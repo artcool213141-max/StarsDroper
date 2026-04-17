@@ -139,8 +139,12 @@
     const giftLabel = document.getElementById('gift-count');
     const starLabel = document.getElementById('star-count');
 
-    const BACKEND_URL = 'https://stars-drop.vercel.app/api';
+    // --- СЕКРЕТКИ И НАСТРОЙКИ ---
+    // ВАЖНО: В HTML мы не можем скрыть URL бэкенда, 
+    // поэтому просто выносим его в константу для удобства.
+    const BACKEND_URL = window.location.origin + '/api'; 
     const user = tg.initDataUnsafe?.user;
+    // ----------------------------
 
     let giftsCollected = 0;
     let starsEarned = 0;
