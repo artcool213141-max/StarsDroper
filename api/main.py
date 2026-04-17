@@ -7,22 +7,20 @@ from supabase import create_client, Client
 app = Flask(__name__)
 CORS(app)
 
-# Настройки Supabase из переменных окружения Vercel
+# --- ПЕРЕМЕННЫЕ ИЗ VERCEL SETTINGS ---
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Простейшая инициализация без лишних параметров (так не будет ошибки AttributeError)
+# Инициализация Supabase
 if not SUPABASE_URL or not SUPABASE_KEY:
     supabase = None
+    print("Внимание: Supabase не настроен!")
 else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Твои токены
-CRYPTO_PAY_TOKEN = '519389:AAnFdMg1D8ywsfVEd0aA02B8872Zzz61ATO'
-BOT_TOKEN = '8451029637:AAHF6jJdQ98QhYRRsJxH_wuktMeE5QctT-I'
-
 def get_or_create_user(user_id):
-    # Если база не подключена, возвращаем пустую заглушку
     if not supabase:
         return {"user_id": int(user_id), "balance": 0.0, "stars": 0, "points": 0}
     
@@ -86,28 +84,29 @@ def crypto_webhook():
     update = request.json
     if update.get('update_type') == 'invoice_paid':
         p = update.get('payload', {})
-        uid, amt = p.get('payload'), float(p.get('amount'))
+        uid = p.get('payload')
+        amt = float(p.get('amount'))
         u = get_or_create_user(uid)
         new_bal = round(float(u.get('balance', 0.0)) + amt, 2)
-        supabase.table('users').update({"balance": new_bal}).eq('user_id', uid).execute()
+        if supabase:
+            supabase.table('users').update({"balance": new_bal}).eq('user_id', uid).execute()
     return "OK", 200
 
 @app.route('/api/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     update = request.json
-    # Подтверждение платежа
     if "pre_checkout_query" in update:
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": update["pre_checkout_query"]["id"], "ok": True})
     
-    # Зачисление
     if "message" in update and "successful_payment" in update["message"]:
         pay = update["message"]["successful_payment"]
         uid = pay.get('invoice_payload')
         amt = int(pay["total_amount"])
         u = get_or_create_user(uid)
         new_stars = int(u.get('stars', 0)) + amt
-        supabase.table('users').update({"stars": new_stars}).eq('user_id', uid).execute()
+        if supabase:
+            supabase.table('users').update({"stars": new_stars}).eq('user_id', uid).execute()
     return "OK", 200
 
 @app.route('/api/get_balance/<user_id>', methods=['GET'])
