@@ -231,24 +231,32 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const BACKEND_URL = 'stars-droper-main.vercel.app/api'; 
+    const BACKEND_URL = 'https://stars-droper-main.vercel.app/api';
     const user = tg.initDataUnsafe?.user;
     let isProcessing = false;
 
     // Синхронизация баланса
-    async function syncData() {
-        if (!user) return;
-        try {
-            const res = await fetch(`${BACKEND_URL}/get_balance/${user.id}?t=${Date.now()}`);
-            if (!res.ok) throw new Error();
-            const data = await res.json();
-            
-            const tonVal = data.balance !== undefined ? data.balance : (data.ton_balance || 0);
-            document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-            document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
-            document.getElementById('bal-tickets').innerText = Math.floor(data.tickets || 0);
-        } catch (e) { console.warn("Balance sync failed"); }
+async function syncData() {
+    if (!user) return;
+    try {
+        const res = await fetch(`${BACKEND_URL}/get_balance/${user.id}?t=${Date.now()}`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        
+        // Мапим данные строго по твоим колонкам из Supabase
+        const tonVal = data.balance || 0;     // Колонка balance (TON)
+        const starsVal = data.stars || 0;     // Колонка stars (Звёзды)
+        const ticketsVal = data.tickets || 0; // Колонка tickets (Тикеты)
+        
+        document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
+        document.getElementById('bal-stars').innerText = Math.floor(starsVal);
+        document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
+        
+        console.log("Балансы обновлены:", {tonVal, starsVal, ticketsVal});
+    } catch (e) { 
+        console.warn("Ошибка синхронизации баланса"); 
     }
+}
 
     // Оплата TON
     async function processPayment(amount) {
