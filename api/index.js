@@ -1,3 +1,15 @@
+const express = require('express'); // 1. Подключаем экспресс
+const cors = require('cors');
+const axios = require('axios');
+const { createClient } = require('@supabase/supabase-js');
+
+const app = express(); // 2. ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ (создаем app)
+
+app.use(cors()); // Разрешаем запросы из браузера
+app.use(express.json()); // Чтобы сервер понимал JSON в запросах
+
+// Дальше идут твои настройки Supabase...
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 // Обработка входящего уведомления об оплате
 app.post('/api/crypto-webhook', async (req, res) => {
     const { status, payload, amount } = req.body;
