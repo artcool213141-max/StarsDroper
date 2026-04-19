@@ -25,24 +25,27 @@ app.get('/api/get_balance/:user_id', async (req, res) => {
     res.json(data);
 });
 
-// 2. СОЗДАНИЕ ОПЛАТЫ ЗВЁЗДАМИ (Тот самый запрос для verifyGift)
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     try {
         const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-            title: "Пополнение баланса",
-            description: `Покупка ${amount} звёзд`,
-            payload: String(user_id), // Передаем ID юзера в payload, чтобы поймать его потом
+            title: "Stars Recharge",
+            description: `Пополнение на ${amount} звёзд`,
+            payload: String(user_id), 
+            provider_token: "", // Для звёзд ВСЕГДА ПУСТО
             currency: "XTR",
-            prices: [{ label: "Stars", amount: parseInt(amount) }]
+            prices: [{ label: "Звёзды", amount: parseInt(amount) }]
         });
 
         if (response.data.ok) {
+            console.log("Ссылка создана:", response.data.result);
             res.json({ pay_url: response.data.result });
         } else {
-            res.status(400).json({ error: "Ошибка Telegram API" });
+            console.error("Ошибка TG:", response.data);
+            res.status(400).json({ error: "TG API Error" });
         }
     } catch (e) {
+        console.error("Ошибка сервера:", e.message);
         res.status(500).json({ error: e.message });
     }
 });
