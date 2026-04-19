@@ -258,7 +258,7 @@ async function syncData() {
     }
 }
 
-    // Оплата TON
+// Оплата TON
     async function processPayment(amount) {
         if (isProcessing || !user) return;
         isProcessing = true;
@@ -267,34 +267,62 @@ async function syncData() {
             const res = await fetch(`${BACKEND_URL}/create_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({user_id: user.id, amount})
+                // Важно: ID как строка, amount как число
+                body: JSON.stringify({
+                    user_id: String(user.id), 
+                    amount: Number(amount)
+                })
             });
+            
             const data = await res.json();
-            if (data.pay_url) { tg.openTelegramLink(data.pay_url); closeVault(); }
-            else { tg.showAlert('Крипто-бот недоступен'); }
-        } catch (e) { tg.showAlert('Ошибка сети'); } 
-        finally { isProcessing = false; }
+            
+            if (res.ok && data.pay_url) { 
+                tg.openTelegramLink(data.pay_url); 
+                closeVault(); 
+            } else { 
+                tg.showAlert(data.error || 'Крипто-бот недоступен'); 
+            }
+        } catch (e) { 
+            tg.showAlert('Ошибка сети: проверь бэкенд'); 
+        } finally { 
+            isProcessing = false; 
+        }
     }
 
     // Оплата STARS
     async function verifyGift() {
         const val = parseInt(document.getElementById('stars-input').value);
         if (!val || val < 1) return tg.showAlert('Введите число');
+        
         isProcessing = true;
         try {
             const res = await fetch(`${BACKEND_URL}/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: user.id, amount: val })
+                body: JSON.stringify({ 
+                    user_id: String(user.id), 
+                    amount: val 
+                })
             });
+            
             const data = await res.json();
-            if (data.pay_url) {
+            
+            if (res.ok && data.pay_url) {
                 tg.openInvoice(data.pay_url, (status) => {
-                    if (status === 'paid') { tg.showAlert('Успешно!'); closeVault(); syncData(); }
+                    if (status === 'paid') { 
+                        tg.showAlert('Успешно!'); 
+                        closeVault(); 
+                        syncData(); 
+                    }
                 });
+            } else {
+                tg.showAlert(data.error || 'Ошибка при создании счета');
             }
-        } catch (e) { tg.showAlert('Ошибка сервера'); } 
-        finally { isProcessing = false; }
+        } catch (e) { 
+            tg.showAlert('Ошибка сервера'); 
+        } finally { 
+            isProcessing = false; 
+        }
     }
 
     function renderTonPacks() {
