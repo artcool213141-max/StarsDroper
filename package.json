@@ -1,10 +1,11 @@
 {
-  "name": "stars-drop",
+  "name": "stars-drop-backend",
   "version": "1.0.0",
   "main": "api/index.js",
   "dependencies": {
     "express": "^4.18.2",
-    "axios": "^1.6.0",
-    "@supabase/supabase-js": "latest"
+    "cors": "^2.8.5",
+    "axios": "^1.6.2",
+    "@supabase/supabase-js": "^2.38.4"
   }
 }
