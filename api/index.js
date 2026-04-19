@@ -5,93 +5,110 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
+// Разрешаем CORS и JSON
 app.use(cors());
 app.use(express.json());
 
-// ВСТАВЬ ТОКЕН НАПРЯМУЮ ДЛЯ ПРОВЕРКИ
-const BOT_TOKEN = "8340303311:AAFoEqmKEOUN4kiOGn7ZEWy2K972-7pYMjo"; // Прямо сюда, в кавычках!
+// Конфигурация из Environment Variables
+const supabase = createClient(
+    process.env.SUPABASE_URL || '', 
+    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+);
+const BOT_TOKEN = process.env.BOT_TOKEN;
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+// --- 1. ПОЛУЧЕНИЕ БАЛАНСА ---
+app.get('/api/get_balance/:user_id', async (req, res) => {
+    const { user_id } = req.params;
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('balance')
+            .eq('user_id', String(user_id))
+            .single();
 
+        if (error || !data) {
+            // Если юзера нет, возвращаем баланс 0
+            return res.json({ balance: 0 });
+        }
+        res.json(data);
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// --- 2. СОЗДАНИЕ ОПЛАТЫ ЗВЕЗДАМИ ---
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
-    try {
-        // Проверяем токен в логах (для отладки, потом удалишь)
-        console.log("Использую токен:", process.env.BOT_TOKEN ? "Ок" : "ПУСТО!");
 
-        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Stars", // Коротко и ясно
-            description: "Top up balance", 
+    if (!BOT_TOKEN) {
+        console.error("ОШИБКА: BOT_TOKEN не задан в Vercel!");
+        return res.status(500).json({ error: "Server configuration error: No BOT_TOKEN" });
+    }
+
+    try {
+        const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
+        
+        const response = await axios.post(tgUrl, {
+            title: "Пополнение баланса",
+            description: `Покупка ${amount} звезд`,
             payload: String(user_id),
-            provider_token: "", 
+            provider_token: "", // Для звезд всегда пусто
             currency: "XTR",
             prices: [{ 
                 label: "Stars", 
-                amount: Math.floor(Number(amount)) // Строго целое число
+                amount: Math.floor(Number(amount)) // Только целые числа
             }]
         });
 
         if (response.data.ok) {
-            console.log("Ссылка создана успешно");
+            console.log(`Ссылка для ${user_id} создана успешно`);
             res.json({ pay_url: response.data.result });
         } else {
-            console.error("Ошибка от TG:", response.data);
+            console.error("TG Error:", response.data);
             res.status(400).json(response.data);
         }
     } catch (e) {
-        console.error("Ошибка запроса:", e.response?.data || e.message);
-        res.status(500).json({ error: "Server error" });
+        console.error("Request Error:", e.response?.data || e.message);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-app.post('/api/create_stars_pay', async (req, res) => {
-    const { user_id, amount } = req.body;
-    try {
-        // Проверяем токен в логах (для отладки, потом удалишь)
-        console.log("Использую токен:", process.env.BOT_TOKEN ? "Ок" : "ПУСТО!");
-
-        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Stars", // Коротко и ясно
-            description: "Top up balance", 
-            payload: String(user_id),
-            provider_token: "", 
-            currency: "XTR",
-            prices: [{ 
-                label: "Stars", 
-                amount: Math.floor(Number(amount)) // Строго целое число
-            }]
-        });
-
-        if (response.data.ok) {
-            console.log("Ссылка создана успешно");
-            res.json({ pay_url: response.data.result });
-        } else {
-            console.error("Ошибка от TG:", response.data);
-            res.status(400).json(response.data);
-        }
-    } catch (e) {
-        console.error("Ошибка запроса:", e.response?.data || e.message);
-        res.status(500).json({ error: "Server error" });
-    }
-});
-
-// 3. ТВOЙ КРИПТО-ВЕБХУК (Обновление базы при оплате через CryptoBot)
+// --- 3. КРИПТО-ВЕБХУК (CryptoBot) ---
 app.post('/api/crypto-webhook', async (req, res) => {
     const { status, payload, amount } = req.body;
 
     if (status === 'paid') {
-        const userId = payload; 
+        const userId = String(payload);
         const paidAmount = parseFloat(amount);
 
-        // Обновляем баланс в Supabase
-        const { data: user } = await supabase.from('users').select('balance').eq('user_id', userId).single();
-        const newBalance = (user?.balance || 0) + paidAmount;
+        try {
+            // Получаем текущий баланс
+            const { data: user } = await supabase
+                .from('users')
+                .select('balance')
+                .eq('user_id', userId)
+                .single();
 
-        await supabase.from('users').update({ balance: newBalance }).eq('user_id', userId);
-        console.log(`Баланс юзера ${userId} обновлен на ${paidAmount} TON`);
+            const currentBalance = user?.balance || 0;
+            const newBalance = currentBalance + paidAmount;
+
+            // Обновляем (или создаем) запись
+            await supabase
+                .from('users')
+                .upsert({ user_id: userId, balance: newBalance });
+
+            console.log(`Баланс юзера ${userId} обновлен: +${paidAmount}`);
+        } catch (dbError) {
+            console.error("DB Error:", dbError.message);
+        }
     }
     res.status(200).send('OK');
 });
 
-// ОБЯЗАТЕЛЬНО В КОНЦЕ
+// Роут-заглушка для проверки работоспособности
+app.get('/api', (req, res) => {
+    res.send('API is running...');
+});
+
+// Экспорт для Vercel
 module.exports = app;
