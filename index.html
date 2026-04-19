@@ -290,53 +290,41 @@ async function syncData() {
     }
 
 async function verifyGift() {
-        const val = parseInt(document.getElementById('stars-input').value);
+    const val = parseInt(document.getElementById('stars-input').value);
+    if (!val || val < 1) return tg.showAlert('Введите число');
+    
+    isProcessing = true;
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, { // Проверь путь /api/
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ user_id: String(tg.initDataUnsafe.user.id), amount: val })
+        });
         
-        // Валидация
-        if (!val || val < 1) return tg.showAlert('Введите корректное число');
-        if (isProcessing) return;
-
-        isProcessing = true;
-        tg.HapticFeedback.impactOccurred('medium');
-
-        try {
-            const res = await fetch(`${BACKEND_URL}/create_stars_pay`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    user_id: String(user.id), // Превращаем в строку для стабильности
-                    amount: val 
-                })
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.pay_url) {
-                // Если бэкенд вернул полную ссылку t.me (результат createInvoiceLink)
-                if (data.pay_url.includes('t.me/')) {
-                    tg.openTelegramLink(data.pay_url);
-                    // Закрываем модалку, так как оплата пошла в Telegram
-                    closeVault(); 
-                } else {
-                    // Если это прямой инвойс-токен
-                    tg.openInvoice(data.pay_url, (status) => {
-                        if (status === 'paid') { 
-                            tg.showAlert('Оплата успешно завершена!'); 
-                            closeVault(); 
-                            syncData(); 
-                        }
-                    });
-                }
+        const data = await res.json();
+        
+        if (data.pay_url) {
+            // ВАЖНО: Если бэкенд вернул ссылку t.me/$...
+            if (data.pay_url.includes('t.me/')) {
+                tg.openTelegramLink(data.pay_url);
             } else {
-                tg.showAlert(data.error || 'Ошибка при получении ссылки на оплату');
+                // Если вернул просто токен инвойса
+                tg.openInvoice(data.pay_url, (status) => {
+                    if (status === 'paid') { 
+                        tg.showAlert('Успешно!'); 
+                        closeVault(); 
+                    }
+                });
             }
-        } catch (e) {
-            console.error(e);
-            tg.showAlert('Ошибка сервера: проверь соединение с бэкендом');
-        } finally {
-            isProcessing = false;
+        } else {
+            tg.showAlert('Бэкенд не вернул ссылку');
         }
+    } catch (e) { 
+        tg.showAlert('Ошибка фронтенда: ' + e.message); 
+    } finally { 
+        isProcessing = false; 
     }
+}
 
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
