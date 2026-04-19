@@ -295,32 +295,37 @@ async function verifyGift() {
     
     isProcessing = true;
     try {
-        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, { // Проверь путь /api/
+        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ user_id: String(tg.initDataUnsafe.user.id), amount: val })
+            body: JSON.stringify({ 
+                user_id: String(tg.initDataUnsafe.user.id), 
+                amount: val 
+            })
         });
         
         const data = await res.json();
         
         if (data.pay_url) {
-            // ВАЖНО: Если бэкенд вернул ссылку t.me/$...
+            // Если ссылка полная (начинается на t.me), открываем через Telegram Link
             if (data.pay_url.includes('t.me/')) {
                 tg.openTelegramLink(data.pay_url);
+                // Опционально: закрываем окно, так как оплата пошла в интерфейсе ТГ
+                closeVault(); 
             } else {
-                // Если вернул просто токен инвойса
+                // Если это короткий токен инвойса
                 tg.openInvoice(data.pay_url, (status) => {
                     if (status === 'paid') { 
-                        tg.showAlert('Успешно!'); 
+                        tg.showAlert('Успешно пополнено!'); 
                         closeVault(); 
                     }
                 });
             }
         } else {
-            tg.showAlert('Бэкенд не вернул ссылку');
+            tg.showAlert('Бэкенд не прислал ссылку');
         }
     } catch (e) { 
-        tg.showAlert('Ошибка фронтенда: ' + e.message); 
+        tg.showAlert('Ошибка: ' + e.message); 
     } finally { 
         isProcessing = false; 
     }
