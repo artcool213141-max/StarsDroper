@@ -28,25 +28,24 @@ app.get('/api/get_balance/:user_id', async (req, res) => {
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     try {
-        const response = await axios.post(`https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`, {
-            title: "Stars Recharge",
-            description: `Пополнение на ${amount} звёзд`,
-            payload: String(user_id), 
-            provider_token: "", // Для звёзд ВСЕГДА ПУСТО
+        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
+            title: "Recharge Stars",
+            description: `Buy ${amount} Stars`,
+            payload: String(user_id),
+            provider_token: "", 
             currency: "XTR",
-            prices: [{ label: "Звёзды", amount: parseInt(amount) }]
+            prices: [{ label: "Stars", amount: Math.floor(amount) }]
         });
 
         if (response.data.ok) {
-            console.log("Ссылка создана:", response.data.result);
             res.json({ pay_url: response.data.result });
         } else {
-            console.error("Ошибка TG:", response.data);
-            res.status(400).json({ error: "TG API Error" });
+            console.error("TG Error:", response.data);
+            res.status(400).json(response.data);
         }
     } catch (e) {
-        console.error("Ошибка сервера:", e.message);
-        res.status(500).json({ error: e.message });
+        console.error("Server Error:", e.response?.data || e.message);
+        res.status(500).json({ error: "Ошибка на стороне сервера" });
     }
 });
 
