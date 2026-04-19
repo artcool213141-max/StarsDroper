@@ -8,21 +8,36 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Настройки Supabase
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-const BOT_TOKEN = process.env.BOT_TOKEN;
+// ВСТАВЬ ТОКЕН НАПРЯМУЮ ДЛЯ ПРОВЕРКИ
+const BOT_TOKEN = "8340303311:AAFoEqmKEOUN4kiOGn7ZEWy2K972-7pYMjo"; // Прямо сюда, в кавычках!
 
-// 1. ПОЛУЧЕНИЕ БАЛАНСА (чтобы в приложении не было 0)
-app.get('/api/get_balance/:user_id', async (req, res) => {
-    const { user_id } = req.params;
-    const { data, error } = await supabase
-        .from('users') // Проверь, что таблица называется именно так
-        .select('*')
-        .eq('user_id', user_id)
-        .single();
-    
-    if (error) return res.status(404).json({ error: "User not found" });
-    res.json(data);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+app.post('/api/create_stars_pay', async (req, res) => {
+    const { user_id, amount } = req.body;
+    try {
+        // Используем константу BOT_TOKEN, которую мы объявили выше
+        const url = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
+        
+        const response = await axios.post(url, {
+            title: "Stars",
+            description: "Top up",
+            payload: String(user_id),
+            provider_token: "", 
+            currency: "XTR",
+            prices: [{ label: "Stars", amount: Math.floor(Number(amount)) }]
+        });
+
+        if (response.data.ok) {
+            res.json({ pay_url: response.data.result });
+        } else {
+            res.status(400).json(response.data);
+        }
+    } catch (e) {
+        // Если упадет тут, мы увидим подробности
+        console.error("FULL ERROR:", e.response?.data || e.message);
+        res.status(500).json({ error: e.response?.data || e.message });
+    }
 });
 
 app.post('/api/create_stars_pay', async (req, res) => {
