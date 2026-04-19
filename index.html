@@ -291,38 +291,36 @@ async function syncData() {
 
 async function verifyGift() {
     const val = parseInt(document.getElementById('stars-input').value);
-    if (!val || val < 1) return tg.showAlert('Введите количество');
-
-    // Показываем лоадер на кнопке, если он у тебя есть
+    if (!val || val < 1) return tg.showAlert('Введите число');
+    
     try {
         const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ 
                 user_id: String(tg.initDataUnsafe.user.id), 
                 amount: val 
             })
         });
-
+        
         const data = await res.json();
-
+        
         if (data.pay_url) {
-            // ПРОВЕРКА: Если пришла полная ссылка t.me
+            // ТЕЛЕГРАМ ХИТРЫЙ: если ссылка полная, openInvoice её не откроет
             if (data.pay_url.includes('t.me/')) {
-                console.log("Открываю через openTelegramLink");
+                // Открываем как внешнюю ссылку внутри ТГ
                 tg.openTelegramLink(data.pay_url);
             } else {
-                // Если пришел короткий токен
-                console.log("Открываю через openInvoice");
+                // Если это короткий токен
                 tg.openInvoice(data.pay_url, (status) => {
-                    if (status === 'paid') tg.showAlert('Оплачено!');
+                    if (status === 'paid') tg.showAlert('Готово!');
                 });
             }
         } else {
-            tg.showAlert('Ошибка: сервер не вернул ссылку');
+            tg.showAlert('Сервер не прислал ссылку');
         }
     } catch (e) {
-        tg.showAlert('Ошибка сети: ' + e.message);
+        tg.showAlert('Ошибка: ' + e.message);
     }
 }
 
