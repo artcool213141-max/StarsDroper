@@ -16,27 +16,31 @@ const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SER
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     try {
-        // Используем константу BOT_TOKEN, которую мы объявили выше
-        const url = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
-        
-        const response = await axios.post(url, {
-            title: "Stars",
-            description: "Top up",
+        // Проверяем токен в логах (для отладки, потом удалишь)
+        console.log("Использую токен:", process.env.BOT_TOKEN ? "Ок" : "ПУСТО!");
+
+        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
+            title: "Stars", // Коротко и ясно
+            description: "Top up balance", 
             payload: String(user_id),
             provider_token: "", 
             currency: "XTR",
-            prices: [{ label: "Stars", amount: Math.floor(Number(amount)) }]
+            prices: [{ 
+                label: "Stars", 
+                amount: Math.floor(Number(amount)) // Строго целое число
+            }]
         });
 
         if (response.data.ok) {
+            console.log("Ссылка создана успешно");
             res.json({ pay_url: response.data.result });
         } else {
+            console.error("Ошибка от TG:", response.data);
             res.status(400).json(response.data);
         }
     } catch (e) {
-        // Если упадет тут, мы увидим подробности
-        console.error("FULL ERROR:", e.response?.data || e.message);
-        res.status(500).json({ error: e.response?.data || e.message });
+        console.error("Ошибка запроса:", e.response?.data || e.message);
+        res.status(500).json({ error: "Server error" });
     }
 });
 
