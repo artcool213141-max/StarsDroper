@@ -28,24 +28,31 @@ app.get('/api/get_balance/:user_id', async (req, res) => {
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     try {
+        // Проверяем токен в логах (для отладки, потом удалишь)
+        console.log("Использую токен:", process.env.BOT_TOKEN ? "Ок" : "ПУСТО!");
+
         const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
-            title: "Recharge Stars",
-            description: `Buy ${amount} Stars`,
+            title: "Stars", // Коротко и ясно
+            description: "Top up balance", 
             payload: String(user_id),
             provider_token: "", 
             currency: "XTR",
-            prices: [{ label: "Stars", amount: Math.floor(amount) }]
+            prices: [{ 
+                label: "Stars", 
+                amount: Math.floor(Number(amount)) // Строго целое число
+            }]
         });
 
         if (response.data.ok) {
+            console.log("Ссылка создана успешно");
             res.json({ pay_url: response.data.result });
         } else {
-            console.error("TG Error:", response.data);
+            console.error("Ошибка от TG:", response.data);
             res.status(400).json(response.data);
         }
     } catch (e) {
-        console.error("Server Error:", e.response?.data || e.message);
-        res.status(500).json({ error: "Ошибка на стороне сервера" });
+        console.error("Ошибка запроса:", e.response?.data || e.message);
+        res.status(500).json({ error: "Server error" });
     }
 });
 
