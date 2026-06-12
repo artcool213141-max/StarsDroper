@@ -4,76 +4,45 @@ const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-
-// Разрешаем CORS и JSON
 app.use(cors());
 app.use(express.json());
 
-// Конфигурация из Environment Variables
 const supabase = createClient(
-    process.env.SUPABASE_URL || '', 
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
 );
-const BOT_TOKEN = process.env.BOT_TOKEN;
 
-// --- 1. ПОЛУЧЕНИЕ БАЛАНСА ---
-app.get('/api/get_balance/:user_id', async (req, res) => {
-    const { user_id } = req.params;
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('balance')
-            .eq('user_id', String(user_id))
-            .single();
-
-        if (error || !data) {
-            // Если юзера нет, возвращаем баланс 0
-            return res.json({ balance: 0 });
-        }
-        res.json(data);
-    } catch (e) {
-        res.status(500).json({ error: e.message });
-    }
-});
-
-// --- 2. СОЗДАНИЕ ОПЛАТЫ ЗВЕЗДАМИ ---
+// --- 1. ОПТИМИЗИРОВАННАЯ ОПЛАТА ЗВЕЗДАМИ ---
 app.post('/api/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
-
-    if (!BOT_TOKEN) {
-        console.error("ОШИБКА: BOT_TOKEN не задан в Vercel!");
-        return res.status(500).json({ error: "Server configuration error: No BOT_TOKEN" });
-    }
+    if (!BOT_TOKEN) return res.status(500).json({ error: "Config error" });
 
     try {
-        const tgUrl = `https://api.telegram.org/bot${BOT_TOKEN}/createInvoiceLink`;
+        // Добавляем тайм-аут для axios, чтобы не висело вечно
+        const tgUrl = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`;
         
         const response = await axios.post(tgUrl, {
             title: "Пополнение баланса",
             description: `Покупка ${amount} звезд`,
             payload: String(user_id),
-            provider_token: "", // Для звезд всегда пусто
+            provider_token: "",
             currency: "XTR",
-            prices: [{ 
-                label: "Stars", 
-                amount: Math.floor(Number(amount)) // Только целые числа
-            }]
-        });
+            prices: [{ label: "Stars", amount: Math.floor(Number(amount)) }]
+        }, { timeout: 5000 }); // Ждем ответа от ТГ не более 5 секунд
 
         if (response.data.ok) {
-            console.log(`Ссылка для ${user_id} создана успешно`);
-            res.json({ pay_url: response.data.result });
+            return res.json({ pay_url: response.data.result });
         } else {
-            console.error("TG Error:", response.data);
-            res.status(400).json(response.data);
+            return res.status(400).json({ error: response.data.description });
         }
     } catch (e) {
-        console.error("Request Error:", e.response?.data || e.message);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error("Stars Pay Error:", e.message);
+        return res.status(503).json({ error: "Telegram API timeout or error" });
     }
 });
 
-// --- 3. КРИПТО-ВЕБХУК (CryptoBot) ---
+// --- 2. КРИПТО-ВЕБХУК (с использованием RPC) ---
+// Рекомендую использовать SQL-функцию, которую мы создавали, чтобы избежать race condition
 app.post('/api/crypto-webhook', async (req, res) => {
     const { status, payload, amount } = req.body;
 
@@ -81,34 +50,18 @@ app.post('/api/crypto-webhook', async (req, res) => {
         const userId = String(payload);
         const paidAmount = parseFloat(amount);
 
-        try {
-            // Получаем текущий баланс
-            const { data: user } = await supabase
-                .from('users')
-                .select('balance')
-                .eq('user_id', userId)
-                .single();
+        // Используем RPC для атомарного прибавления (это быстрее и надежнее)
+        const { error } = await supabase.rpc('increment_ton_balance', { 
+            user_id_val: userId, 
+            amount_val: paidAmount 
+        });
 
-            const currentBalance = user?.balance || 0;
-            const newBalance = currentBalance + paidAmount;
-
-            // Обновляем (или создаем) запись
-            await supabase
-                .from('users')
-                .upsert({ user_id: userId, balance: newBalance });
-
-            console.log(`Баланс юзера ${userId} обновлен: +${paidAmount}`);
-        } catch (dbError) {
-            console.error("DB Error:", dbError.message);
+        if (error) {
+            console.error("Supabase Error:", error);
         }
     }
-    res.status(200).send('OK');
+    // Всегда возвращаем 200, чтобы бот не слал повторы
+    return res.status(200).send('OK');
 });
 
-// Роут-заглушка для проверки работоспособности
-app.get('/api', (req, res) => {
-    res.send('API is running...');
-});
-
-// Экспорт для Vercel
 module.exports = app;
