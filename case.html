@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>StarDrop Premium Edition | Purple</title>
+    <title>StarDrop Premium Edition | Gold</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
         
         :root {
-            --bg-main: #0a080c; /* Чуть более глубокий фиолетовый оттенок черного */
-            --neon-purple: #a855f7; /* Фиолетовый акцент */
+            --bg-main: #0c0a09; /* Глубокий премиальный черный/угольный оттенок */
+            --neon-gold: #fbbf24; /* Золотой акцент */
+            --neon-gold-dark: #d97706; /* Темное золото */
             --ton-blue: #0088cc;
         }
 
@@ -35,7 +36,7 @@
             background: rgba(0, 0, 0, 0.6);
             padding: 10px 15px;
             border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.08);
             backdrop-filter: blur(10px);
         }
         .balance-item-v2 { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
@@ -43,20 +44,20 @@
         .balance-item-v2 span { font-weight: 900; font-size: 0.9rem; }
 
         .live-header { display: flex; align-items: center; padding: 20px 20px 10px; gap: 12px; }
-        .live-label { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-purple); text-transform: uppercase; letter-spacing: 3px; }
-        .live-dot { width: 8px; height: 8px; background: var(--neon-purple); border-radius: 50%; box-shadow: 0 0 10px var(--neon-purple); animation: pulse 1.5s infinite; }
+        .live-label { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-gold); text-transform: uppercase; letter-spacing: 3px; }
+        .live-dot { width: 8px; height: 8px; background: var(--neon-gold); border-radius: 50%; box-shadow: 0 0 10px var(--neon-gold); animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
         #live-drop-wrapper {
             width: 100%; height: 60px; overflow: hidden; position: relative;
-            background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.05), transparent);
+            background: linear-gradient(90deg, transparent, rgba(251, 191, 36, 0.05), transparent);
         }
         .live-rail { display: flex; position: absolute; left: 0; top: 0; height: 100%; gap: 12px; padding: 10px; transition: transform 0.5s ease; }
 
         .roulette-container {
             position: relative; width: 100%; height: 160px; 
-            background: #0f0b1a; margin: 20px 0; overflow: hidden; 
-            border-top: 1px solid rgba(168, 85, 247, 0.15); border-bottom: 1px solid rgba(168, 85, 247, 0.15);
+            background: #14110f; margin: 20px 0; overflow: hidden; 
+            border-top: 1px solid rgba(251, 191, 36, 0.15); border-bottom: 1px solid rgba(251, 191, 36, 0.15);
         }
         .roulette-container::before, .roulette-container::after {
             content: ''; position: absolute; top: 0; width: 30%; height: 100%; z-index: 10; pointer-events: none;
@@ -65,8 +66,8 @@
         .roulette-container::after { right: 0; background: linear-gradient(to left, var(--bg-main) 10%, transparent 100%); }
 
         .center-line {
-            position: absolute; left: 50%; top: 0; width: 2px; height: 100%; background: var(--neon-purple);
-            z-index: 50; transform: translateX(-50%); box-shadow: 0 0 15px var(--neon-purple);
+            position: absolute; left: 50%; top: 0; width: 2px; height: 100%; background: var(--neon-gold);
+            z-index: 50; transform: translateX(-50%); box-shadow: 0 0 15px var(--neon-gold);
         }
         .roulette-rail { display: flex; position: absolute; left: 0; align-items: center; height: 100%; will-change: transform; }
         .roulette-item { 
@@ -77,8 +78,8 @@
         .roulette-item img { width: 80px; height: 80px; object-fit: contain; }
         
         .win-glow { 
-            border-color: var(--neon-purple) !important; 
-            background: rgba(168, 85, 247, 0.2) !important; 
+            border-color: var(--neon-gold) !important; 
+            background: rgba(251, 191, 36, 0.15) !important; 
             animation: win-pulse 1s infinite ease-in-out; 
             z-index: 20;
         }
@@ -87,13 +88,13 @@
         }
 
         .case-card {
-            background: linear-gradient(145deg, #16121a, #0c0a0f);
-            border-radius: 35px; border: 1px solid rgba(168, 85, 247, 0.05);
+            background: linear-gradient(145deg, #1c1917, #0c0a09);
+            border-radius: 35px; border: 1px solid rgba(251, 191, 36, 0.05);
             transition: transform 0.2s;
         }
         .case-card:active { transform: scale(0.95); }
         .cnt-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: white; transition: 0.3s; }
-        .cnt-btn.active { background: var(--neon-purple); color: white; font-weight: 900; }
+        .cnt-btn.active { background: var(--neon-gold-dark); color: white; font-weight: 900; box-shadow: 0 0 10px rgba(217, 119, 6, 0.3); }
         
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -101,17 +102,17 @@
 </head>
 <body>
 
-    <header class="p-6 flex justify-between items-center sticky top-0 z-[100] bg-[#0a080c]/90 backdrop-blur-xl border-b border-purple-500/10">
+    <header class="p-6 flex justify-between items-center sticky top-0 z-[100] bg-[#0c0a09]/90 backdrop-blur-xl border-b border-amber-500/10">
         <div class="flex items-center gap-4">
             <button onclick="window.location.href='index.html'" class="flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10">
-                <svg class="w-6 h-6 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                <svg class="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </button>
-            <div class="orbitron text-2xl font-black italic">STAR<span class="text-purple-500">DROP</span></div>
+            <div class="orbitron text-2xl font-black italic">STAR<span class="text-amber-500">DROP</span></div>
         </div>
         <div class="balance-container-v2">
             <div class="balance-item-v2 text-blue-400"><span id="header-ton">0.00</span><img src="img/ton.png"></div>
-            <div class="balance-item-v2 text-yellow-400"><span id="header-stars">0</span><img src="img/star.png"></div>
-            <div class="balance-item-v2 text-purple-400"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
+            <div class="balance-item-v2 text-yellow-500"><span id="header-stars">0</span><img src="img/star.png"></div>
+            <div class="balance-item-v2 text-amber-600"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
         </div>
     </header>
 
@@ -123,16 +124,16 @@
         <div class="grid grid-cols-2 gap-5" id="main-grid"></div>
     </div>
 
-    <div id="case-modal" class="fixed inset-0 z-[200] hidden flex-col p-6 bg-[#0a080c]/98 backdrop-blur-2xl overflow-y-auto">
+    <div id="case-modal" class="fixed inset-0 z-[200] hidden flex-col p-6 bg-[#0c0a09]/98 backdrop-blur-2xl overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
             <button id="back-btn" onclick="closeModal()" class="text-gray-500 font-bold text-xs uppercase tracking-widest">← Назад</button>
-            <div class="orbitron text-[10px] text-purple-500 uppercase">System Ready</div>
+            <div class="orbitron text-[10px] text-amber-500 uppercase tracking-widest">System Ready</div>
         </div>
 
         <div id="view-preview">
             <div class="flex flex-col items-center mb-8">
                 <img id="m-img" src="" class="w-64 h-64 object-contain">
-                <h1 id="m-title" class="orbitron text-2xl font-black mt-4 uppercase text-center"></h1>
+                <h1 id="m-title" class="orbitron text-2xl font-black mt-4 uppercase text-center tracking-wide"></h1>
             </div>
             <div class="flex flex-col items-center gap-6 mb-8">
                 <div class="flex gap-2">
@@ -141,7 +142,7 @@
                     <button onclick="setMul(3)" class="cnt-btn w-12 h-12 rounded-xl font-black">3</button>
                 </div>
                 <div class="grid grid-cols-2 gap-4 w-full" id="roll-buttons-container">
-                    <button id="btn-stars" onclick="startRoll('stars')" class="bg-purple-600 text-white py-4 rounded-3xl font-black flex justify-center items-center gap-2 active:scale-95 transition-transform">
+                    <button id="btn-stars" onclick="startRoll('stars')" class="bg-amber-500 text-black py-4 rounded-3xl font-black flex justify-center items-center gap-2 active:scale-95 transition-transform shadow-lg shadow-amber-500/20">
                         <img src="img/star.png" class="w-5 h-5"> <span id="p-stars">0</span>
                     </button>
                     <button id="btn-ton" onclick="startRoll('ton')" class="bg-[#0088cc] text-white py-4 rounded-3xl font-black flex justify-center items-center gap-2 active:scale-95 transition-transform">
@@ -155,7 +156,7 @@
         <div id="view-roulette" class="hidden flex-col items-center">
             <div class="text-center mb-6">
                 <h2 id="roul-title" class="orbitron text-xl font-black uppercase text-white"></h2>
-                <div class="orbitron text-[10px] text-purple-500 animate-pulse mt-1 uppercase tracking-widest">● Анализ вероятностей...</div>
+                <div class="orbitron text-[10px] text-amber-500 animate-pulse mt-1 uppercase tracking-widest">● Анализ вероятностей...</div>
             </div>
             <div id="roulette-rows" class="w-full"></div>
         </div>
@@ -166,11 +167,11 @@
                 <span class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Общая ценность:</span>
                 <div class="flex items-center gap-1">
                     <img src="img/star.png" class="w-4 h-4">
-                    <span id="win-total-price" class="orbitron text-purple-500 font-black text-lg">0</span>
+                    <span id="win-total-price" class="orbitron text-amber-500 font-black text-lg">0</span>
                 </div>
             </div>
             <div class="w-full flex flex-col gap-3">
-                <button id="sell-all-btn" onclick="sellAllAndClose()" class="w-full bg-purple-600 text-white py-5 rounded-3xl font-black uppercase text-sm active:scale-95 transition-all">Продать</button>
+                <button id="sell-all-btn" onclick="sellAllAndClose()" class="w-full bg-amber-500 text-black py-5 rounded-3xl font-black uppercase text-sm active:scale-95 transition-all shadow-lg shadow-amber-500/20">Продать</button>
                 <button id="keep-all-btn" onclick="saveToInventoryAndClose()" class="w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs active:scale-95">В инвентарь</button>
             </div>
         </div>
@@ -272,7 +273,7 @@ const CASES = [
         loot: [
             ["star.png", 80], ["raketa.png", 10], ["paska.jpg", 5], ["1may.jpg", 1.5], ["fonarik.jpg", 1],
             ["otkritka.jpg", 0.5], ["happybirthday.jpg", 0.4], ["koks.jpg", 0.3], ["dog.png", 0.2], ["botinok.png", 0.2],
-            ["kalendar.png", 0.1], ["cerrrdce.jpg", 0.1], ["lucky.jpg", 0.1], ["bear.png", 0.1] // Джекпот 3500 при цене 50
+            ["kalendar.png", 0.1], ["cerrrdce.jpg", 0.1], ["lucky.jpg", 0.1], ["bear.png", 0.1]
         ] 
     },
     { 
@@ -344,7 +345,7 @@ const CASES = [
         loot: [
             ["booox.png", 45], ["zhele.png", 25], ["mafin.jpg", 15], ["zirka.PNG", 7], ["kryg.PNG", 3],
             ["gribb.PNG", 2], ["cvetk.PNG", 1], ["sshapka.PNG", 0.5], ["tyfli.PNG", 0.4], ["rozza.png", 0.3],
-            ["heart.png", 0.2], ["colso.png", 0.2], ["ccolso2.png", 0.1], ["orel.jpg", 0.1], ["kepka.png", 0.01] // Супер джекпот за 100к
+            ["heart.png", 0.2], ["colso.png", 0.2], ["ccolso2.png", 0.1], ["orel.jpg", 0.1], ["kepka.png", 0.01]
         ] 
     }
 ];
@@ -393,8 +394,7 @@ function updatePriceButtons() {
     if (!btnTickets) {
         btnTickets = document.createElement('button');
         btnTickets.id = 'btn-tickets-roll';
-        // ИЗМЕНЕНО: bg-green-500 -> bg-purple-600
-        btnTickets.className = "col-span-2 bg-purple-600 text-white py-4 rounded-3xl font-black flex justify-center items-center gap-2 active:scale-95 transition-transform hidden";
+        btnTickets.className = "col-span-2 bg-amber-500 text-black py-4 rounded-3xl font-black flex justify-center items-center gap-2 active:scale-95 transition-transform hidden shadow-lg shadow-amber-500/10";
         document.getElementById('roll-buttons-container').appendChild(btnTickets);
     }
     if (activeCase.type === 'tickets') {
@@ -488,8 +488,7 @@ function showWin(winners) {
     let total = 0;
     winners.forEach(item => {
         total += item.price;
-        // ИЗМЕНЕНО: border-green-500/30 -> border-purple-500/30, text-green-500 -> text-purple-400
-        winGrid.innerHTML += `<div class="flex flex-col items-center p-4 bg-white/5 rounded-3xl border border-purple-500/30 animate-fade-in"><img src="img/${item.img}" class="w-20 h-20 object-contain mb-2"><div class="text-purple-400 font-black orbitron text-xs">⭐${item.price}</div></div>`;
+        winGrid.innerHTML += `<div class="flex flex-col items-center p-4 bg-white/5 rounded-3xl border border-amber-500/30 animate-fade-in"><img src="img/${item.img}" class="w-20 h-20 object-contain mb-2"><div class="text-amber-400 font-black orbitron text-xs">⭐${item.price}</div></div>`;
     });
     document.getElementById('win-total-price').innerText = total.toLocaleString();
     isBusy = false;
@@ -507,17 +506,14 @@ async function sellAllAndClose() {
             method: 'PATCH',
             headers: { 
                 ...headers, 
-                'Prefer': 'return=representation' // Изменено на representation, чтобы получить ответ
+                'Prefer': 'return=representation'
             },
             body: JSON.stringify({ stars: newBalance })
         });
 
         if (res.ok) {
-            // Сначала обновляем локальный объект баланса
             balance.stars = newBalance;
-            // Обновляем текст в шапке
             saveAndRefresh();
-            // Закрываем модалку
             closeModal();
             console.log("Успешно продано. Новый баланс:", balance.stars);
         } else {
@@ -537,7 +533,6 @@ async function saveToInventoryAndClose() {
     isBusy = true;
 
     try {
-        // 1. Получаем текущий инвентарь
         const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, { 
             headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } 
         });
@@ -551,7 +546,6 @@ async function saveToInventoryAndClose() {
             currentInv = [];
         }
 
-        // 2. Формируем новые предметы
         const newItems = currentWinners.map(item => ({
             id: Date.now() + Math.random(), 
             name: item.name,
@@ -561,7 +555,6 @@ async function saveToInventoryAndClose() {
 
         const updatedInventory = [...currentInv, ...newItems];
 
-        // 3. Сохраняем обновленный массив
         const saveRes = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
             method: 'PATCH',
             headers: { 
@@ -574,7 +567,6 @@ async function saveToInventoryAndClose() {
         if (saveRes.ok) {
             console.log("Инвентарь обновлен");
             closeModal();
-            // Вызываем синхронизацию, чтобы обновить все данные
             await syncData(); 
         } else {
             throw new Error("Ошибка сохранения на сервере");
@@ -596,8 +588,7 @@ function closeModal() {
 function renderLootPreview() {
     document.getElementById('loot-display').innerHTML = activeCase.loot.map(attr => {
         const itm = ITEMS[attr[0]];
-        // ИЗМЕНЕНО: text-green-500 -> text-purple-400
-        return itm ? `<div class="bg-white/5 rounded-2xl p-2 flex flex-col items-center border border-white/5"><img src="img/${itm.img}" class="w-10 h-10 mb-1 object-contain"><div class="text-[8px] text-purple-400">⭐${itm.price}</div></div>` : '';
+        return itm ? `<div class="bg-white/5 rounded-2xl p-2 flex flex-col items-center border border-white/5"><img src="img/${itm.img}" class="w-10 h-10 mb-1 object-contain"><div class="text-[8px] text-amber-400">⭐${itm.price}</div></div>` : '';
     }).join('');
 }
 
@@ -607,11 +598,9 @@ function render() {
     tGrid.innerHTML = ''; mGrid.innerHTML = '';
     CASES.forEach((c, idx) => {
         if (c.type === 'tickets') {
-            // ИЗМЕНЕНО: border-green-500/30 -> border-purple-500/30, text-green-500 -> text-purple-400, bg-green-500 -> bg-purple-600
-            tGrid.innerHTML = `<div class="case-card p-6 flex items-center justify-between border-2 border-purple-500/30" onclick="openCase(${idx})"><div class="flex items-center gap-6"><img src="img/${c.img}" class="w-24 h-24 object-contain"><div><div class="orbitron text-lg text-purple-400 font-black uppercase">${c.name}</div></div></div><div class="bg-purple-600 text-white px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2">${c.price} <img src="img/ticket.png" class="w-4 h-4"></div></div>`;
+            tGrid.innerHTML = `<div class="case-card p-6 flex items-center justify-between border-2 border-amber-500/20" onclick="openCase(${idx})"><div class="flex items-center gap-6"><img src="img/${c.img}" class="w-24 h-24 object-contain"><div class="orbitron text-lg text-amber-400 font-black uppercase tracking-wide">${c.name}</div></div><div class="bg-amber-500 text-black px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2">${c.price} <img src="img/ticket.png" class="w-4 h-4"></div></div>`;
         } else {
-            // ИЗМЕНЕНО: text-green-500 -> text-purple-400
-            mGrid.innerHTML += `<div class="case-card p-4 flex flex-col items-center justify-between min-h-[280px]"><div onclick="openCase(${idx})" class="flex flex-col items-center"><img src="img/${c.img}" class="w-28 h-28 mb-2 object-contain"><div class="orbitron text-[10px] text-purple-400 font-black mb-4 uppercase text-center">${c.name}</div></div><div class="w-full flex flex-col gap-2"><button onclick="openCase(${idx})" class="w-full bg-white/5 py-2 rounded-xl text-[12px] font-bold">⭐ ${c.priceStars}</button><button onclick="openCase(${idx})" class="w-full bg-blue-500/10 py-2 rounded-xl text-[12px] font-bold text-blue-400">${c.priceTon} TON</button></div></div>`;
+            mGrid.innerHTML += `<div class="case-card p-4 flex flex-col items-center justify-between min-h-[280px]"><div onclick="openCase(${idx})" class="flex flex-col items-center"><img src="img/${c.img}" class="w-28 h-28 mb-2 object-contain"><div class="orbitron text-[10px] text-amber-400 font-black mb-4 uppercase text-center tracking-wide">${c.name}</div></div><div class="w-full flex flex-col gap-2"><button onclick="openCase(${idx})" class="w-full bg-white/5 py-2 rounded-xl text-[12px] font-bold border border-white/5">⭐ ${c.priceStars}</button><button onclick="openCase(${idx})" class="w-full bg-blue-500/10 py-2 rounded-xl text-[12px] font-bold text-blue-400">${c.priceTon} TON</button></div></div>`;
         }
     });
 }
