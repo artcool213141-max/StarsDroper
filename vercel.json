@@ -6,26 +6,26 @@
       "use": "@vercel/node"
     },
     {
-      "src": "index.html",
+      "src": "*.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
-      "src": "/api/create_stars_pay",
+      "src": "/create_stars_pay",
       "dest": "api/index.js"
     },
     {
-      "src": "/api/crypto-webhook",
+      "src": "/crypto-webhook",
       "dest": "api/index.js"
     },
     {
-      "src": "/api/get_balance/(.*)",
+      "src": "/get_balance/(.*)",
       "dest": "api/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/$1"
     }
   ]
 }
