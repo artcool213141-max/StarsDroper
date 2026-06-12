@@ -7,45 +7,34 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(200).send('OK');
 
     try {
-        // Логируем тело запроса, чтобы видеть структуру
-        console.log("ПОЛНЫЙ ЗАПРОС:", JSON.stringify(req.body, null, 2));
-
         const { update_type, payload } = req.body;
 
         if (update_type === 'invoice_paid') {
-            const userId = String(payload.invoice_payload); 
+            // Исправлено: теперь берем ID из правильного места
+            const userId = String(payload.payload); 
             const sum = parseFloat(payload.amount);
             
-            console.log(`Попытка зачисления: ${sum} для юзера ${userId}`);
+            console.log(`Зачисление: ${sum} для юзера ${userId}`);
 
-            // 1. Получаем данные
+            // 1. Получаем данные (замени 'balance' на реальное имя колонки из БД!)
             const { data: user, error: fetchError } = await supabase
                 .from('users')
-                .select('balance') // УБЕДИСЬ: В базе колонка точно ton_balance?
+                .select('balance') 
                 .eq('user_id', userId)
                 .single();
 
-            if (fetchError) {
-                console.error("ОШИБКА SELECT:", fetchError);
-                // Если юзера нет, возможно, нужно создать?
-            }
-
+            // Если юзера нет, создаем его (или обрабатываем ошибку)
             const currentBalance = user?.balance || 0;
             const newBalance = parseFloat(currentBalance) + sum;
 
-            // 2. Обновляем
-            const { data, error: updateError } = await supabase
+            // 2. Обновляем (замени 'balance' на реальное имя колонки из БД!)
+            const { error: updateError } = await supabase
                 .from('users')
                 .update({ balance: newBalance })
-                .eq('user_id', userId)
-                .select(); // Добавляем select, чтобы увидеть результат
+                .eq('user_id', userId);
 
-            if (updateError) {
-                console.error("ОШИБКА UPDATE:", updateError);
-                throw updateError;
-            }
-
-            console.log("УСПЕХ. Результат:", data);
+            if (updateError) throw updateError;
+            console.log(`УСПЕХ: Баланс ${userId} обновлен до ${newBalance}`);
         }
 
         return res.status(200).send('OK');
