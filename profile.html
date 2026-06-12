@@ -89,7 +89,10 @@
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
                 </button>
             </div>
-            <div class="bg-black/20 border border-white/5 rounded-xl p-3 text-[9px] font-mono break-all text-gray-400 select-all" id="ref-link-display">Загрузка ссылки...</div>
+            <div class="flex gap-2 items-center">
+                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-3 text-[9px] font-mono break-all text-gray-400 select-all overflow-hidden whitespace-nowrap text-ellipsis" id="ref-link-display">Загрузка ссылки...</div>
+                <button onclick="copyRefLink()" class="bg-white/5 border border-white/10 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase text-purple-400 active:bg-purple-500/20 transition-colors">Копировать</button>
+            </div>
         </section>
 
         <section class="glass-card p-6 min-h-[300px]">
@@ -130,7 +133,6 @@
     const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // [ITEMS константа остается без изменений...]
     const ITEMS = {
         "1may.jpg": { name: "1 May Exclusive", price: 100 },
         "2025.jpg": { name: "Happy 2025", price: 500 },
@@ -248,7 +250,6 @@
         }
     }
 
-    // [ handlePromo, openItem, closeModal, sellItem, withdrawToBot остаются без изменений...]
     async function handlePromo() {
         const input = document.getElementById('promo-input');
         const codeText = input.value.trim().toUpperCase();
@@ -349,8 +350,41 @@
     }
 
     function shareInvite() {
-        const url = `https://t.me/StarsDropOfficial_Bot/app?startapp=${userId}`;
+        const url = `https://t.me/StarsDropOfficial_Bot/app?startapp=ref${userId}`;
         tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Забирай ежедневные бонусы и открывай кейсы!`);
+    }
+
+    function copyRefLink() {
+        const linkText = `https://t.me/StarsDropOfficial_Bot/app?startapp=ref${userId}`;
+        
+        // Попытка использовать Telegram WebApp буфер обмена (если поддерживается)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(linkText).then(() => {
+                tg.HapticFeedback.notificationOccurred('success');
+                tg.showAlert("📋 Ссылка скопирована в буфер обмена!");
+            }).catch(() => {
+                fallbackCopy(linkText);
+            });
+        } else {
+            fallbackCopy(linkText);
+        }
+    }
+
+    function fallbackCopy(text) {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        try {
+            document.execCommand('copy');
+            tg.HapticFeedback.notificationOccurred('success');
+            tg.showAlert("📋 Ссылка скопирована!");
+        } catch (err) {
+            tg.showAlert("Не удалось скопировать. Выделите ссылку в поле вручную.");
+        }
+        document.body.removeChild(textArea);
     }
 
     // Stars Background Animation (Теперь фиолетовая)
@@ -387,7 +421,7 @@
         draw(); 
         loadUser(); 
         tg.expand(); 
-        document.getElementById('ref-link-display').innerText = `https://t.me/StarsDropOfficial_Bot/app?startapp=${userId}`;
+        document.getElementById('ref-link-display').innerText = `https://t.me/StarsDropOfficial_Bot/app?startapp=ref${userId}`;
     };
     window.onresize = initStars;
 </script>
