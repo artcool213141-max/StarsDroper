@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarsDrop - Telegram Edition</title>
+    <title>StarsDrop - Gold Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        :root { --accent: #7c3aed; }
+        :root { --accent: #f59e0b; --accent-hover: #d97706; }
         
         * { -webkit-tap-highlight-color: transparent; user-select: none; }
         
@@ -19,7 +19,7 @@
         }
 
         .header-panel { 
-            padding: 12px 20px; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; 
+            padding: 12px 16px; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; 
             padding-top: calc(12px + var(--tg-safe-area-inset-top, 0px));
         }
 
@@ -27,8 +27,8 @@
 
         .wheel-track { 
             position: relative; width: 100%; height: 90px; overflow: hidden; 
-            border-top: 1px solid rgba(124, 58, 237, 0.15); border-bottom: 1px solid rgba(124, 58, 237, 0.15);
-            background: rgba(124, 58, 237, 0.02);
+            border-top: 1px solid rgba(245, 158, 11, 0.15); border-bottom: 1px solid rgba(245, 158, 11, 0.15);
+            background: rgba(245, 158, 11, 0.01);
         }
 
         .pointer { 
@@ -42,22 +42,22 @@
         .item { 
             min-width: 80px; height: 80px; margin: 0 4px; background: rgba(255,255,255,0.03); 
             border-radius: 12px; display: flex; align-items: center; justify-content: center; 
-            border: 1px solid rgba(124, 58, 237, 0.1);
+            border: 1px solid rgba(245, 158, 11, 0.1);
         }
         .item img { width: 55px; height: 55px; object-fit: contain; }
 
         .btn-main { 
-            background: var(--accent); color: white; font-weight: 900; border-radius: 18px; 
-            transition: 0.2s; box-shadow: 0 0 25px rgba(124, 58, 237, 0.3);
+            background: var(--accent); color: #000; font-weight: 900; border-radius: 18px; 
+            transition: 0.2s; box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
         }
         .btn-main:active { transform: scale(0.97); }
         .btn-main:disabled { opacity: 0.3; filter: grayscale(1); }
 
         .multi-btn { background: #111; border: 1px solid #222; padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #555; }
-        .multi-btn.active { border-color: var(--accent); background: #1a0b2e; color: white; }
+        .multi-btn.active { border-color: var(--accent); background: #261a02; color: white; }
 
-        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.92); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
-        .modal-box { background: #0f0f0f; border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; }
+        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.94); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
+        .modal-box { background: #0f0f0f; border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 30px rgba(245, 158, 11, 0.15); }
         
         /* Скрытие полосы прокрутки */
         ::-webkit-scrollbar { display: none; }
@@ -66,7 +66,16 @@
 <body>
 
     <header class="header-panel flex justify-between items-center">
-        <div class="font-black italic text-lg tracking-tighter">STARS<span class="text-[#7c3aed]">DROP</span></div>
+        <div class="flex items-center gap-3">
+            <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#111] border border-[#222] active:scale-90 transition-transform">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </a>
+            <div class="font-black italic text-lg tracking-tighter">STARS<span class="text-[#f59e0b]">DROP</span></div>
+        </div>
+        
         <div class="flex items-center gap-2 bg-[#111] px-4 py-1.5 rounded-full border border-[#222]">
             <img src="img/star.png" class="w-4 h-4" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1828/1828884.png'">
             <span id="val-stars" class="font-black text-sm">0</span>
@@ -83,16 +92,20 @@
             <button onclick="setMulti(4)" class="multi-btn" data-m="4">X4</button>
             <button onclick="setMulti(5)" class="multi-btn" data-m="5">X5</button>
         </div>
-        <button id="spin-btn" onclick="startSpin()" class="w-full py-4 btn-main uppercase tracking-widest text-sm">Загрузка...</button>
+        <button id="spin-btn" onclick="startSpin()" class="w-full py-4 btn-main uppercase tracking-widest text-sm">Подключение...</button>
     </div>
 
     <div id="win-modal">
         <div class="modal-box">
-            <h2 class="text-lg font-black italic uppercase text-purple-400">Вам выпало!</h2>
+            <h2 class="text-xl font-black italic uppercase text-[#f59e0b] tracking-wider">Отличный улов!</h2>
+            <p class="text-[11px] text-gray-400 uppercase font-medium mt-1">Твои награды:</p>
+            
             <div id="win-items-container" class="grid grid-cols-3 gap-2 my-5"></div>
-            <p class="text-[10px] text-gray-500 uppercase font-bold mb-4">Ценность: <span id="total-win-price" class="text-white">0</span> ★</p>
-            <button onclick="claimPrize('sell')" id="sell-btn" class="w-full bg-[#7c3aed] py-4 rounded-xl font-black uppercase text-xs mb-3">Продать всё</button>
-            <button onclick="claimPrize('keep')" id="keep-btn" class="w-full bg-white/5 py-4 rounded-xl font-bold uppercase text-[10px]">В инвентарь</button>
+            
+            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-white text-sm">0</span> ★</p>
+            
+            <button onclick="claimPrize('sell')" id="sell-btn" class="w-full bg-[#f59e0b] text-black py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
+            <button onclick="claimPrize('keep')" id="keep-btn" class="w-full bg-white/5 text-gray-300 py-4 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-white/5 active:bg-white/10">Оставить в рюкзаке</button>
         </div>
     </div>
 
@@ -105,7 +118,6 @@
         tg.expand();
         tg.enableClosingConfirmation();
 
-        // Сюда вставь свой объект ALL_ITEMS (я сократил для веса)
         const ALL_ITEMS = {
             "star.png": { price: 15, img: "star.png" },
             "raketa.png": { price: 50, img: "raketa.png" },
@@ -114,7 +126,6 @@
             "car.png": { price: 5000, img: "car.png" },
             "helmet.png": { price: 25000, img: "helmet.png" },
             "kepka.png": { price: 100000, img: "kepka.png" }
-            // Добавь остальные свои предметы сюда точно так же
         };
 
         const ALL_KEYS = Object.keys(ALL_ITEMS);
@@ -148,13 +159,17 @@
             const btn = document.getElementById('spin-btn');
             
             if (isFree) {
-                btn.innerText = "БЕСПЛАТНЫЙ СПИН";
-                btn.style.background = "#059669"; // Green
+                btn.innerText = "ХАЛЯВНЫЙ СПИН";
+                btn.style.background = "#10b981"; // Энергичный зеленый для бесплатного
+                btn.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.25)";
+                btn.style.color = "#fff";
                 btn.disabled = isSpinning;
             } else {
-                btn.style.background = ""; // Reset to purple
+                btn.style.background = ""; // Возврат к золотому
+                btn.style.boxShadow = "";
+                btn.style.color = "";
                 const cost = 100 * multi;
-                btn.innerText = `КРУТИТЬ ЗА ${cost} ★`;
+                btn.innerText = `ИСПЫТАТЬ УДАЧУ ЗА ${cost} ★`;
                 btn.disabled = isSpinning || (user.stars < cost);
             }
             if (!isSpinning) initWheels();
@@ -163,7 +178,6 @@
         function initWheels() {
             const container = document.getElementById('wheels-container');
             container.innerHTML = '';
-            // Если спин бесплатный, всегда показываем 1 ленту
             const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
             const isFree = (Date.now() - lastFree) > 86400000;
             const displayMulti = isFree ? 1 : multi;
@@ -212,7 +226,6 @@
             const RARE_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price >= 100 && ALL_ITEMS[k].price <= 500); 
             const JUNK_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price < 100);
 
-            // Мгновенно фиксируем результат
             for(let i=0; i<curMulti; i++) {
                 tempStep++;
                 let winKey = (tempStep % 7 === 0) ? RARE_KEYS[Math.floor(Math.random()*RARE_KEYS.length)] : JUNK_KEYS[Math.floor(Math.random()*JUNK_KEYS.length)];
@@ -222,7 +235,6 @@
                 line.querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
             }
 
-            // Записываем в базу
             const upd = isFree ? { last_free_spin: new Date().toISOString(), spin_count: tempStep } 
                                : { stars: user.stars - cost, spin_count: tempStep };
 
@@ -235,7 +247,6 @@
             
             document.getElementById('val-stars').innerText = Math.floor(user.stars);
 
-            // Анимация
             for(let i=0; i<curMulti; i++) {
                 const line = document.getElementById(`line-${i}`);
                 const offset = (130 * 88) - (window.innerWidth / 2) + 44;
@@ -258,7 +269,7 @@
                 container.innerHTML += `
                     <div class="bg-white/5 p-2 rounded-xl border border-white/5">
                         <img src="img/${w.img}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'">
-                        <p class="text-[10px] font-black text-purple-400 mt-1">${w.price}★</p>
+                        <p class="text-[10px] font-black text-[#f59e0b] mt-1">${w.price}★</p>
                     </div>`;
             });
             document.getElementById('total-win-price').innerText = total;
@@ -281,7 +292,7 @@
                 await SB.from('users').update({ inventory: inv }).eq('user_id', user.user_id);
             }
 
-            location.reload(); // Проще всего для чистого сброса стейта в Telegram
+            location.reload();
         }
 
         checkAuth();
