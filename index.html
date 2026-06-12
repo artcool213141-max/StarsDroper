@@ -241,7 +241,13 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
+    const user = tg.initDataUnsafe?.user;
+if (!user) {
+    // Если мы не в Telegram, блокируем интерфейс, иначе ID будет левым
+    document.body.innerHTML = "<h1 style='color:white; text-align:center; margin-top:20px;'>Открой через Telegram!</h1>";
+    throw new Error("No user data");
+}
+const userId = String(user.id);
 
     // ПОДКЛЮЧАЕМ SUPABASE НАПРЯМУЮ
     const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
