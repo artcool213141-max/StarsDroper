@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarDrop Smart Upgrade</title>
+    <title>StarDrop Gold Upgrade</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,7 +11,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
         :root {
-            --accent: #a855f7;
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
             --bg: #0f0f0f;
             --card-bg: rgba(255, 255, 255, 0.03);
         }
@@ -31,18 +32,18 @@
             width: 190px; height: 190px; 
             border-radius: 50%; 
             background: #050505; 
-            border: 2px solid rgba(168, 85, 247, 0.2); 
+            border: 2px solid rgba(245, 158, 11, 0.2); 
             margin: 10px auto; 
             position: relative; 
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 30px rgba(168, 85, 247, 0.1);
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.1);
         }
         
         #wheel-progress { 
             position: absolute; inset: 0; 
             border-radius: 50%; 
             background: conic-gradient(var(--accent) 0deg, transparent 0deg); 
-            opacity: 0.4;
+            opacity: 0.25;
             transition: background 0.5s ease;
         }
 
@@ -63,7 +64,7 @@
             border-radius: 12px; background: rgba(255,255,255,0.02); 
             border: 1px solid transparent; transition: 0.2s;
         }
-        .item-card.active { border-color: var(--accent); background: rgba(168, 85, 247, 0.1); }
+        .item-card.active { border-color: var(--accent); background: rgba(245, 158, 11, 0.08); }
 
         /* Слоты */
         .slot { 
@@ -74,13 +75,13 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: 0.3s;
         }
-        .slot.filled { border-color: rgba(168, 85, 247, 0.4); background: rgba(168, 85, 247, 0.05); }
+        .slot.filled { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.03); }
 
         .btn-main { 
-            background: var(--accent); color: white; 
+            background: var(--accent); color: #000; 
             font-weight: 900; width: 100%; 
             padding: 18px; border-radius: 16px; 
-            box-shadow: 0 4px 20px rgba(168, 85, 247, 0.2); 
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15); 
             transition: 0.3s; 
         }
         .btn-main:disabled { background: #222; color: #555; box-shadow: none; opacity: 0.5; }
@@ -95,8 +96,13 @@
 <body class="p-5">
 
     <div class="flex justify-between items-center mb-4">
-        <button onclick="window.history.back()" class="text-[11px] font-bold opacity-50 uppercase tracking-widest">← Назад</button>
-        <div class="text-[11px] font-black text-purple-500 tracking-widest uppercase">Smart Upgrade</div>
+        <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#111] border border-[#222] active:scale-90 transition-transform">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+        </a>
+        <div class="text-[11px] font-black text-[#f59e0b] tracking-widest uppercase">Модернизация</div>
     </div>
 
     <div class="wheel-container">
@@ -104,17 +110,17 @@
         <div id="pointer-wrapper"><div id="pointer"></div></div>
         <div id="res-msg"></div>
         <div id="center-ui" class="relative z-10 text-center">
-            <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+            <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">
             <div id="view-empty" class="text-5xl font-black opacity-10">?</div>
         </div>
     </div>
 
-    <div id="info-chance" class="text-center text-purple-400 font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите подарок</div>
+    <div id="info-chance" class="text-center text-[#f59e0b] font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите предмет</div>
 
     <div class="grid grid-cols-2 gap-4 mb-5">
         <div class="slot" id="slot-1">
             <img id="img-1" src="" class="w-10 h-10 object-contain hidden">
-            <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Ваш предмет</div>
+            <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Твой предмет</div>
         </div>
         <div class="slot" id="slot-2">
             <img id="img-2" src="" class="w-10 h-10 object-contain hidden">
@@ -124,17 +130,17 @@
 
     <div class="grid grid-cols-2 gap-4">
         <div>
-            <h3 class="text-[10px] font-black uppercase mb-3 opacity-30 text-center tracking-widest">Инвентарь</h3>
+            <h3 class="text-[10px] font-black uppercase mb-3 opacity-30 text-center tracking-widest">Твой рюкзак</h3>
             <div id="mine-list" class="scroll-area"></div>
         </div>
         <div>
-            <h3 class="text-[10px] font-black uppercase mb-3 text-purple-500 text-center tracking-widest">Доступно</h3>
+            <h3 class="text-[10px] font-black uppercase mb-3 text-[#f59e0b] text-center tracking-widest">Доступно</h3>
             <div id="target-list" class="scroll-area"></div>
         </div>
     </div>
 
     <div class="fixed bottom-6 left-5 right-5">
-        <button id="upg-btn" onclick="startUpgrade()" class="btn-main uppercase" disabled>Начать апгрейд</button>
+        <button id="upg-btn" onclick="startUpgrade()" class="btn-main uppercase tracking-wider text-xs" disabled>Запустить улучшение</button>
     </div>
 
 <script>
@@ -144,7 +150,6 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const userId = tg.initDataUnsafe?.user?.id || 8015661230;
 
-    // Данные предметов (без изменений)
     const ITEMS_DATA = {
         "1may.jpg": { name: "1 May", price: 100 }, "2025.jpg": { name: "2025", price: 500 },
         "bear.png": { name: "Bear", price: 3500 }, "book.jpg": { name: "Book", price: 1000 },
@@ -183,7 +188,7 @@
         if (!error && data?.inventory) {
             userInventory = Array.isArray(data.inventory) ? data.inventory : [];
         }
-        document.getElementById('info-chance').innerText = userInventory.length > 0 ? "Выбери свой предмет" : "Инвентарь пуст";
+        document.getElementById('info-chance').innerText = userInventory.length > 0 ? "ВЫБЕРИ СВОЙ ПРЕДМЕТ" : "РЮКЗАК ПУСТ";
         render();
     }
 
@@ -214,7 +219,7 @@
                     <img src="img/${file}" class="w-8 h-8 object-contain">
                     <div class="overflow-hidden">
                         <div class="text-[9px] font-black truncate uppercase">${info.name}</div>
-                        <div class="text-[7px] text-purple-400 font-bold">${info.price} ⭐</div>
+                        <div class="text-[7px] text-[#f59e0b] font-bold">${info.price} ⭐</div>
                     </div>
                 </div>`).join('');
     }
@@ -253,13 +258,13 @@
         if(s1 && s2) {
             let chance = (s1.price / s2.price) * 100 * 0.8;
             chance = Math.min(chance, 85);
-            info.innerText = `Шанс на успех: ${chance.toFixed(1)}%`;
-            wheel.style.background = `conic-gradient(#a855f7 ${chance * 3.6}deg, transparent 0deg)`;
+            info.innerText = `ШАНС НА УСПЕХ: ${chance.toFixed(1)}%`;
+            wheel.style.background = `conic-gradient(#f59e0b ${chance * 3.6}deg, transparent 0deg)`;
             btn.disabled = false;
         } else {
             btn.disabled = true;
-            wheel.style.background = `conic-gradient(#a855f7 0deg, transparent 0deg)`;
-            info.innerText = s1 ? "Выбери цель апгрейда" : "Выбери свой предмет";
+            wheel.style.background = `conic-gradient(#f59e0b 0deg, transparent 0deg)`;
+            info.innerText = s1 ? "ВЫБЕРИ ЦЕЛЬ УЛУЧШЕНИЯ" : "ВЫБЕРИ СВОЙ ПРЕДМЕТ";
         }
     }
 
@@ -286,11 +291,11 @@
 
             let newInv = [...userInventory];
             if (isWin) {
-                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#a855f7";
+                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#f59e0b";
                 newInv[s1.idx] = { img: s2.img, name: s2.name };
                 tg.HapticFeedback.notificationOccurred('success');
             } else {
-                resMsg.innerText = "ПРОВАЛ"; resMsg.style.color = "#ef4444";
+                resMsg.innerText = "СЛОМАЛСЯ"; resMsg.style.color = "#ef4444";
                 newInv.splice(s1.idx, 1);
                 tg.HapticFeedback.notificationOccurred('error');
             }
