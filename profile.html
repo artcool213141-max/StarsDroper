@@ -38,9 +38,50 @@
         .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
         
         #item-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
-        .dock-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 10, 2, 0.96); border-top: 1px solid rgba(245, 176, 37, 0.18); display: flex; padding: 15px 10px 40px; z-index: 1000; }
-        .dock-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; color: #736b5d; font-size: 10px; font-weight: bold; text-decoration: none; transition: 0.3s; }
-        .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 8px var(--accent-gold)); }
+        
+        /* ОБНОВЛЕННЫЙ ТУЛБАР */
+        .dock-bar { 
+            position: fixed; 
+            bottom: 0; 
+            left: 0; 
+            right: 0; 
+            background: linear-gradient(to top, rgba(10, 6, 1, 0.98) 80%, rgba(25, 19, 6, 0.95));
+            border-top: 1px solid rgba(245, 176, 37, 0.25); 
+            display: flex; 
+            justify-content: space-around;
+            padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 24px)); 
+            z-index: 1000; 
+            backdrop-filter: blur(10px);
+        }
+        .dock-btn { 
+            flex: 1; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center;
+            gap: 5px; 
+            color: #8c8375; 
+            text-decoration: none; 
+            transition: all 0.2s ease;
+        }
+        .dock-btn span {
+            font-size: 11px; 
+            font-weight: 700;
+            letter-spacing: 0.03em;
+        }
+        .dock-btn svg {
+            width: 26px;
+            height: 26px;
+            transition: transform 0.2s ease;
+            fill: currentColor;
+        }
+        .dock-btn:active svg {
+            transform: scale(0.9);
+        }
+        .dock-btn.active { 
+            color: var(--accent-gold); 
+            filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); 
+        }
     </style>
 </head>
 <body>
@@ -118,8 +159,30 @@
     </div>
 
     <nav class="dock-bar">
-        <a href="index.html" class="dock-btn">🏠 <span>Главная</span></a>
-        <div class="dock-btn active">👤 <span>Профиль</span></div>
+        <a href="index.html" class="dock-btn">
+            <svg viewBox="0 0 24 24">
+                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+            </svg>
+            <span>Главная</span>
+        </a>
+        <a href="cases.html" class="dock-btn">
+            <svg viewBox="0 0 24 24">
+                <path d="M22 9h-4.79l-4.38-6.56c-.19-.28-.51-.44-.83-.44s-.64.16-.83.43L6.79 9H2c-.55 0-1 .45-1 1v3c0 .55.45 1 1 1h1v6c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2v-6h1c.55 0 1-.45 1-1v-3c0-.55-.45-1-1-1zm-10-5.25L15.5 9h-7L12 3.75zM19 20H5v-6h14v6z"/>
+            </svg>
+            <span>Кейсы</span>
+        </a>
+        <a href="friends.html" class="dock-btn">
+            <svg viewBox="0 0 24 24">
+                <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 1.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+            </svg>
+            <span>Друзья</span>
+        </a>
+        <div class="dock-btn active">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            </svg>
+            <span>Профиль</span>
+        </div>
     </nav>
 
 <script>
