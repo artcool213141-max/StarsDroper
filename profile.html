@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarsDrop - Profile</title>
+    <title>StarsDrop - Профиль</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -55,9 +55,9 @@
             <h2 id="u-name" class="orbitron text-2xl font-black italic mt-4 tracking-tighter text-white">ЗАГРУЗКА...</h2>
             
             <div class="flex flex-wrap justify-center gap-2 mt-4">
-                <div class="bg-black/40 border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2">
+                <div class="bg-[#d4af37]/20 border border-[#d4af37]/40 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[0_0_10px_rgba(212,175,55,0.2)]">
                     <img src="img/star.png" class="w-4 h-4">
-                    <span id="u-stars" class="text-xs font-black text-yellow-400">0</span>
+                    <span id="u-stars" class="text-xs font-black text-[#d4af37]">0</span>
                 </div>
                 <div class="bg-black/40 border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2">
                     <img src="img/ton.png" class="w-4 h-4">
@@ -74,7 +74,7 @@
         <section class="glass-card p-6 mb-6">
             <h3 class="text-[10px] font-black uppercase text-purple-400 tracking-widest mb-4">Активация бонуса</h3>
             <div class="flex gap-2">
-                <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-purple-500/50" placeholder="ПРОМОКОД">
+                <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-purple-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
                 <button onclick="handlePromo()" class="btn-purple px-6 text-[10px]">ОК</button>
             </div>
         </section>
@@ -82,7 +82,7 @@
         <section class="glass-card p-6 mb-6 border-purple-400/10">
             <div class="flex justify-between items-start mb-4">
                 <div>
-                    <h3 class="text-[10px] font-black uppercase text-purple-400 tracking-widest">Партнерка</h3>
+                    <h3 class="text-[10px] font-black uppercase text-purple-400 tracking-widest">Реферальная система</h3>
                     <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
                 </div>
                 <button onclick="shareInvite()" class="bg-purple-500 text-white p-2 rounded-lg active:scale-90 transition-transform shadow-[0_0_15px_rgba(168,85,247,0.4)]">
@@ -90,14 +90,14 @@
                 </button>
             </div>
             <div class="flex gap-2 items-center">
-                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-3 text-[9px] font-mono break-all text-gray-400 select-all overflow-hidden whitespace-nowrap text-ellipsis" id="ref-link-display">Загрузка ссылки...</div>
+                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-3 text-[9px] font-mono break-all text-gray-400 select-all overflow-hidden whitespace-nowrap text-ellipsis" id="ref-link-display">Генерация ссылки...</div>
                 <button onclick="copyRefLink()" class="bg-white/5 border border-white/10 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase text-purple-400 active:bg-purple-500/20 transition-colors">Копировать</button>
             </div>
         </section>
 
         <section class="glass-card p-6 min-h-[300px]">
             <div class="flex justify-between items-center mb-6">
-                <h3 class="orbitron text-xs font-black uppercase italic">Инвентарь</h3>
+                <h3 class="orbitron text-xs font-black uppercase italic">Ваш инвентарь</h3>
                 <span id="inv-count" class="text-[9px] font-black text-purple-400 bg-purple-500/10 px-3 py-1 rounded-full">0 ПРЕДМЕТОВ</span>
             </div>
             <div id="grid" class="inventory-grid"></div>
@@ -108,7 +108,7 @@
         <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-purple-500/30">
             <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">
             <h2 id="modal-name" class="orbitron text-xl font-black italic mb-1 uppercase text-white"></h2>
-            <p class="text-purple-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Premium Drop</p>
+            <p class="text-purple-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Лимитированный дроп</p>
             <div class="flex flex-col gap-3">
                 <button onclick="withdrawToBot()" class="w-full btn-purple py-4 text-xs">ВЫВЕСТИ В БОТ</button>
                 <button id="sell-btn" onclick="sellItem()" class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-white/10">ПРОДАТЬ</button>
@@ -202,7 +202,7 @@
     async function loadUser() {
         try {
             tg.ready();
-            const firstName = tg.initDataUnsafe?.user?.first_name || "PLAYER";
+            const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
             const photoUrl = tg.initDataUnsafe?.user?.photo_url;
             document.getElementById('u-name').innerText = firstName.toUpperCase();
             
@@ -256,12 +256,12 @@
         if (!codeText || !user) return;
         const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
         if (usedCodes.includes(codeText)) {
-            tg.showAlert("❌ ВЫ УЖЕ ИСПОЛЬЗОВАЛИ ЭТОТ КОД");
+            tg.showAlert("❌ Вы уже использовали этот промокод");
             return;
         }
         const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).single();
-        if (!promo) { tg.showAlert("🛑 КОД НЕ НАЙДЕН"); return; }
-        if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ КОД БОЛЬШЕ НЕ РАБОТАЕТ"); return; }
+        if (!promo) { tg.showAlert("🛑 Промокод не найден"); return; }
+        if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
         const upd = {
             stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
             balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
@@ -271,7 +271,7 @@
         const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
         if (!updErr) {
             await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
-            tg.showAlert("✅ БОНУС АКТИВИРОВАН!");
+            tg.showAlert("✅ Бонус успешно активирован!");
             input.value = '';
             loadUser();
         }
@@ -315,10 +315,10 @@
         const priceVerification = 150;
         if (!user.is_paid_75) {
             if ((user.stars || 0) < priceVerification) {
-                tg.showAlert(`🛑 НУЖНА ВЕРИФИКАЦИЯ\nЦена: ${priceVerification} ⭐`);
+                tg.showAlert(`🛑 ТРЕБУЕТСЯ ВЕРИФИКАЦИЯ\nСтоимость: ${priceVerification} ⭐`);
                 return;
             }
-            tg.showConfirm(`Списать ${priceVerification} Stars для верификации вывода?`, async (ok) => {
+            tg.showConfirm(`Списать ${priceVerification} Stars для верификации вывода предметов?`, async (ok) => {
                 if (ok) {
                     await _supabase.from('users').update({ 
                         stars: user.stars - priceVerification, 
@@ -342,11 +342,11 @@
                 let newInv = [...user.inventory];
                 newInv.splice(selectedIdx, 1);
                 await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
-                tg.showAlert("✅ ЗАЯВКА ОТПРАВЛЕНА АДМИНУ!");
+                tg.showAlert("✅ Заявка на вывод успешно отправлена администратору!");
                 closeModal(); 
                 loadUser();
             }
-        } catch(e) { tg.showAlert("Ошибка сети"); }
+        } catch(e) { tg.showAlert("Ошибка соединения с сетью"); }
     }
 
     function shareInvite() {
@@ -357,7 +357,6 @@
     function copyRefLink() {
         const linkText = `https://t.me/StarsDropOfficial_Bot/app?startapp=ref${userId}`;
         
-        // Попытка использовать Telegram WebApp буфер обмена (если поддерживается)
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(linkText).then(() => {
                 tg.HapticFeedback.notificationOccurred('success');
@@ -382,12 +381,12 @@
             tg.HapticFeedback.notificationOccurred('success');
             tg.showAlert("📋 Ссылка скопирована!");
         } catch (err) {
-            tg.showAlert("Не удалось скопировать. Выделите ссылку в поле вручную.");
+            tg.showAlert("Не удалось скопировать автоматически. Выделите ссылку вручную.");
         }
         document.body.removeChild(textArea);
     }
 
-    // Stars Background Animation (Теперь фиолетовая)
+    // Stars Background Animation (Фиолетовая)
     const canvas = document.getElementById('stars-canvas');
     const ctx = canvas.getContext('2d');
     let stars = [];
@@ -404,7 +403,7 @@
     }
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#a855f7"; // Фиолетовые частицы
+        ctx.fillStyle = "#a855f7"; 
         stars.forEach(s => {
             ctx.globalAlpha = s.a; 
             ctx.beginPath(); 
