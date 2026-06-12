@@ -401,12 +401,12 @@
     }
 
     function shareInvite() {
-        const url = `https://t.me/NowearSpinOfficial_Bot/app?startapp=ref${userId}`;
+        const url = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
         tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Забирай ежедневные бонусы и открывай кейсы!`);
     }
 
     function copyRefLink() {
-        const linkText = `https://t.me/NowearSpinOfficial_Bot/app?startapp=ref${userId}`;
+        const linkText = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
         
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(linkText).then(() => {
@@ -471,7 +471,7 @@
         draw(); 
         loadUser(); 
         tg.expand(); 
-        document.getElementById('ref-link-display').innerText = `https://t.me/NowearSpinOfficial_Bot/app?startapp=ref${userId}`;
+        document.getElementById('ref-link-display').innerText = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
     };
     window.onresize = initStars;
 </script>
