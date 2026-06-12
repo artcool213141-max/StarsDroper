@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarDrop Plinko Final</title>
+    <title>NowearSpin Plinko Final</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
-        :root { --accent: #a855f7; --bg: #0f0f0f; }
+        :root { --accent: #d4af37; --bg: #0d0a05; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         
         #plinko-container { 
@@ -20,12 +20,12 @@
             margin-top: 10px;
         }
         .star-logo {
-    width: 20px;       /* Ширина картинки */
-    height: 20px;      /* Высота картинки */
-    object-fit: contain;
-    display: inline-block;
-    vertical-align: middle; /* Выравнивание по центру текста */
-}
+            width: 20px;       /* Ширина картинки */
+            height: 20px;      /* Высота картинки */
+            object-fit: contain;
+            display: inline-block;
+            vertical-align: middle; /* Выравнивание по центру текста */
+        }
         canvas { display: block; margin: 0 auto; max-width: 100%; height: 100% !important; }
 
         .multiplier-bar { 
@@ -33,21 +33,28 @@
             padding: 0 5px; position: absolute; bottom: 0; width: 100%; z-index: 10;
         }
         .x-badge { 
-            flex: 1; margin: 0 2px; height: 26px; background: var(--accent); 
+            flex: 1; margin: 0 2px; height: 26px; background: var(--accent); color: #0d0a05;
             border-radius: 4px; font-size: 10px; font-weight: 900;
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 12px rgba(168, 85, 247, 0.5);
+            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
         }
-        .btn-bet { background: var(--accent); color: white; font-weight: 900; border-radius: 16px; padding: 18px; width: 100%; transition: 0.2s; box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4); }
+        .btn-bet { background: var(--accent); color: #0d0a05; font-weight: 900; border-radius: 16px; padding: 18px; width: 100%; transition: 0.2s; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); }
         .btn-bet:active { transform: scale(0.96); }
     </style>
 </head>
 <body class="p-4">
 
     <div class="flex justify-between items-center h-[50px]">
-        <div class="font-black text-xl tracking-tighter uppercase">Stars<span class="text-purple-500">Plinko</span></div>
+        <div class="flex items-center gap-3">
+            <div onclick="location.href='games.html'" class="cursor-pointer text-[#d4af37] hover:text-white transition-colors flex items-center justify-center p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </div>
+            <div class="font-black text-xl tracking-tighter uppercase">Nowear<span class="text-[#d4af37]">Plinko</span></div>
+        </div>
         <div class="bg-white/5 px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
-            <span id="balance" class="font-bold text-purple-400 text-lg">0</span>
+            <span id="balance" class="font-bold text-[#d4af37] text-lg">0</span>
             <img src="img/star.png" class="star-logo" alt="star">
         </div>
     </div>
@@ -55,7 +62,7 @@
     <div id="plinko-container">
         <div class="multiplier-bar">
             <div class="x-badge">5X</div>
-            <div class="x-badge" style="background: #3b0764; opacity: 0.8;">0.2X</div>
+            <div class="x-badge" style="background: #3a2e0b; color: #fff; opacity: 0.8;">0.2X</div>
             <div class="x-badge">2X</div>
             <div class="x-badge">1.2X</div>
             <div class="x-badge">1X</div>
@@ -66,11 +73,11 @@
         </div>
     </div>
 
-    <div class="mt-auto bg-[#111] p-5 rounded-3xl border border-white/5 space-y-5">
+    <div class="mt-auto bg-[#141006] p-5 rounded-3xl border border-white/5 space-y-5">
         <div class="grid grid-cols-3 gap-3">
             <div class="text-center bg-white/5 p-2 rounded-xl border border-white/5">
                 <p class="text-[9px] opacity-40 uppercase mb-1">Ставка</p>
-                <input id="bet-input" type="number" value="10" class="bg-transparent w-full text-center font-black text-purple-400 outline-none">
+                <input id="bet-input" type="number" value="10" class="bg-transparent w-full text-center font-black text-[#d4af37] outline-none">
             </div>
             <div class="text-center bg-white/5 p-2 rounded-xl border border-white/5">
                 <p class="text-[9px] opacity-40 uppercase mb-1">Риск</p>
@@ -125,7 +132,7 @@
             const y = 60 + i * 42;
             Composite.add(engine.world, Bodies.circle(x, y, 3.5, { 
                 isStatic: true, 
-                render: { fillStyle: '#444' } 
+                render: { fillStyle: '#4a3b14' } 
             }));
         }
     }
@@ -172,7 +179,7 @@
             restitution: 0.5,
             friction: 0.02,
             frictionAir: 0.04, // Плавность полета
-            render: { fillStyle: '#a855f7', strokeStyle: '#fff', lineWidth: 2 },
+            render: { fillStyle: '#d4af37', strokeStyle: '#fff', lineWidth: 2 },
             label: 'ball',
             betAmount: bet
         });
