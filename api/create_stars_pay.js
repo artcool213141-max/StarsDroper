@@ -1,8 +1,10 @@
 export default async function handler(req, res) {
-    if (req.method !== 'POST') return res.status(405).send('Method not allowed');
+    // Явно разрешаем POST
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: "Method not allowed, use POST" });
+    }
     
     const { user_id, amount } = req.body;
-    // Используем process.env.BOT_TOKEN, который ты добавил в Vercel
     const url = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`;
     
     try {
@@ -12,17 +14,18 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 title: "Пополнение баланса",
                 description: `Пополнение на ${amount} звёзд`,
-                payload: String(user_id), 
-                currency: "XTR", 
+                payload: String(user_id),
+                currency: "XTR",
                 prices: [{ label: "Звёзды", amount: Number(amount) }]
             })
         });
         
         const data = await response.json();
+        
         if (data.ok) {
+            // Возвращаем именно объект, как ожидает фронтенд
             return res.status(200).json({ pay_url: data.result });
         } else {
-            console.error("Ошибка API Telegram:", data);
             return res.status(400).json({ error: data.description });
         }
     } catch (e) {
