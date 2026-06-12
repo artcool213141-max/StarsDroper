@@ -256,7 +256,6 @@ const userId = String(user.id);
     // Синхронизация баланса через Supabase напрямую
 async function syncData() {
     try {
-        console.log("Запрос данных для ID:", userId);
         const { data, error } = await _supabase
             .from('users')
             .select('*')
@@ -264,14 +263,21 @@ async function syncData() {
             .single();
 
         if (error) {
-            console.error("ОШИБКА SUPABASE:", error.message); // <-- ЭТА СТРОКА ПОКАЖЕТ, ЧТО НЕ ТАК
+            console.error("Ошибка Supabase (проверь Policies!):", error);
             return;
         }
 
         if (data) {
-            document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
-            document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
-            document.getElementById('bal-tickets').innerText = Math.floor(data.tickets || 0);
+            // Теперь используем твои названия колонок
+            const tonVal = data.balance || 0;      
+            const starsVal = data.stars || 0;      
+            const ticketsVal = data.tickets || 0; 
+            
+            document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
+            document.getElementById('bal-stars').innerText = Math.floor(starsVal);
+            document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
+            
+            console.log("Данные загружены:", data);
         }
     } catch (e) { 
         console.error("Критическая ошибка:", e); 
