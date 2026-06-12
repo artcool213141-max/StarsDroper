@@ -245,25 +245,30 @@
     const user = tg.initDataUnsafe?.user;
     let isProcessing = false;
 
-    // Синхронизация баланса
+    // Синхронизация баланса (Исправлено под твою структуру БД: balance, stars, ticket)
     async function syncData() {
         if (!user) return;
         try {
             const res = await fetch(`${BACKEND_URL}/get_balance/${user.id}?t=${Date.now()}`);
-            if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error("Ошибка ответа сервера");
             const data = await res.json();
             
-            const tonVal = data.balance || 0;     
-            const starsVal = data.stars || 0;     
-            const ticketsVal = data.tickets || 0; 
+            console.log("Полученные данные из БД через бэкенд:", data);
             
+            // Получаем поля из ответа бэкенда. Если полей нет или они NULL — берём 0.
+            // Проверяем как 'ticket' (из твоей БД), так и 'tickets' на случай, если бэкенд переименовывает его при отдаче.
+            const tonVal = (data.balance !== undefined && data.balance !== null) ? data.balance : 0;     
+            const starsVal = (data.stars !== undefined && data.stars !== null) ? data.stars : 0;     
+            const ticketsVal = (data.ticket !== undefined && data.ticket !== null) ? data.ticket : (data.tickets || 0); 
+            
+            // Обновляем текст на UI, форматируя TON до сотых, а звезды и тикеты до целого числа
             document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-            document.getElementById('bal-stars').innerText = Math.floor(starsVal);
-            document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
+            document.getElementById('bal-stars').innerText = Math.floor(Number(starsVal));
+            document.getElementById('bal-tickets').innerText = Math.floor(Number(ticketsVal));
             
-            console.log("Балансы обновлены:", {tonVal, starsVal, ticketsVal});
+            console.log("Балансы успешно обновлены на экране:", {tonVal, starsVal, ticketsVal});
         } catch (e) { 
-            console.warn("Ошибка синхронизации баланса"); 
+            console.warn("Ошибка синхронизации баланса:", e); 
         }
     }
 
