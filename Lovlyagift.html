@@ -7,9 +7,9 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --primary: #00ff41;
+            --primary: #ffe600; /* Сочный желтый вместо зеленого */
             --danger: #ff4444;
-            --bg-dark: #040d04;
+            --bg-dark: #0f0e01; /* Темный фон с легким желтым отливом */
         }
         body { 
             margin: 0; 
@@ -23,7 +23,7 @@
             position: relative; 
             width: 100vw; 
             height: 100vh; 
-            background: radial-gradient(circle at center, #0a1a0a 0%, #000 100%);
+            background: radial-gradient(circle at center, #242101 0%, #000 100%); /* Темно-золотой градиент */
         }
         
         .ui-panel { 
@@ -43,17 +43,22 @@
             background: rgba(0,0,0,0.6); 
             padding: 8px 15px; 
             border-radius: 15px; 
-            border: 1px solid rgba(0,255,65,0.3);
-            box-shadow: 0 0 15px rgba(0,255,65,0.1);
+            border: 1px solid rgba(255,230,0,0.3); /* Желтая рамка */
+            box-shadow: 0 0 15px rgba(255,230,0,0.15); /* Желтый неон */
         }
         #pause-btn { 
             background: rgba(255,255,255,0.05); 
-            border: 1px solid rgba(255,255,255,0.1); 
+            border: 1px solid rgba(255,230,0,0.2); /* Легкий желтый контур */
             color: white; 
             padding: 8px 15px; 
             border-radius: 12px; 
             cursor: pointer;
             backdrop-filter: blur(5px);
+            transition: 0.2s;
+        }
+        #pause-btn:active {
+            background: var(--primary);
+            color: black;
         }
 
         #danger-zone {
@@ -80,7 +85,7 @@
         .modal { 
             position: fixed; 
             inset: 0; 
-            background: rgba(0,0,0,0.9); 
+            background: rgba(0,0,0,0.92); 
             display: none; 
             flex-direction: column; 
             align-items: center; 
@@ -102,7 +107,7 @@
             text-transform: uppercase;
             transition: 0.3s;
         }
-        .btn-green { background: var(--primary); color: black; box-shadow: 0 0 25px rgba(0,255,65,0.4); }
+        .btn-green { background: var(--primary); color: black; box-shadow: 0 0 25px rgba(255,230,0,0.4); } /* Желтая неоновая кнопка */
         .btn-exit { background: #111; color: white; border: 1px solid #333; }
         
         .item-star { filter: drop-shadow(0 0 15px #ffd700); }
@@ -139,12 +144,8 @@
     const giftLabel = document.getElementById('gift-count');
     const starLabel = document.getElementById('star-count');
 
-    // --- СЕКРЕТКИ И НАСТРОЙКИ ---
-    // ВАЖНО: В HTML мы не можем скрыть URL бэкенда, 
-    // поэтому просто выносим его в константу для удобства.
     const BACKEND_URL = window.location.origin + '/api'; 
     const user = tg.initDataUnsafe?.user;
-    // ----------------------------
 
     let giftsCollected = 0;
     let starsEarned = 0;
@@ -172,7 +173,6 @@
         return window.location.origin + '/' + fileName;
     }
 
-    // Загрузка начальных звезд из localStorage
     function initStars() {
         const savedStars = localStorage.getItem('user_stars') || "0";
         starLabel.innerText = savedStars;
@@ -200,7 +200,6 @@
         }
 
         item.setAttribute('data-type', type);
-        // ИСПРАВЛЕНО: Путь теперь без "img/"
         item.innerHTML = `<img src="${getAssetUrl(imgName)}" onerror="this.src='star.png'">`;
         
         item.style.left = Math.random() * (window.innerWidth - 75) + 'px';
@@ -295,10 +294,9 @@
         const exitBtn = document.getElementById('exit-btn');
         if (exitBtn) exitBtn.innerText = "СОХРАНЕНИЕ...";
 
-        // Данные уже в localStorage через handleHit, здесь можно просто выйти или сделать финальный синк
         if (user?.id && starsEarned > 0) {
             try {
-                await fetch(`${BACKEND_URL}/sync`, { // Изменил на /sync как в кликере
+                await fetch(`${BACKEND_URL}/sync`, { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
