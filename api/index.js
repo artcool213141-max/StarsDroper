@@ -14,12 +14,15 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// ЖЕСТКО ВШИВАЕМ ТВОЙ ТОКЕН КРИПТОБОТА
+const MY_CRYPTO_BOT_TOKEN = '595078:AARWA1nRE3vG9cCqQZclg8DgCJuga0msN9w';
+
 // --- 1. РОУТ ДЛЯ ПОЛУЧЕНИЯ БАЛАНСА (БЕЗ НЕГО ВСЁ ВИСИТ НА ЗАГРУЗКЕ) ---
 app.get('/get_balance/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
         
-        // Запрос в Supabase. Убедись, что таблица называется именно 'users' (или поменяй название)
+        // Запрос в Supabase
         const { data, error } = await supabase
             .from('users')
             .select('balance, stars, tickets')
@@ -103,13 +106,9 @@ app.post('/crypto-webhook', async (req, res) => {
 app.post('/create_crypto_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     
-    if (!process.env.CRYPTO_BOT_TOKEN) {
-        return res.status(500).json({ error: "Config error: CRYPTO_BOT_TOKEN missing" });
-    }
-    
     try {
-        // Стучимся в API Криптобота
-        const cryptoUrl = `https://pay.crypton.sh/api/createInvoice`; // Для продакшена. Если тестнет, то testnet-pay.crypton.sh
+        // Стучимся в обновленный эндпоинт API Криптобота
+        const cryptoUrl = `https://pay.crypton.me/api/createInvoice`; 
         
         const response = await axios.post(cryptoUrl, {
             asset: "TON",                    // Валюта — строго TON
@@ -119,15 +118,15 @@ app.post('/create_crypto_pay', async (req, res) => {
             allow_comments: false,
             allow_anonymous: false
         }, {
-            headers: { 'Crypto-Pay-API-Token': process.env.CRYPTO_BOT_TOKEN },
+            headers: { 'Crypto-Pay-API-Token': MY_CRYPTO_BOT_TOKEN },
             timeout: 5000
         });
 
         if (response.data && response.data.ok) {
-            // Возвращаем фронтенду ссылку на оплату (bot_invoice_url)
-            return res.json({ pay_url: response.data.result.bot_invoice_url });
+            // Возвращаем фронтенду правильную прямую ссылку на оплату pay_url
+            return res.json({ pay_url: response.data.result.pay_url });
         } else {
-            return res.status(400).json({ error: response.data.error || "CryptoBot error" });
+            return res.status(400).json({ error: response.data.error?.name || "CryptoBot error" });
         }
     } catch (e) {
         console.error("Crypto Pay Invoice Error:", e.response?.data || e.message);
