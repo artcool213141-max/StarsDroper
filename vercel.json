@@ -1,9 +1,31 @@
 {
   "version": 2,
+  "builds": [
+    {
+      "src": "api/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
   "routes": [
-    { "src": "/create_stars_pay", "dest": "api/index.js" },
-    { "src": "/crypto-webhook", "dest": "api/index.js" },
-    { "src": "/get_balance/(.*)", "dest": "api/index.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    {
+      "src": "/api/create_stars_pay",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/api/crypto-webhook",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/api/get_balance/(.*)",
+      "dest": "api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
   ]
 }
