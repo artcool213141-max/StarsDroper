@@ -99,6 +99,15 @@
         .btn-main:disabled { filter: grayscale(1); opacity: 0.3; box-shadow: none; }
 
         input#input-bet { color: var(--accent); }
+
+        /* Стили для иконок валют */
+        .currency-logo {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+            display: inline-block;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
@@ -112,9 +121,15 @@
             </div>
             <div class="font-black text-[#d4af37] text-2xl italic tracking-tighter cursor-pointer uppercase" onclick="location.href='games.html'">Nowear<span class="text-white">Spin</span></div>
         </div>
-        <div class="flex gap-8 font-bold text-amber-100">
-            <div class="flex items-center gap-2">⭐ <span id="val-stars">0</span></div>
-            <div class="flex items-center gap-2">💎 <span id="val-ton">0.00</span></div>
+        <div class="flex gap-6 font-bold text-amber-100">
+            <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+                <span id="val-stars">0</span>
+                <img src="img/star.png" class="currency-logo" alt="star">
+            </div>
+            <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
+                <span id="val-ton">0.00</span>
+                <img src="img/ton.png" class="currency-logo" alt="ton">
+            </div>
         </div>
     </header>
 
@@ -137,7 +152,6 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    // ЗАМЕНИ НА СВОЙ ANON KEY ИЗ SUPABASE (начинается на eyJ...)
     const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co"; 
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo"; 
     const SB = supabase.createClient(SB_URL, SB_KEY);
@@ -147,14 +161,12 @@
     let crashPoint = 2.00;
 
     async function checkAuth() {
-        // Берем ID напрямую из ТГ, если локалсторадж подводит
         const saved = localStorage.getItem('nowearspin_user');
         if (saved) {
             currentUser = JSON.parse(saved);
         } else if (tg.initDataUnsafe?.user) {
             currentUser = { user_id: tg.initDataUnsafe.user.id };
         } else {
-            // Если совсем глухо - не вылетаем сразу, даем шанс
             currentUser = { user_id: 12345 }; 
         }
         syncBalances();
@@ -250,7 +262,6 @@
             document.getElementById('btn-main').innerText = "ВЗЯТО!";
             document.getElementById('btn-main').disabled = true;
             tg.HapticFeedback.notificationOccurred('success');
-            // Здесь добавь логику SB.from('users').update...
         }
     }
 
