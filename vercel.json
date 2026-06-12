@@ -10,10 +10,6 @@
       "use": "@vercel/static"
     },
     {
-      "src": "img/**",
-      "use": "@vercel/static"
-    },
-    {
       "src": "*.png",
       "use": "@vercel/static"
     }
@@ -32,8 +28,20 @@
       "dest": "api/index.js"
     },
     {
+      "src": "/img/star.png",
+      "dest": "/star.png"
+    },
+    {
+      "src": "/img/ton.png",
+      "dest": "/ton.png"
+    },
+    {
+      "src": "/img/case3.png",
+      "dest": "/case3.png"
+    },
+    {
       "src": "/img/(.*)",
-      "dest": "/img/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*\\.html)",
