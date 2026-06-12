@@ -12,8 +12,8 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// --- 1. ОПТИМИЗИРОВАННАЯ ОПЛАТА ЗВЕЗДАМИ ---
-app.post('/api/create_stars_pay', async (req, res) => {
+// ТАК КАК ФАЙЛ В ПАПКЕ API, ТУТ ДОЛЖЕН БЫТЬ ПРОСТО ПУТЬ '/' ИЛИ ДЛЯ КОНКРЕТНОГО ДЕЙСТВИЯ
+app.post('/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     
     if (!process.env.BOT_TOKEN) {
@@ -43,8 +43,7 @@ app.post('/api/create_stars_pay', async (req, res) => {
     }
 });
 
-// --- 2. КРИПТО-ВЕБХУК ---
-app.post('/api/crypto-webhook', async (req, res) => {
+app.post('/crypto-webhook', async (req, res) => {
     try {
         const { status, payload, amount } = req.body;
 
@@ -65,4 +64,5 @@ app.post('/api/crypto-webhook', async (req, res) => {
     return res.status(200).send('OK');
 });
 
+// ОБЯЗАТЕЛЬНО ДЛЯ ВЕРСЕЛЬ: ЭКСПОРТИРУЕМ ПРИЛОЖЕНИЕ
 module.exports = app;
