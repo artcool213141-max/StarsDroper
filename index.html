@@ -240,18 +240,24 @@
     </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    const user = tg.initDataUnsafe?.user;
-    
-const userId = String(user.id);
+const tg = window.Telegram.WebApp;
 
-    // ПОДКЛЮЧАЕМ SUPABASE НАПРЯМУЮ
-    const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+// --- ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ ---
+let tgUser = tg.initDataUnsafe?.user;
 
-    const BACKEND_URL = 'https://stars-droper-main.vercel.app';
-    let isProcessing = false;
+if (!tgUser) {
+    console.warn("Мы в браузере, используем тестовый профиль!");
+    tgUser = { id: "12345678", first_name: "TestUser", username: "tester" };
+}
+
+const userId = String(tgUser.id);
+
+// --- КОНФИГУРАЦИЯ СЕРВИСОВ ---
+const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const BACKEND_URL = 'https://stars-droper-main.vercel.app';
+let isProcessing = false;
 
     // Синхронизация баланса через Supabase напрямую
 async function syncData() {
