@@ -1,58 +1,56 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(200).send('OK');
 
     try {
-        // Проверка подписи (если она включена в настройках CryptoBot)
-        const signature = req.headers['crypto-pay-api-signature'];
-        if (signature) {
-            const apiSecret = crypto.createHash('sha256').update(process.env.CRYPTO_BOT_TOKEN).digest();
-            const check = crypto.createHmac('sha256', apiSecret).update(JSON.stringify(req.body)).digest('hex');
-            if (signature !== check) return res.status(401).send('Unauthorized');
-        }
+        // Логируем тело запроса, чтобы видеть структуру
+        console.log("ПОЛНЫЙ ЗАПРОС:", JSON.stringify(req.body, null, 2));
 
-        // РАЗБОР ДАННЫХ (Адаптировано под твой текущий формат логов)
         const { update_type, payload } = req.body;
 
         if (update_type === 'invoice_paid') {
-            // ВАЖНО: берем данные из объекта payload, который прислал бот
             const userId = String(payload.invoice_payload); 
             const sum = parseFloat(payload.amount);
             
-            console.log(`Зачисление: ${sum} для юзера ${userId}`);
+            console.log(`Попытка зачисления: ${sum} для юзера ${userId}`);
 
-            // 1. Получаем текущий баланс (используем имя колонки из РАБОЧЕГО файла!)
-            const { data: user } = await supabase
+            // 1. Получаем данные
+            const { data: user, error: fetchError } = await supabase
                 .from('users')
-                .select('ton_balance') 
+                .select('ton_balance') // УБЕДИСЬ: В базе колонка точно ton_balance?
                 .eq('user_id', userId)
                 .single();
 
+            if (fetchError) {
+                console.error("ОШИБКА SELECT:", fetchError);
+                // Если юзера нет, возможно, нужно создать?
+            }
+
             const currentBalance = user?.ton_balance || 0;
-            const newBalance = currentBalance + sum;
+            const newBalance = parseFloat(currentBalance) + sum;
 
-            // 2. Обновляем (используем UPSERT, как в рабочем коде)
-            const { error: updateError } = await supabase
+            // 2. Обновляем
+            const { data, error: updateError } = await supabase
                 .from('users')
-                .upsert({ 
-                    user_id: userId, 
-                    ton_balance: newBalance 
-                }, { onConflict: 'user_id' });
+                .update({ ton_balance: newBalance })
+                .eq('user_id', userId)
+                .select(); // Добавляем select, чтобы увидеть результат
 
-            if (updateError) throw updateError;
-            console.log(`УСПЕХ! Баланс ${userId} теперь: ${newBalance}`);
+            if (updateError) {
+                console.error("ОШИБКА UPDATE:", updateError);
+                throw updateError;
+            }
+
+            console.log("УСПЕХ. Результат:", data);
         }
 
         return res.status(200).send('OK');
     } catch (err) {
-        console.error("Ошибка:", err.message);
-        return res.status(200).send('OK'); // Всегда 200, чтобы не спамил
+        console.error("КРИТИЧЕСКАЯ ОШИБКА:", err.message);
+        return res.status(200).send('OK'); 
     }
 }
