@@ -7,7 +7,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Инициализация Supabase
 const supabase = createClient(
     process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -31,7 +30,7 @@ app.post('/api/create_stars_pay', async (req, res) => {
             provider_token: "",
             currency: "XTR",
             prices: [{ label: "Stars", amount: Math.floor(Number(amount)) }]
-        }, { timeout: 5000 }); // Ждем ответа от ТГ не более 5 секунд
+        }, { timeout: 5000 });
 
         if (response.data.ok) {
             return res.json({ pay_url: response.data.result });
@@ -44,7 +43,7 @@ app.post('/api/create_stars_pay', async (req, res) => {
     }
 });
 
-// --- 2. КРИПТО-ВЕБХУК (с использованием RPC) ---
+// --- 2. КРИПТО-ВЕБХУК ---
 app.post('/api/crypto-webhook', async (req, res) => {
     try {
         const { status, payload, amount } = req.body;
@@ -53,23 +52,16 @@ app.post('/api/crypto-webhook', async (req, res) => {
             const userId = String(payload);
             const paidAmount = parseFloat(amount);
 
-            // Используем RPC для атомарного прибавления баланса
             const { error } = await supabase.rpc('increment_ton_balance', { 
                 user_id_val: userId, 
                 amount_val: paidAmount 
             });
 
-            if (error) {
-                console.error("Supabase Error:", error);
-            } else {
-                console.log(`Успех! Юзер ${userId} оплатил ${paidAmount}`);
-            }
+            if (error) console.error("Supabase Error:", error);
         }
     } catch (err) {
         console.error("Webhook Error:", err.message);
     }
-    
-    // Всегда возвращаем 200, чтобы бот не слал повторы
     return res.status(200).send('OK');
 });
 
