@@ -17,7 +17,8 @@
         }
 
         body { 
-            background-color: var(--bg-dark); 
+            /* Перенесли градиент сюда, чтобы он не перекрывал canvas со звездами */
+            background: radial-gradient(circle at 50% 30%, #513e11 0%, #0f0a02 75%); 
             color: white; 
             font-family: 'Inter', sans-serif; 
             margin: 0; 
@@ -37,15 +38,24 @@
         #pc-only-blocker { display: none; position: fixed; inset: 0; background: #000; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 20px; }
         .qr-frame { background: white; padding: 15px; border-radius: 25px; box-shadow: 0 0 40px var(--accent-gold); margin-bottom: 25px; }
 
-        #stars-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+        /* Настройки холста со звездами */
+        #stars-canvas { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 100%; 
+            z-index: 1; /* Звезды находятся над фоном body */
+            pointer-events: none; 
+        }
         
         .main-wrapper { 
-            background: radial-gradient(circle at 50% 30%, #513e11 0%, #0f0a02 75%); /* Золотистый градиент */
+            background: transparent; /* Делаем обертку прозрачной */
             height: 100vh; 
             display: flex; 
             flex-direction: column; 
             position: relative; 
-            z-index: 1; 
+            z-index: 2; /* Интерфейс находится над звездами */
         }
 
         .scrollable-content {
@@ -137,7 +147,7 @@
                     </div>
                     <div class="balance-item-v2 text-yellow-400" onclick="openVault('stars')">
                         <span id="bal-stars" class="font-black">0</span>
-                        <img src="img/star.png" alt="STAR" onerror="this.src='https://img.icons8.com/fluency/48/star.png'">
+                        <img src="https://img.icons8.com/fluency/48/star.png" alt="STAR">
                     </div>
                     <div class="balance-item-v2 text-yellow-600">
                         <span id="bal-tickets" class="font-black">0</span>
@@ -236,28 +246,28 @@
     let isProcessing = false;
 
     // Синхронизация баланса
-async function syncData() {
-    if (!user) return;
-    try {
-        const res = await fetch(`${BACKEND_URL}/get_balance/${user.id}?t=${Date.now()}`);
-        if (!res.ok) throw new Error();
-        const data = await res.json();
-        
-        const tonVal = data.balance || 0;     
-        const starsVal = data.stars || 0;     
-        const ticketsVal = data.tickets || 0; 
-        
-        document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-        document.getElementById('bal-stars').innerText = Math.floor(starsVal);
-        document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
-        
-        console.log("Балансы обновлены:", {tonVal, starsVal, ticketsVal});
-    } catch (e) { 
-        console.warn("Ошибка синхронизации баланса"); 
+    async function syncData() {
+        if (!user) return;
+        try {
+            const res = await fetch(`${BACKEND_URL}/get_balance/${user.id}?t=${Date.now()}`);
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            
+            const tonVal = data.balance || 0;     
+            const starsVal = data.stars || 0;     
+            const ticketsVal = data.tickets || 0; 
+            
+            document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
+            document.getElementById('bal-stars').innerText = Math.floor(starsVal);
+            document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
+            
+            console.log("Балансы обновлены:", {tonVal, starsVal, ticketsVal});
+        } catch (e) { 
+            console.warn("Ошибка синхронизации баланса"); 
+        }
     }
-}
 
-// Оплата TON
+    // Оплата TON
     async function processPayment(amount) {
         if (isProcessing || !user) return;
         isProcessing = true;
@@ -287,37 +297,37 @@ async function syncData() {
         }
     }
 
-async function verifyGift() {
-    const val = parseInt(document.getElementById('stars-input').value);
-    if (!val || val < 1) return tg.showAlert('Введите число');
-    
-    try {
-        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ 
-                user_id: String(tg.initDataUnsafe.user.id), 
-                amount: val 
-            })
-        });
+    async function verifyGift() {
+        const val = parseInt(document.getElementById('stars-input').value);
+        if (!val || val < 1) return tg.showAlert('Введите число');
         
-        const data = await res.json();
-        
-        if (data.pay_url) {
-            if (data.pay_url.includes('t.me/')) {
-                tg.openTelegramLink(data.pay_url);
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    user_id: String(tg.initDataUnsafe.user.id), 
+                    amount: val 
+                })
+            });
+            
+            const data = await res.json();
+            
+            if (data.pay_url) {
+                if (data.pay_url.includes('t.me/')) {
+                    tg.openTelegramLink(data.pay_url);
+                } else {
+                    tg.openInvoice(data.pay_url, (status) => {
+                        if (status === 'paid') tg.showAlert('Готово!');
+                    });
+                }
             } else {
-                tg.openInvoice(data.pay_url, (status) => {
-                    if (status === 'paid') tg.showAlert('Готово!');
-                });
+                tg.showAlert('Сервер не прислал ссылку');
             }
-        } else {
-            tg.showAlert('Сервер не прислал ссылку');
+        } catch (e) {
+            tg.showAlert('Ошибка: ' + e.message);
         }
-    } catch (e) {
-        tg.showAlert('Ошибка: ' + e.message);
     }
-}
 
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
@@ -356,6 +366,7 @@ async function verifyGift() {
             syncData();
         }
         renderTonPacks();
+        initStars(); // Инициализация звезд с точными размерами окна
         setTimeout(() => {
             document.getElementById('global-loader').style.display = 'none';
             document.body.classList.add('loaded');
@@ -366,9 +377,10 @@ async function verifyGift() {
     const canvas = document.getElementById('stars-canvas');
     const ctx = canvas.getContext('2d');
     let starsArr = [];
+    
     function initStars() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+        canvas.width = window.innerWidth || document.documentElement.clientWidth;
+        canvas.height = window.innerHeight || document.documentElement.clientHeight;
         starsArr = Array.from({length: 35}, () => ({ 
             x: Math.random() * canvas.width, 
             y: Math.random() * canvas.height, 
@@ -377,16 +389,24 @@ async function verifyGift() {
             opacity: Math.random() 
         }));
     }
+    
     function animateStars() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         starsArr.forEach(s => {
-            ctx.beginPath(); ctx.globalAlpha = s.opacity; ctx.fillStyle = "#f5b025"; 
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
-            s.y += s.speed; if (s.y > canvas.height) s.y = -5;
+            ctx.beginPath(); 
+            ctx.globalAlpha = s.opacity; 
+            ctx.fillStyle = "#f5b025"; 
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); 
+            ctx.fill();
+            s.y += s.speed; 
+            if (s.y > canvas.height) s.y = -5;
         });
         requestAnimationFrame(animateStars);
     }
-    initStars(); animateStars();
+    
+    // Пересчитываем размеры холста при изменении ориентации экрана
+    window.addEventListener('resize', initStars);
+    animateStars();
 </script>
 </body>
 </html>
