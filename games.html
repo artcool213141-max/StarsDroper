@@ -42,7 +42,7 @@
             font-size: 1.4rem; 
             text-transform: uppercase; 
             font-style: italic;
-            margin-left: 12px; /* Небольшой отступ от стрелочки */
+            margin-left: 12px;
         }
 
         .games-list {
@@ -75,13 +75,6 @@
         .game-img {
             width: 90%;
             filter: drop-shadow(0 0 25px var(--accent));
-        }
-
-        .game-title {
-            font-weight: 900;
-            font-size: 2.8rem;
-            text-transform: uppercase;
-            margin-bottom: 1.5rem;
         }
 
         .btn-play {
@@ -122,7 +115,6 @@
             <div class="image-container">
                 <img src="mine.png" class="game-img">
             </div>
-            <h2 class="game-title">MINES</h2>
             <button onclick="launch('mines.html')" class="btn-play">Играть</button>
         </section>
 
@@ -130,28 +122,22 @@
             <div class="image-container">
                 <img src="plinko.png" class="game-img">
             </div>
-            <h2 class="game-title">PLINKO</h2>
             <button onclick="launch('plinko.html')" class="btn-play">Играть</button>
         </section>
 
     </div>
 
     <script>
-        // Инициализация TG
         let tg = window.Telegram.WebApp;
         
         function launch(file) {
-            // Простейшая вибрация, если доступна
             if (tg.HapticFeedback) {
                 tg.HapticFeedback.impactOccurred('heavy');
             }
-            
-            // Прямой переход без лишних проверок
             console.log("Запуск:", file);
             window.location.replace("./" + file);
         }
 
-        // На всякий случай расширяем
         tg.expand();
     </script>
 </body>
