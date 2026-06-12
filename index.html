@@ -254,31 +254,29 @@ const userId = String(user.id);
     let isProcessing = false;
 
     // Синхронизация баланса через Supabase напрямую
-    async function syncData() {
-        try {
-            const { data, error } = await _supabase
-                .from('users')
-                .select('*')
-                .eq('user_id', userId)
-                .single();
+async function syncData() {
+    try {
+        console.log("Запрос данных для ID:", userId);
+        const { data, error } = await _supabase
+            .from('users')
+            .select('*')
+            .eq('user_id', userId)
+            .single();
 
-            if (error) throw error;
-
-            if (data) {
-                const tonVal = data.balance || 0;     
-                const starsVal = data.stars || 0;     
-                const ticketsVal = data.tickets || 0; 
-                
-                document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-                document.getElementById('bal-stars').innerText = Math.floor(starsVal);
-                document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
-                
-                console.log("Supabase балансы успешно обновлены:", {tonVal, starsVal, ticketsVal});
-            }
-        } catch (e) { 
-            console.error("Ошибка синхронизации через Supabase:", e); 
+        if (error) {
+            console.error("ОШИБКА SUPABASE:", error.message); // <-- ЭТА СТРОКА ПОКАЖЕТ, ЧТО НЕ ТАК
+            return;
         }
+
+        if (data) {
+            document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
+            document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
+            document.getElementById('bal-tickets').innerText = Math.floor(data.tickets || 0);
+        }
+    } catch (e) { 
+        console.error("Критическая ошибка:", e); 
     }
+}
 
     // Оплата TON через Крипто-бота
     async function processPayment(amount) {
