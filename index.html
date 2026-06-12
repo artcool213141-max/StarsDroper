@@ -324,51 +324,24 @@ async function syncData() {
     // Оплата Звёздами (Telegram Stars)
 async function payWithStars() {
     const val = parseInt(document.getElementById('stars-input').value);
-    if (!val || val < 1) return tg.showAlert('Введите корректное число');
-
+    if (!val || val < 1) return tg.showAlert('Введите число');
     tg.MainButton.showProgress();
-
-// --- Оптимизированный блок fetch ---
     try {
         const response = await fetch(`${BACKEND_URL}/create_stars_pay`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                user_id: userId, 
-                amount: val 
-            })
+            body: JSON.stringify({ user_id: userId, amount: val })
         });
-
-        // Проверяем, ответил ли сервер успешно
-        if (!response.ok) {
-            throw new Error(`Ошибка сервера: ${response.status}`);
-        }
-
         const data = await response.json();
-
         if (data.pay_url) {
-            // Открываем счет
             window.Telegram.WebApp.openInvoice(data.pay_url, (status) => {
                 tg.MainButton.hideProgress();
-                if (status === 'paid') {
-                    tg.showAlert('Оплата прошла успешно!');
-                    syncData();
-                    closeVault();
-                } else if (status === 'cancelled') {
-                    tg.showAlert('Оплата была отменена.');
-                } else {
-                    tg.showAlert('Статус оплаты: ' + status);
-                }
+                if (status === 'paid') { syncData(); closeVault(); }
             });
-        } else {
-            throw new Error(data.error || 'Не удалось получить ссылку на оплату');
         }
-    } catch (e) {
-        tg.MainButton.hideProgress();
-        console.error("Ошибка при оплате звездами:", e);
-        tg.showAlert('Ошибка: ' + e.message);
-    }
-    
+    } catch (e) { tg.MainButton.hideProgress(); tg.showAlert('Ошибка: ' + e.message); }
+}
+
     // Рендер пакетов TON (Добавлен пак на 0.05 TON на первое место)
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100];
