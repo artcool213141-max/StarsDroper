@@ -5,7 +5,6 @@ const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 
-// Разрешаем CORS полностью, чтобы CORB не докапывался
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
@@ -14,123 +13,64 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ЖЕСТКО ВШИВАЕМ ТВОЙ ТОКЕН КРИПТОБОТА
 const MY_CRYPTO_BOT_TOKEN = '595078:AARWA1nRE3vG9cCqQZclg8DgCJuga0msN9w';
 
-// --- 1. РОУТ ДЛЯ ПОЛУЧЕНИЯ БАЛАНСА (БЕЗ НЕГО ВСЁ ВИСИТ НА ЗАГРУЗКЕ) ---
+// 1. ПОЛУЧЕНИЕ БАЛАНСА
 app.get('/get_balance/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        
-        // Запрос в Supabase
-        const { data, error } = await supabase
-            .from('users')
-            .select('balance, stars, tickets')
-            .eq('user_id', String(userId))
-            .single();
-
+        const { data, error } = await supabase.from('users').select('balance, stars, tickets').eq('user_id', String(userId)).single();
         if (error && error.code === 'PGRST116') {
-            // Если юзера еще нет в базе, регистрируем его с дефолтными балансами
-            const { data: newUser, error: createError } = await supabase
-                .from('users')
-                .insert([{ user_id: String(userId), balance: 0, stars: 0, tickets: 3 }])
-                .select()
-                .single();
-                
-            if (createError) throw createError;
+            const { data: newUser } = await supabase.from('users').insert([{ user_id: String(userId), balance: 0, stars: 0, tickets: 3 }]).select().single();
             return res.json(newUser);
         }
-
-        if (error) throw error;
         return res.json(data);
     } catch (err) {
-        console.error("Balance Route Error:", err.message);
         return res.status(500).json({ error: err.message });
     }
 });
 
-// --- 2. ОПЛАТА ЗВЕЗДАМИ ---
+// 2. ОПЛАТА ЗВЕЗДАМИ
 app.post('/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
-    
-    if (!process.env.BOT_TOKEN) {
-        return res.status(500).json({ error: "Config error: BOT_TOKEN missing" });
-    }
-    
     try {
-        const tgUrl = `https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`;
-        
-        const response = await axios.post(tgUrl, {
+        const response = await axios.post(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/createInvoiceLink`, {
             title: "Пополнение баланса",
             description: `Покупка ${amount} звезд`,
             payload: String(user_id),
-            provider_token: "",
             currency: "XTR",
             prices: [{ label: "Stars", amount: Math.floor(Number(amount)) }]
-        }, { timeout: 5000 });
-
-        if (response.data.ok) {
-            return res.json({ pay_url: response.data.result });
-        } else {
-            return res.status(400).json({ error: response.data.description });
-        }
+        });
+        return res.json({ pay_url: response.data.result });
     } catch (e) {
-        console.error("Stars Pay Error:", e.message);
-        return res.status(503).json({ error: "Telegram API timeout or error" });
+        return res.status(503).json({ error: "Telegram API error" });
     }
 });
 
-// --- 3. КРИПТО-ВЕБХУК ---
+// 3. КРИПТО-ВЕБХУК
 app.post('/crypto-webhook', async (req, res) => {
-    try {
-        const { status, payload, amount } = req.body;
-
-        if (status === 'paid') {
-            const userId = String(payload);
-            const paidAmount = parseFloat(amount);
-
-            const { error } = await supabase.rpc('increment_ton_balance', { 
-                user_id_val: userId, 
-                amount_val: paidAmount 
-            });
-
-            if (error) console.error("Supabase Error:", error);
-        }
-    } catch (err) {
-        console.error("Webhook Error:", err.message);
+    if (req.body.status === 'paid') {
+        await supabase.rpc('increment_ton_balance', { user_id_val: String(req.body.payload), amount_val: parseFloat(req.body.amount) });
     }
     return res.status(200).send('OK');
 });
 
-// --- 4. СОЗДАНИЕ СЧЕТА В TON (CRYPTO BOT) ---
+// 4. ЕДИНСТВЕННЫЙ РОУТ ДЛЯ CRYPTO PAY
 app.post('/create_crypto_pay', async (req, res) => {
     const { user_id, amount } = req.body;
-    
     try {
-        // Стучимся в обновленный эндпоинт API Криптобота
-        const cryptoUrl = `https://pay.crypton.me/api/createInvoice`; 
-        
-        const response = await axios.post(cryptoUrl, {
-            asset: "TON",                    // Валюта — строго TON
-            amount: String(amount),          // Сумма пополнения (строкой)
-            payload: String(user_id),        // Передаем ID юзера, чтобы поймать его в вебхуке
-            description: "Пополнение баланса TON",
-            allow_comments: false,
-            allow_anonymous: false
+        const response = await axios.post('https://pay.crypt.bot/api/createInvoice', {
+            asset: "TON",
+            amount: String(amount),
+            payload: String(user_id),
+            description: "Пополнение баланса TON"
         }, {
-            headers: { 'Crypto-Pay-API-Token': MY_CRYPTO_BOT_TOKEN },
-            timeout: 5000
+            headers: { 'Crypto-Pay-API-Token': MY_CRYPTO_BOT_TOKEN }
         });
-
-        if (response.data && response.data.ok) {
-            // Возвращаем фронтенду правильную прямую ссылку на оплату pay_url
-            return res.json({ pay_url: response.data.result.pay_url });
-        } else {
-            return res.status(400).json({ error: response.data.error?.name || "CryptoBot error" });
-        }
+        return res.json({ pay_url: response.data.result.bot_invoice_url });
     } catch (e) {
-        console.error("Crypto Pay Invoice Error:", e.response?.data || e.message);
-        return res.status(503).json({ error: "CryptoBot API error" });
+        console.error("CRYPTO ERROR:", e.response?.data || e.message);
+        return res.status(500).json({ error: "CryptoBot API Error", details: e.response?.data });
     }
 });
 
