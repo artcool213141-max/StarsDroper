@@ -76,7 +76,14 @@
 <body>
 
     <header>
-        <div onclick="location.href='games.html'" class="font-black text-[#d4af37] text-xl italic cursor-pointer uppercase tracking-tighter">Stars<span class="text-white">Mines</span></div>
+        <div class="flex items-center gap-3">
+            <div onclick="location.href='games.html'" class="cursor-pointer text-[#d4af37] hover:text-white transition-colors flex items-center justify-center p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </div>
+            <div onclick="location.href='games.html'" class="font-black text-[#d4af37] text-xl italic cursor-pointer uppercase tracking-tighter">Stars<span class="text-white">Mines</span></div>
+        </div>
         <div class="flex gap-4 font-bold text-sm">
             <div class="flex items-center gap-1.5"><img src="img/star.png" class="w-4 h-4"> <span id="val-stars">0</span></div>
             <div class="flex items-center gap-1.5"><img src="img/ton.png" class="w-4 h-4"> <span id="val-ton">0.00</span></div>
