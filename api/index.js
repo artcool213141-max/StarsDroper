@@ -99,4 +99,40 @@ app.post('/crypto-webhook', async (req, res) => {
     return res.status(200).send('OK');
 });
 
+// --- 4. СОЗДАНИЕ СЧЕТА В TON (CRYPTO BOT) ---
+app.post('/create_crypto_pay', async (req, res) => {
+    const { user_id, amount } = req.body;
+    
+    if (!process.env.CRYPTO_BOT_TOKEN) {
+        return res.status(500).json({ error: "Config error: CRYPTO_BOT_TOKEN missing" });
+    }
+    
+    try {
+        // Стучимся в API Криптобота
+        const cryptoUrl = `https://pay.crypton.sh/api/createInvoice`; // Для продакшена. Если тестнет, то testnet-pay.crypton.sh
+        
+        const response = await axios.post(cryptoUrl, {
+            asset: "TON",                    // Валюта — строго TON
+            amount: String(amount),          // Сумма пополнения (строкой)
+            payload: String(user_id),        // Передаем ID юзера, чтобы поймать его в вебхуке
+            description: "Пополнение баланса TON",
+            allow_comments: false,
+            allow_anonymous: false
+        }, {
+            headers: { 'Crypto-Pay-API-Token': process.env.CRYPTO_BOT_TOKEN },
+            timeout: 5000
+        });
+
+        if (response.data && response.data.ok) {
+            // Возвращаем фронтенду ссылку на оплату (bot_invoice_url)
+            return res.json({ pay_url: response.data.result.bot_invoice_url });
+        } else {
+            return res.status(400).json({ error: response.data.error || "CryptoBot error" });
+        }
+    } catch (e) {
+        console.error("Crypto Pay Invoice Error:", e.response?.data || e.message);
+        return res.status(503).json({ error: "CryptoBot API error" });
+    }
+});
+
 module.exports = app;
