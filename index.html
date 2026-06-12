@@ -322,38 +322,42 @@ async function syncData() {
     }
 
     // Оплата Звёздами (Telegram Stars)
-async function verifyGift() {
+async function payWithStars() {
     const val = parseInt(document.getElementById('stars-input').value);
-    if (!val) return tg.showAlert('Введите число');
+    if (!val || val < 1) return tg.showAlert('Введите корректное число');
 
-    tg.MainButton.showProgress(); // Показываем крутилку загрузки
+    tg.MainButton.showProgress();
 
     try {
-        // Убедись, что путь начинается с /api/
-        const res = await fetch('/api/create_stars_pay', {
-            method: 'POST', // ЭТО САМОЕ ВАЖНОЕ
+        const response = await fetch('/api/create_stars_pay', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, amount: val })
+            body: JSON.stringify({ 
+                user_id: userId, 
+                amount: val 
+            })
         });
 
-        const data = await res.json();
+        const data = await response.json(); // Здесь было res, а нужно response
 
         if (data.pay_url) {
-            // Успех, открываем инвойс
             window.Telegram.WebApp.openInvoice(data.pay_url, (status) => {
                 tg.MainButton.hideProgress();
                 if (status === 'paid') {
                     tg.showAlert('Успешно!');
                     syncData();
+                    closeVault();
+                } else if (status === 'cancelled') {
+                    tg.showAlert('Оплата отменена');
                 }
             });
         } else {
             tg.MainButton.hideProgress();
-            tg.showAlert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+            tg.showAlert('Ошибка: ' + (data.error || 'Нет ссылки'));
         }
     } catch (e) {
         tg.MainButton.hideProgress();
-        tg.showAlert('Ошибка сети: ' + e.message);
+        tg.showAlert('Ошибка: ' + e.message);
     }
 }
 
