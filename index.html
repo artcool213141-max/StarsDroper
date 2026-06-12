@@ -339,7 +339,20 @@ async function payWithStars() {
                 if (status === 'paid') { syncData(); closeVault(); }
             });
         }
-    } catch (e) { tg.MainButton.hideProgress(); tg.showAlert('Ошибка: ' + e.message); }
+    } catch (e) { 
+        tg.MainButton.hideProgress(); 
+        tg.showAlert('Ошибка: ' + e.message); 
+    }
+} // <--- ВОТ ЭТА СКОБКА ОБЯЗАТЕЛЬНО ДОЛЖНА БЫТЬ ЗДЕСЬ
+
+function renderTonPacks() {
+    const PACKS = [1, 3, 5, 10, 20, 50, 100];
+    document.getElementById('pane-ton').innerHTML = PACKS.map(amt => `
+        <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
+            <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
+            <div class="font-black text-white text-lg">${amt} TON</div>
+        </div>
+    `).join('');
 }
 
     // Рендер пакетов TON (Добавлен пак на 0.05 TON на первое место)
