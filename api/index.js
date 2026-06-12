@@ -4,7 +4,9 @@ const axios = require('axios');
 const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-app.use(cors());
+
+// Разрешаем CORS полностью, чтобы CORB не докапывался
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 
 const supabase = createClient(
@@ -12,7 +14,39 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// ТАК КАК ФАЙЛ В ПАПКЕ API, ТУТ ДОЛЖЕН БЫТЬ ПРОСТО ПУТЬ '/' ИЛИ ДЛЯ КОНКРЕТНОГО ДЕЙСТВИЯ
+// --- 1. РОУТ ДЛЯ ПОЛУЧЕНИЯ БАЛАНСА (БЕЗ НЕГО ВСЁ ВИСИТ НА ЗАГРУЗКЕ) ---
+app.get('/get_balance/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // Запрос в Supabase. Убедись, что таблица называется именно 'users' (или поменяй название)
+        const { data, error } = await supabase
+            .from('users')
+            .select('balance, stars, tickets')
+            .eq('user_id', String(userId))
+            .single();
+
+        if (error && error.code === 'PGRST116') {
+            // Если юзера еще нет в базе, регистрируем его с дефолтными балансами
+            const { data: newUser, error: createError } = await supabase
+                .from('users')
+                .insert([{ user_id: String(userId), balance: 0, stars: 0, tickets: 3 }])
+                .select()
+                .single();
+                
+            if (createError) throw createError;
+            return res.json(newUser);
+        }
+
+        if (error) throw error;
+        return res.json(data);
+    } catch (err) {
+        console.error("Balance Route Error:", err.message);
+        return res.status(500).json({ error: err.message });
+    }
+});
+
+// --- 2. ОПЛАТА ЗВЕЗДАМИ ---
 app.post('/create_stars_pay', async (req, res) => {
     const { user_id, amount } = req.body;
     
@@ -43,6 +77,7 @@ app.post('/create_stars_pay', async (req, res) => {
     }
 });
 
+// --- 3. КРИПТО-ВЕБХУК ---
 app.post('/crypto-webhook', async (req, res) => {
     try {
         const { status, payload, amount } = req.body;
@@ -64,5 +99,4 @@ app.post('/crypto-webhook', async (req, res) => {
     return res.status(200).send('OK');
 });
 
-// ОБЯЗАТЕЛЬНО ДЛЯ ВЕРСЕЛЬ: ЭКСПОРТИРУЕМ ПРИЛОЖЕНИЕ
 module.exports = app;
