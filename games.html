@@ -10,8 +10,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
         :root {
-            --bg: #0a0510;
-            --accent: #a855f7;
+            --bg: #0d0a05;
+            --accent: #d4af37;
         }
 
         body {
@@ -27,8 +27,8 @@
         }
 
         header {
-            background: #08040d;
-            border-bottom: 2px solid rgba(168, 85, 247, 0.3);
+            background: #0d0a05;
+            border-bottom: 2px solid rgba(212, 175, 55, 0.3);
             padding: 12px 20px;
             display: flex;
             justify-content: space-between;
@@ -39,7 +39,7 @@
         .logo { font-weight: 900; font-size: 1.4rem; text-transform: uppercase; font-style: italic; }
 
         .home-btn {
-            background: rgba(168, 85, 247, 0.1);
+            background: rgba(212, 175, 55, 0.1);
             border: 1px solid var(--accent);
             padding: 8px;
             border-radius: 12px;
@@ -65,7 +65,7 @@
         .image-container {
             width: 250px;
             height: 250px;
-            background: radial-gradient(circle, rgba(168, 85, 247, 0.2) 0%, transparent 70%);
+            background: radial-gradient(circle, rgba(212, 175, 55, 0.2) 0%, transparent 70%);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -86,13 +86,13 @@
 
         .btn-play {
             background: var(--accent);
-            color: white;
+            color: #0d0a05;
             font-weight: 900;
             padding: 16px 70px;
             border-radius: 18px;
             text-transform: uppercase;
             font-size: 1.2rem;
-            box-shadow: 0 5px 20px rgba(168, 85, 247, 0.4);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
             border: none;
             cursor: pointer;
         }
@@ -105,10 +105,10 @@
 
     <header>
         <div class="logo">
-            <span class="text-purple-500">STARS</span><span class="text-white">DROP</span>
+            <span class="text-[#d4af37]">STARS</span><span class="text-white">DROP</span>
         </div>
         <button onclick="window.location.href='index.html'" class="home-btn">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.5">
                 <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
@@ -133,7 +133,7 @@
             <button onclick="launch('plinko.html')" class="btn-play">Играть</button>
         </section>
 
-                <section class="game-card">
+        <section class="game-card">
             <div class="image-container">
                 <img src="plinko.png" class="game-img">
             </div>
@@ -163,4 +163,3 @@
     </script>
 </body>
 </html>
-
