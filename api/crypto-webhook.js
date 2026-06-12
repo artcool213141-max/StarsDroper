@@ -21,7 +21,7 @@ export default async function handler(req, res) {
             // 1. Получаем данные
             const { data: user, error: fetchError } = await supabase
                 .from('users')
-                .select('ton_balance') // УБЕДИСЬ: В базе колонка точно ton_balance?
+                .select('balance') // УБЕДИСЬ: В базе колонка точно ton_balance?
                 .eq('user_id', userId)
                 .single();
 
@@ -30,13 +30,13 @@ export default async function handler(req, res) {
                 // Если юзера нет, возможно, нужно создать?
             }
 
-            const currentBalance = user?.ton_balance || 0;
+            const currentBalance = user?.balance || 0;
             const newBalance = parseFloat(currentBalance) + sum;
 
             // 2. Обновляем
             const { data, error: updateError } = await supabase
                 .from('users')
-                .update({ ton_balance: newBalance })
+                .update({ balance: newBalance })
                 .eq('user_id', userId)
                 .select(); // Добавляем select, чтобы увидеть результат
 
