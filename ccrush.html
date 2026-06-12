@@ -11,10 +11,12 @@
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         
         :root { 
-            --bg: #0a0510; 
-            --accent: #a855f7; 
-            --accent-glow: rgba(168, 85, 247, 0.4);
-            --panel-bg: #120a1f;
+            /* Золотая премиум палитра */
+            --bg: #0d0a05; 
+            --accent: #d4af37; 
+            --accent-glow: rgba(212, 175, 55, 0.4);
+            --panel-bg: #1a140a;
+            --border-gold: rgba(212, 175, 55, 0.3);
         }
         
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
@@ -22,8 +24,8 @@
         .game-container { 
             position: relative; height: calc(100vh - 160px); width: 100%; overflow: hidden;
             background-image: 
-                linear-gradient(rgba(168, 85, 247, 0.15) 1.5px, transparent 1.5px),
-                linear-gradient(90deg, rgba(168, 85, 247, 0.15) 1.5px, transparent 1.5px);
+                linear-gradient(rgba(212, 175, 55, 0.08) 1.5px, transparent 1.5px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.08) 1.5px, transparent 1.5px);
             background-size: 60px 60px;
             z-index: 5;
         }
@@ -32,6 +34,16 @@
         @keyframes scrollGrid { 
             from { background-position: 0 0; } 
             to { background-position: -120px 120px; } 
+        }
+
+        /* Эффект легкого золотого свечения для сетки на заднем плане */
+        .game-container::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 1;
         }
 
         #rocket-wrap {
@@ -67,22 +79,22 @@
 
         .ui-panel {
             position: fixed; bottom: 0; width: 100%; background: var(--panel-bg);
-            border-top: 2px solid rgba(168, 85, 247, 0.3); padding: 20px;
+            border-top: 2px solid var(--border-gold); padding: 20px;
             display: grid; grid-template-columns: 160px 1fr 200px; gap: 15px; 
             align-items: center; z-index: 100;
         }
 
         .live-drop { position: absolute; left: 15px; top: 15px; width: 95px; z-index: 60; }
         .drop-item { 
-            background: rgba(15, 5, 25, 0.9); border: 1px solid #3b225a; 
+            background: rgba(15, 12, 5, 0.9); border: 1px solid #4a3b14; 
             padding: 8px; border-radius: 10px; text-align: center; 
             font-weight: 900; font-size: 13px; border-left: 4px solid var(--accent); margin-bottom: 5px;
         }
 
-        .currency-btn { background: #1a1025; padding: 12px; border: 1px solid #3b225a; border-radius: 12px; cursor: pointer; text-align: center; font-size: 11px; font-weight: 900; color: #a19bb0; }
-        .currency-btn.active { border-color: var(--accent); background: #2d164d; color: #fff; box-shadow: 0 0 15px rgba(168, 85, 247, 0.2); }
+        .currency-btn { background: #21190a; padding: 12px; border: 1px solid #4a3b14; border-radius: 12px; cursor: pointer; text-align: center; font-size: 11px; font-weight: 900; color: #c5bfae; }
+        .currency-btn.active { border-color: var(--accent); background: #3d300f; color: #fff; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
         
-        .btn-main { background: var(--accent); color: #fff; font-weight: 900; height: 100%; border-radius: 12px; font-size: 1.2rem; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 15px rgba(168, 85, 247, 0.4); }
+        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; height: 100%; border-radius: 12px; font-size: 1.2rem; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); }
         .btn-main:active { transform: scale(0.96); }
         .btn-main:disabled { filter: grayscale(1); opacity: 0.3; box-shadow: none; }
 
@@ -91,9 +103,9 @@
 </head>
 <body>
 
-    <header class="flex justify-between items-center p-5 bg-[#08040d] border-b border-[#221536] relative z-[110]">
-        <div class="font-black text-accent text-2xl italic tracking-tighter cursor-pointer" onclick="location.href='games.html'">STARSDROP</div>
-        <div class="flex gap-8 font-bold text-purple-100">
+    <header class="flex justify-between items-center p-5 bg-[#0d0a05] border-b border-[#241d0b] relative z-[110]">
+        <div class="font-black text-[#d4af37] text-2xl italic tracking-tighter cursor-pointer" onclick="location.href='games.html'">STARSDROP</div>
+        <div class="flex gap-8 font-bold text-amber-100">
             <div class="flex items-center gap-2">⭐ <span id="val-stars">0</span></div>
             <div class="flex items-center gap-2">💎 <span id="val-ton">0.00</span></div>
         </div>
@@ -110,7 +122,7 @@
             <div id="mode-stars" onclick="switchMode('stars')" class="currency-btn active">STARS</div>
             <div id="mode-ton" onclick="switchMode('ton')" class="currency-btn">TON</div>
         </div>
-        <div class="bg-[#08040d] border border-[#3b225a] rounded-xl p-4">
+        <div class="bg-[#050402] border border-[#4a3b14] rounded-xl p-4">
             <input type="number" id="input-bet" class="bg-transparent w-full text-center text-3xl font-black outline-none" value="10">
         </div>
         <button id="btn-main" onclick="onAction()" class="btn-main">Ставка</button>
