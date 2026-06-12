@@ -3,23 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarsDrop - Gold Edition</title>
+    <title>NowearSpin - Gold Edition</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        :root { --accent: #f59e0b; --accent-hover: #d97706; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;700;900&display=swap');
+        :root { 
+            --accent: #d4af37; 
+            --accent-hover: #aa841c; 
+            --accent-gradient: linear-gradient(135deg, #f3e09a 0%, #d4af37 50%, #aa841c 100%);
+            --bg: #0d0a05; 
+        }
         
         * { -webkit-tap-highlight-color: transparent; user-select: none; }
         
         body { 
-            background: #050505; color: white; font-family: 'Inter', sans-serif; 
+            background: var(--bg); color: white; font-family: 'Inter', sans-serif; 
             margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; 
         }
 
         .header-panel { 
-            padding: 12px 16px; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; 
+            padding: 12px 16px; background: #0a0804; border-bottom: 1px solid #1c170a; 
             padding-top: calc(12px + var(--tg-safe-area-inset-top, 0px));
         }
 
@@ -27,8 +32,8 @@
 
         .wheel-track { 
             position: relative; width: 100%; height: 90px; overflow: hidden; 
-            border-top: 1px solid rgba(245, 158, 11, 0.15); border-bottom: 1px solid rgba(245, 158, 11, 0.15);
-            background: rgba(245, 158, 11, 0.01);
+            border-top: 1px solid rgba(212, 175, 55, 0.2); border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+            background: rgba(212, 175, 55, 0.02);
         }
 
         .pointer { 
@@ -40,26 +45,26 @@
         .wheel-line { display: flex; align-items: center; height: 100%; will-change: transform; }
 
         .item { 
-            min-width: 80px; height: 80px; margin: 0 4px; background: rgba(255,255,255,0.03); 
+            min-width: 80px; height: 80px; margin: 0 4px; background: rgba(255, 255, 255, 0.02); 
             border-radius: 12px; display: flex; align-items: center; justify-content: center; 
-            border: 1px solid rgba(245, 158, 11, 0.1);
+            border: 1px solid rgba(212, 175, 55, 0.1);
         }
         .item img { width: 55px; height: 55px; object-fit: contain; }
 
         .btn-main { 
-            background: var(--accent); color: #000; font-weight: 900; border-radius: 18px; 
-            transition: 0.2s; box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+            background: var(--accent-gradient); color: #0d0a05; font-weight: 900; border-radius: 18px; 
+            transition: 0.2s; box-shadow: 0 5px 25px rgba(212, 175, 55, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .btn-main:active { transform: scale(0.97); }
         .btn-main:disabled { opacity: 0.3; filter: grayscale(1); }
 
-        .multi-btn { background: #111; border: 1px solid #222; padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #555; }
-        .multi-btn.active { border-color: var(--accent); background: #261a02; color: white; }
+        .multi-btn { background: #141006; border: 1px solid #28200d; padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #5a4b2c; }
+        .multi-btn.active { border-color: var(--accent); background: #2b220c; color: white; box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
 
-        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0,0,0,0.94); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
-        .modal-box { background: #0f0f0f; border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 30px rgba(245, 158, 11, 0.15); }
+        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(5, 4, 2, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
+        .modal-box { background: #120e06; border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(212, 175, 55, 0.2); }
         
-        /* Скрытие полосы прокрутки */
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
@@ -67,24 +72,24 @@
 
     <header class="header-panel flex justify-between items-center">
         <div class="flex items-center gap-3">
-            <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#111] border border-[#222] active:scale-90 transition-transform">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+            <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#1c160a] border border-[#2e2410] active:scale-90 transition-transform">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#d4af37]">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
             </a>
-            <div class="font-black italic text-lg tracking-tighter">STARS<span class="text-[#f59e0b]">DROP</span></div>
+            <div class="font-black italic text-lg tracking-tighter uppercase">Nowear<span class="text-[#d4af37]">Spin</span></div>
         </div>
         
-        <div class="flex items-center gap-2 bg-[#111] px-4 py-1.5 rounded-full border border-[#222]">
+        <div class="flex items-center gap-2 bg-[#1c160a] px-4 py-1.5 rounded-full border border-[#3e3116] shadow-[0_0_10px_rgba(212,175,55,0.05)]">
             <img src="img/star.png" class="w-4 h-4" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1828/1828884.png'">
-            <span id="val-stars" class="font-black text-sm">0</span>
+            <span id="val-stars" class="font-black text-sm text-[#d4af37]">0</span>
         </div>
     </header>
 
     <div id="wheels-container"></div>
 
-    <div class="p-6 bg-[#0a0a0a] border-t border-[#181818] pb-[calc(24px + var(--tg-safe-area-inset-bottom, 0px))]">
+    <div class="p-6 bg-[#0a0804] border-t border-[#1c170a] pb-[calc(24px + var(--tg-safe-area-inset-bottom, 0px))]">
         <div id="multi-wrap" class="flex gap-2 mb-4">
             <button onclick="setMulti(1)" class="multi-btn active" data-m="1">X1</button>
             <button onclick="setMulti(2)" class="multi-btn" data-m="2">X2</button>
@@ -97,14 +102,14 @@
 
     <div id="win-modal">
         <div class="modal-box">
-            <h2 class="text-xl font-black italic uppercase text-[#f59e0b] tracking-wider">Отличный улов!</h2>
+            <h2 class="text-xl font-black italic uppercase text-[#d4af37] tracking-wider">Отличный улов!</h2>
             <p class="text-[11px] text-gray-400 uppercase font-medium mt-1">Твои награды:</p>
             
             <div id="win-items-container" class="grid grid-cols-3 gap-2 my-5"></div>
             
-            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-white text-sm">0</span> ★</p>
+            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-[#d4af37] text-sm">0</span> ★</p>
             
-            <button onclick="claimPrize('sell')" id="sell-btn" class="w-full bg-[#f59e0b] text-black py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
+            <button onclick="claimPrize('sell')" id="sell-btn" class="w-full bg-gradient-to-r from-[#f3e09a] via-[#d4af37] to-[#aa841c] text-[#0d0a05] py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
             <button onclick="claimPrize('keep')" id="keep-btn" class="w-full bg-white/5 text-gray-300 py-4 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-white/5 active:bg-white/10">Оставить в рюкзаке</button>
         </div>
     </div>
@@ -160,12 +165,12 @@
             
             if (isFree) {
                 btn.innerText = "ХАЛЯВНЫЙ СПИН";
-                btn.style.background = "#10b981"; // Энергичный зеленый для бесплатного
-                btn.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.25)";
+                btn.style.background = "#10b981"; 
+                btn.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.4)";
                 btn.style.color = "#fff";
                 btn.disabled = isSpinning;
             } else {
-                btn.style.background = ""; // Возврат к золотому
+                btn.style.background = ""; 
                 btn.style.boxShadow = "";
                 btn.style.color = "";
                 const cost = 100 * multi;
@@ -267,9 +272,9 @@
             currentWins.forEach(w => {
                 total += w.price;
                 container.innerHTML += `
-                    <div class="bg-white/5 p-2 rounded-xl border border-white/5">
+                    <div class="bg-white/5 p-2 rounded-xl border border-[#d4af37]/20">
                         <img src="img/${w.img}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'">
-                        <p class="text-[10px] font-black text-[#f59e0b] mt-1">${w.price}★</p>
+                        <p class="text-[10px] font-black text-[#d4af37] mt-1">${w.price}★</p>
                     </div>`;
             });
             document.getElementById('total-win-price').innerText = total;
