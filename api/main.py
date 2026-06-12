@@ -1,115 +1,103 @@
 import os
 import requests
+import hmac
+import hashlib
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from supabase import create_client, Client
+from supabase import create_client
 
 app = Flask(__name__)
 CORS(app)
 
-# --- ПЕРЕМЕННЫЕ ИЗ VERCEL SETTINGS ---
+# Используем сессию для ускорения запросов
+session = requests.Session()
+
+# Конфигурация
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# Инициализация Supabase
-if not SUPABASE_URL or not SUPABASE_KEY:
-    supabase = None
-    print("Внимание: Supabase не настроен!")
-else:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-def get_or_create_user(user_id):
-    if not supabase:
-        return {"user_id": int(user_id), "balance": 0.0, "stars": 0, "points": 0}
-    
-    try:
-        res = supabase.table('users').select("*").eq('user_id', user_id).execute()
-        if res.data:
-            return res.data[0]
-        
-        new_user = {"user_id": int(user_id), "balance": 0.0, "stars": 0, "points": 0}
-        supabase.table('users').insert(new_user).execute()
-        return new_user
-    except Exception as e:
-        print(f"Ошибка БД: {e}")
-        return {"user_id": int(user_id), "balance": 0.0, "stars": 0, "points": 0}
+# --- API: СОЗДАНИЕ ПЛАТЕЖЕЙ ---
 
 @app.route('/api/create_pay', methods=['POST'])
 def create_pay():
-    try:
-        data = request.json
-        uid = str(data.get('user_id'))
-        amount = data.get('amount')
-        url = "https://pay.crypt.bot/api/createInvoice"
-        payload = {
-            "asset": "TON",
-            "amount": str(amount),
-            "payload": uid,
-            "description": "Пополнение баланса TON"
-        }
-        headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
-        r = requests.post(url, json=payload, headers=headers).json()
-        if r.get('ok'):
-            return jsonify({"pay_url": r['result']['bot_invoice_url']}), 200
-        return jsonify({"error": "crypto_bot_err"}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    data = request.json
+    uid = str(data.get('user_id'))
+    amount = data.get('amount')
+    
+    url = "https://pay.crypt.bot/api/createInvoice"
+    payload = {"asset": "TON", "amount": str(amount), "payload": uid, "description": "Пополнение баланса TON"}
+    headers = {"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}
+    
+    r = session.post(url, json=payload, headers=headers).json()
+    if r.get('ok'):
+        return jsonify({"pay_url": r['result']['bot_invoice_url']}), 200
+    return jsonify({"error": "crypto_bot_err"}), 400
 
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
-    try:
-        data = request.json
-        uid = str(data.get('user_id'))
-        amount = int(data.get('amount'))
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
-        payload = {
-            "title": "Пополнение звёзд",
-            "description": f"Зачисление {amount} XTR",
-            "payload": uid,
-            "provider_token": "",
-            "currency": "XTR",
-            "prices": [{"label": "Stars", "amount": amount}]
-        }
-        r = requests.post(url, json=payload).json()
-        if r.get('ok'):
-            return jsonify({"pay_url": r['result']}), 200
-        return jsonify({"error": "stars_err"}), 400
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    data = request.json
+    uid = str(data.get('user_id'))
+    amount = int(data.get('amount'))
+    
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": "Пополнение звёзд",
+        "description": f"Зачисление {amount} XTR",
+        "payload": uid,
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }
+    r = session.post(url, json=payload).json()
+    if r.get('ok'):
+        return jsonify({"pay_url": r['result']}), 200
+    return jsonify({"error": "stars_err"}), 400
+
+# --- API: ВЕБХУКИ ---
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
+    # Проверка подписи безопасности
+    signature = request.headers.get('crypto-pay-api-signature')
+    secret = hashlib.sha256(CRYPTO_PAY_TOKEN.encode()).digest()
+    check = hmac.new(secret, request.data, hashlib.sha256).hexdigest()
+    
+    if signature != check:
+        return "Unauthorized", 401
+
     update = request.json
     if update.get('update_type') == 'invoice_paid':
         p = update.get('payload', {})
-        uid = p.get('payload')
+        uid = int(p.get('payload'))
         amt = float(p.get('amount'))
-        u = get_or_create_user(uid)
-        new_bal = round(float(u.get('balance', 0.0)) + amt, 2)
         if supabase:
-            supabase.table('users').update({"balance": new_bal}).eq('user_id', uid).execute()
+            supabase.rpc('increment_balance', {"uid": uid, "amount_val": amt}).execute()
     return "OK", 200
 
 @app.route('/api/telegram-webhook', methods=['POST'])
 def telegram_webhook():
     update = request.json
     if "pre_checkout_query" in update:
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
+        session.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": update["pre_checkout_query"]["id"], "ok": True})
+        return "OK", 200
     
     if "message" in update and "successful_payment" in update["message"]:
         pay = update["message"]["successful_payment"]
-        uid = pay.get('invoice_payload')
+        uid = int(pay.get('invoice_payload'))
         amt = int(pay["total_amount"])
-        u = get_or_create_user(uid)
-        new_stars = int(u.get('stars', 0)) + amt
         if supabase:
-            supabase.table('users').update({"stars": new_stars}).eq('user_id', uid).execute()
+            supabase.rpc('increment_stars', {"uid": uid, "stars_val": amt}).execute()
     return "OK", 200
 
 @app.route('/api/get_balance/<user_id>', methods=['GET'])
 def get_balance(user_id):
-    user = get_or_create_user(user_id)
-    return jsonify(user), 200
+    if not supabase: return jsonify({"balance": 0, "stars": 0})
+    res = supabase.table('users').select("*").eq('user_id', user_id).execute()
+    return jsonify(res.data[0] if res.data else {"balance": 0, "stars": 0}), 200
+
+if __name__ == '__main__':
+    app.run(debug=True)
