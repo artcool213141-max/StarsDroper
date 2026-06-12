@@ -6,11 +6,11 @@
       "use": "@vercel/node"
     },
     {
-      "src": "*.html",
+      "src": "img/**",
       "use": "@vercel/static"
     },
     {
-      "src": "*.png",
+      "src": "*.html",
       "use": "@vercel/static"
     }
   ],
@@ -28,24 +28,8 @@
       "dest": "api/index.js"
     },
     {
-      "src": "/img/star.png",
-      "dest": "/star.png"
-    },
-    {
-      "src": "/img/ton.png",
-      "dest": "/ton.png"
-    },
-    {
-      "src": "/img/case3.png",
-      "dest": "/case3.png"
-    },
-    {
       "src": "/img/(.*)",
-      "dest": "/$1"
-    },
-    {
-      "src": "/(.*\\.html)",
-      "dest": "/$1"
+      "dest": "/img/$1"
     },
     {
       "src": "/(.*)",
