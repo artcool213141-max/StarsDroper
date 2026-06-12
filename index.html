@@ -326,6 +326,7 @@ async function payWithStars() {
     const val = parseInt(document.getElementById('stars-input').value);
     if (!val || val < 1) return tg.showAlert('Введите число');
     tg.MainButton.showProgress();
+
     try {
         const response = await fetch(`${BACKEND_URL}/create_stars_pay`, {
             method: 'POST',
@@ -333,10 +334,21 @@ async function payWithStars() {
             body: JSON.stringify({ user_id: userId, amount: val })
         });
         const data = await response.json();
+        
         if (data.pay_url) {
-            window.Telegram.WebApp.openInvoice(data.pay_url, (status) => {
+            // Открываем оплату
+            tg.openInvoice(data.pay_url, async (status) => {
                 tg.MainButton.hideProgress();
-                if (status === 'paid') { syncData(); closeVault(); }
+                if (status === 'paid') {
+                    // ЕСЛИ ВЕБХУКОВ НЕТ, ОБНОВЛЯЙ БАЗУ ПРЯМО ТУТ:
+                    await fetch(`${BACKEND_URL}/api/update_balance_after_pay`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ user_id: userId, amount: val })
+                    });
+                    syncData();
+                    closeVault();
+                }
             });
         }
     } catch (e) { 
