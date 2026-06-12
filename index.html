@@ -329,14 +329,14 @@ async function syncData() {
         tg.HapticFeedback.impactOccurred('medium');
         try {
             // Запрос на бэкенд без слова /api/
-            const res = await fetch(`${BACKEND_URL}/create_stars_pay`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    user_id: userId, 
-                    amount: val 
-                })
-            });
+const res = await fetch('/api/create_stars_pay', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+        user_id: userId, 
+        amount: val 
+    })
+});
             
             const data = await res.json();
             
