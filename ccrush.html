@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>StarsDrop - Elite Engine</title>
+    <title>NowearSpin - Elite Engine</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -104,7 +104,14 @@
 <body>
 
     <header class="flex justify-between items-center p-5 bg-[#0d0a05] border-b border-[#241d0b] relative z-[110]">
-        <div class="font-black text-[#d4af37] text-2xl italic tracking-tighter cursor-pointer" onclick="location.href='games.html'">STARSDROP</div>
+        <div class="flex items-center gap-3">
+            <div onclick="location.href='games.html'" class="cursor-pointer text-[#d4af37] hover:text-white transition-colors flex items-center justify-center p-1">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </div>
+            <div class="font-black text-[#d4af37] text-2xl italic tracking-tighter cursor-pointer uppercase" onclick="location.href='games.html'">Nowear<span class="text-white">Spin</span></div>
+        </div>
         <div class="flex gap-8 font-bold text-amber-100">
             <div class="flex items-center gap-2">⭐ <span id="val-stars">0</span></div>
             <div class="flex items-center gap-2">💎 <span id="val-ton">0.00</span></div>
@@ -141,7 +148,7 @@
 
     async function checkAuth() {
         // Берем ID напрямую из ТГ, если локалсторадж подводит
-        const saved = localStorage.getItem('stars_user');
+        const saved = localStorage.getItem('nowearspin_user');
         if (saved) {
             currentUser = JSON.parse(saved);
         } else if (tg.initDataUnsafe?.user) {
