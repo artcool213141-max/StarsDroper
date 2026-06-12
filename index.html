@@ -286,14 +286,14 @@
         isProcessing = true;
         tg.HapticFeedback.impactOccurred('medium');
         try {
-            const res = await fetch(`${BACKEND_URL}/create_pay`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    user_id: userId, 
-                    amount: Number(amount)
-                })
-            });
+const res = await fetch(`${BACKEND_URL}/api/create_pay`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+        user_id: userId, 
+        amount: Number(amount)
+    })
+});
             
             const data = await res.json();
             
