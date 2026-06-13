@@ -240,126 +240,60 @@
     </div>
 
 <script>
-const tg = window.Telegram.WebApp;
-
-// --- ИНИЦИАЛИЗАЦИЯ ПОЛЬЗОВАТЕЛЯ ---
-let tgUser = tg.initDataUnsafe?.user;
-
-if (!tgUser) {
-    console.warn("Мы в браузере, используем тестовый профиль!");
-    tgUser = { id: "12345678", first_name: "TestUser", username: "tester" };
-}
-
-const userId = String(tgUser.id);
-
-// --- КОНФИГУРАЦИЯ СЕРВИСОВ ---
-const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
-const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-const BACKEND_URL = 'https://stars-droper-main.vercel.app';
-let isProcessing = false;
-
-    // Синхронизация баланса через Supabase напрямую
-async function syncData() {
-    try {
-        const { data, error } = await _supabase
-            .from('users')
-            .select('*')
-            .eq('user_id', userId)
-            .single();
-
-        if (error) {
-            console.error("Ошибка Supabase (проверь Policies!):", error);
-            return;
-        }
-
-        if (data) {
-            // Теперь используем твои названия колонок
-            const tonVal = data.balance || 0;      
-            const starsVal = data.stars || 0;      
-            const ticketsVal = data.tickets || 0; 
-            
-            document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-            document.getElementById('bal-stars').innerText = Math.floor(starsVal);
-            document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
-            
-            console.log("Данные загружены:", data);
-        }
-    } catch (e) { 
-        console.error("Критическая ошибка:", e); 
+    const tg = window.Telegram.WebApp;
+    let tgUser = tg.initDataUnsafe?.user || { id: "12345678", first_name: "TestUser", username: "tester" };
+    
+    // Инициализация конфигурации
+    const CONFIG = {
+        API_URL: 'https://stars-droper-main.vercel.app',
+        SUPABASE: supabase.createClient('https://xjucalpaoqlrtmofmden.supabase.co', 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx'),
+        USER_ID: String(tgUser.id)
+    };
+    
+    let isProcessing = false; // Возвращаем эту переменную!
+    
+    async function syncData() {
+        try {
+            const { data } = await CONFIG.SUPABASE.from('users').select('*').eq('user_id', CONFIG.USER_ID).single();
+            if (data) {
+                document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
+                document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
+                document.getElementById('bal-tickets').innerText = Math.floor(data.tickets || 0);
+            }
+        } catch (e) { console.error("Ошибка Supabase:", e); }
     }
-}
 
-    // Оплата TON через Крипто-бота
     async function processPayment(amount) {
         if (isProcessing) return;
         isProcessing = true;
-        tg.HapticFeedback.impactOccurred('medium');
         try {
-            // Шлем запрос на наш новый TON-роут без слова /api/
-            const res = await fetch(`${BACKEND_URL}/create_crypto_pay`, {
+            const res = await fetch(`${CONFIG.API_URL}/api/create_crypto_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    user_id: userId, 
-                    amount: Number(amount)
-                })
+                body: JSON.stringify({ user_id: CONFIG.USER_ID, amount: Number(amount) })
             });
-            
             const data = await res.json();
-            
-            if (res.ok && data.pay_url) { 
-                tg.openTelegramLink(data.pay_url); 
-                closeVault(); 
-            } else { 
-                tg.showAlert(data.error || 'Крипто-бот недоступен'); 
-            }
-        } catch (e) { 
-            tg.showAlert('Ошибка сети: проверь бэкенд'); 
-        } finally { 
-            isProcessing = false; 
-        }
+            if (data.pay_url) tg.openTelegramLink(data.pay_url);
+            else tg.showAlert(data.error || 'Ошибка');
+        } catch (e) { tg.showAlert('Ошибка связи'); }
+        finally { isProcessing = false; }
     }
 
-    // Оплата Звёздами (Telegram Stars)
-async function startStarsPayment(amount) {
-    try {
-        // Укажи здесь URL твоего работающего бэкенда (например, https://tvoyserver.com)
-        const BACKEND_URL = "https://stars-droper-main.vercel.app/api/create_stars_pay"; 
-        
-        const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                user_id: tg.initDataUnsafe?.user?.id || 12345, 
-                amount: amount 
-            })
-        });
-
-        const data = await response.json();
-        
-        if (data.pay_url) {
-            // Это критически важная часть: открываем ссылку через Telegram WebApp
-            window.location.href = data.pay_url; 
-        } else {
-            tg.showAlert("Ошибка создания счета: " + (data.error || "Неизвестно"));
-        }
-    } catch (e) {
-        tg.showAlert("Ошибка подключения к серверу");
+    async function payWithStars() {
+        const amount = document.getElementById('stars-input').value;
+        if (!amount || amount < 50) return tg.showAlert("Мин. 50");
+        try {
+            const res = await fetch(`${CONFIG.API_URL}/api/create_stars_pay`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: CONFIG.USER_ID, amount: parseInt(amount) })
+            });
+            const data = await res.json();
+            if (data.pay_url) window.location.href = data.pay_url;
+            else tg.showAlert("Ошибка: " + (data.error || "Неизвестно"));
+        } catch (e) { tg.showAlert("Ошибка подключения"); }
     }
-}// <--- ВОТ ЭТА СКОБКА ОБЯЗАТЕЛЬНО ДОЛЖНА БЫТЬ ЗДЕСЬ
 
-function renderTonPacks() {
-    const PACKS = [1, 3, 5, 10, 20, 50, 100];
-    document.getElementById('pane-ton').innerHTML = PACKS.map(amt => `
-        <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
-            <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
-            <div class="font-black text-white text-lg">${amt} TON</div>
-        </div>
-    `).join('');
-}
-
-    // Рендер пакетов TON (Добавлен пак на 0.05 TON на первое место)
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100];
         document.getElementById('pane-ton').innerHTML = PACKS.map(amt => `
@@ -372,50 +306,32 @@ function renderTonPacks() {
 
     function setTab(type) {
         const isTon = type === 'ton';
-        document.getElementById('tab-btn-ton').classList.toggle('active', isTon);
-        document.getElementById('tab-btn-stars').classList.toggle('active', !isTon);
         document.getElementById('pane-ton').classList.toggle('hidden', !isTon);
         document.getElementById('pane-stars').classList.toggle('hidden', isTon);
     }
 
-    function openVault(tab) { 
-        tg.HapticFeedback.impactOccurred('light');
-        document.getElementById('vault-modal').style.display = 'flex'; 
-        setTab(tab); 
-    }
-    
+    function openVault(tab) { document.getElementById('vault-modal').style.display = 'flex'; setTab(tab); }
     function closeVault() { document.getElementById('vault-modal').style.display = 'none'; }
     function navigateTo(url) { tg.HapticFeedback.impactOccurred('medium'); window.location.href = url; }
 
     window.onload = () => {
-        tg.expand();
-        tg.ready();
-        
-        const firstName = tg.initDataUnsafe?.user?.first_name || "PLAYER";
-        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-        
-        document.getElementById('display-name').innerText = (tg.initDataUnsafe?.user?.username || firstName).toUpperCase();
-        document.getElementById('display-id').innerText = `ID: ${userId}`;
-        document.getElementById('user-avatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${firstName}`;
+        tg.expand(); tg.ready();
+        document.getElementById('display-name').innerText = (tgUser.username || tgUser.first_name).toUpperCase();
+        document.getElementById('display-id').innerText = `ID: ${CONFIG.USER_ID}`;
         
         syncData();
         renderTonPacks();
-        initStars(); 
+        initStars();
+        animateStars();
         
-        setTimeout(() => {
-            document.getElementById('global-loader').style.display = 'none';
-            document.body.classList.add('loaded');
-        }, 800);
+        setTimeout(() => { document.getElementById('global-loader').style.display = 'none'; }, 800);
     };
 
-    // Анимация звезд
-    const canvas = document.getElementById('stars-canvas');
-    const ctx = canvas.getContext('2d');
     let starsArr = [];
-    
     function initStars() {
-        canvas.width = window.innerWidth || document.documentElement.clientWidth;
-        canvas.height = window.innerHeight || document.documentElement.clientHeight;
+        const canvas = document.getElementById('stars-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
         starsArr = Array.from({length: 35}, () => ({ 
             x: Math.random() * canvas.width, 
             y: Math.random() * canvas.height, 
@@ -426,6 +342,8 @@ function renderTonPacks() {
     }
     
     function animateStars() {
+        const canvas = document.getElementById('stars-canvas');
+        const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         starsArr.forEach(s => {
             ctx.beginPath(); 
@@ -440,7 +358,6 @@ function renderTonPacks() {
     }
     
     window.addEventListener('resize', initStars);
-    animateStars();
 </script>
 </body>
 </html>
