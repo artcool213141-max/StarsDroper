@@ -13,7 +13,6 @@
         #game-view { width: 100%; height: 400px; position: relative; }
         .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; }
         .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; }
-        .btn-play:disabled { background: #665520; opacity: 0.6; cursor: not-allowed; }
         .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
         .mult-row { display: flex; justify-content: space-around; width: 100%; color: #d4af37; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
     </style>
@@ -40,7 +39,7 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); 
+    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE");
     const uid = tg.initDataUnsafe?.user?.id || 12345;
     let mode = 'stars', busy = false;
 
@@ -48,14 +47,12 @@
     const engine = Engine.create();
     const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
-    // Стены
     Composite.add(engine.world, [
         Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
         Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
         Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
     ]);
 
-    // Пины и Зоны
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
     }
@@ -63,13 +60,10 @@
 
     Render.run(render); Runner.run(Runner.create(), engine);
 
-    function setMode(newMode) {
-        mode = newMode;
-    }
+    function setMode(m) { mode = m; }
 
     async function dropBall() {
         if (busy) return;
-        
         busy = true;
         document.getElementById('btn').disabled = true;
         document.getElementById('bet').blur();
@@ -84,13 +78,11 @@
 
     Events.on(engine, 'collisionStart', (e) => {
         e.pairs.forEach(p => {
-            const isBall = p.bodyA.label === 'ball' || p.bodyB.label === 'ball';
-            const isZone = p.bodyA.label.startsWith('z-') || p.bodyB.label.startsWith('z-');
-            
-            if (isBall && isZone) {
-                const ball = p.bodyA.label === 'ball' ? p.bodyA : p.bodyB;
+            const ball = (p.bodyA.label === 'ball') ? p.bodyA : (p.bodyB.label === 'ball') ? p.bodyB : null;
+            const zone = (p.bodyA.label.startsWith('z-')) ? p.bodyA : (p.bodyB.label.startsWith('z-')) ? p.bodyB : null;
+
+            if (ball && zone) {
                 Composite.remove(engine.world, ball);
-                
                 busy = false;
                 document.getElementById('btn').disabled = false;
             }
