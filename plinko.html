@@ -43,6 +43,9 @@
     const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); 
     const uid = tg.initDataUnsafe?.user?.id || 12345;
     let mode = 'stars', busy = false;
+    
+    // Массив множителей для логики
+    const mults = [0.1, 0.2, 0.1, 0.5, 0.1, 0.5, 0.1, 0.2, 0.1];
 
     const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
@@ -67,7 +70,6 @@
         document.getElementById('bet').blur();
         const val = Number(document.getElementById('bet').value);
         
-        // Блокируем кнопку
         busy = true;
         document.getElementById('btn').disabled = true;
 
@@ -81,10 +83,13 @@
     Events.on(engine, 'collisionStart', (e) => {
         e.pairs.forEach(p => {
             if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('z-')) {
-                // Удаляем шарик
-                Composite.remove(engine.world, p.bodyB);
+                // Получаем множитель по индексу лунки
+                const idx = parseInt(p.bodyA.label.split('-')[1]);
+                const win = p.bodyB.val * mults[idx];
                 
-                // Разблокируем возможность нажать кнопку снова
+                // Здесь будет логика начисления выигрыша (win)
+                
+                Composite.remove(engine.world, p.bodyB);
                 busy = false;
                 document.getElementById('btn').disabled = false;
             }
