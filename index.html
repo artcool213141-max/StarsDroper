@@ -245,10 +245,13 @@
 
     const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+    
+    // ИСПРАВЛЕНИЕ: Используем глобальный объект supabase
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let isProcessing = false;
-    const BACKEND_URL = 'https://stars-droper-main.vercel.app';
+    // ИСПРАВЛЕНИЕ: Используем относительный путь для API
+    const API_BASE = '/api'; 
     let ctx;
     let starsArr = [];
 
@@ -260,7 +263,7 @@
                 .eq('user_id', userId)
                 .single();
 
-            if (error) throw error;
+            if (error && error.code !== 'PGRST116') throw error;
             if (data) {
                 document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
                 document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
@@ -276,17 +279,17 @@
         isProcessing = true;
         tg.HapticFeedback.impactOccurred('medium');
         try {
-            const res = await fetch(`${BACKEND_URL}/api/create_pay`, {
+            const res = await fetch(`${API_BASE}/create_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ user_id: userId, amount: Number(amount) })
             });
             const data = await res.json();
-            if (res.ok && data.pay_url) {
-                tg.openTelegramLink(data.pay_url);
+            if (res.ok && data.result?.pay_url) {
+                tg.openTelegramLink(data.result.pay_url);
                 closeVault();
             } else {
-                tg.showAlert(data.error || 'Ошибка создания платежа');
+                tg.showAlert(data.error || 'Ошибка платежа');
             }
         } catch (e) {
             tg.showAlert('Ошибка сети');
@@ -298,36 +301,34 @@
     async function verifyGift() {
         const input = document.getElementById('stars-input');
         const val = parseInt(input.value);
-        if (!val || val < 1) return tg.showAlert('Введите корректное число');
+        if (!val || val < 50) return tg.showAlert('Минимум 50 звезд!');
         
         try {
-            const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
+            const res = await fetch(`${API_BASE}/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ user_id: userId, amount: val })
             });
             const data = await res.json();
-            if (data.pay_url) {
-                tg.openInvoice(data.pay_url, (status) => {
+            if (data.result?.url) {
+                tg.openInvoice(data.result.url, (status) => {
                     if (status === 'paid') tg.showAlert('Баланс пополнен!');
                 });
             } else {
-                tg.showAlert(data.error || 'Ошибка API звезд');
+                tg.showAlert(data.description || 'Ошибка API звезд');
             }
         } catch (e) {
             tg.showAlert('Ошибка: ' + e.message);
         }
     }
 
-function renderTonPacks() {
-        // Добавили 0.05 в массив. Важно: используем точку, а не запятую!
+    function renderTonPacks() {
         const PACKS = [0.05, 1, 3, 5, 10, 20, 50, 100, 250];
         const pane = document.getElementById('pane-ton');
         if(!pane) return;
-        
         pane.innerHTML = PACKS.map(amt => `
             <div onclick="processPayment('${amt}')" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
-                <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
+                <div class="text-[9px] text-yellow-400 font-black uppercase mb-1">Пополнить</div>
                 <div class="font-black text-white text-lg">${amt} TON</div>
             </div>
         `).join('');
