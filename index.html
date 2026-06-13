@@ -241,16 +241,16 @@
 
 <script>
     const tg = window.Telegram.WebApp;
+    // Оставляем fallback на случай, если tg не загрузился, но в идеале здесь должен быть ID
     const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
 
-    // ПОДКЛЮЧАЕМ SUPABASE НАПРЯМУЮ (Берем данные из твоего рабочего профиля)
     const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let isProcessing = false;
+    const BACKEND_URL = 'https://stars-droper-main.vercel.app';
 
-    // Синхронизация баланса через Supabase напрямую
     async function syncData() {
         try {
             const { data, error } = await _supabase
@@ -260,92 +260,72 @@
                 .single();
 
             if (error) throw error;
-
             if (data) {
-                // Извлекаем переменные точно так же, как у тебя в БД
-                const tonVal = data.balance || 0;     
-                const starsVal = data.stars || 0;     
-                const ticketsVal = data.tickets || 0; 
-                
-                // Выводим в HTML
-                document.getElementById('bal-ton').innerText = parseFloat(tonVal).toFixed(2);
-                document.getElementById('bal-stars').innerText = Math.floor(starsVal);
-                document.getElementById('bal-tickets').innerText = Math.floor(ticketsVal);
-                
-                console.log("Supabase балансы успешно обновлены:", {tonVal, starsVal, ticketsVal});
+                document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
+                document.getElementById('bal-stars').innerText = Math.floor(data.stars || 0);
+                document.getElementById('bal-tickets').innerText = Math.floor(data.tickets || 0);
             }
-        } catch (e) { 
-            console.error("Ошибка синхронизации через Supabase:", e); 
+        } catch (e) {
+            console.error("Ошибка синхронизации:", e);
         }
     }
 
-    // Оплата TON (Для этого пока оставил Vercel URL, если бэкенд обрабатывает платежи)
-    const BACKEND_URL = 'https://stars-droper-main.vercel.app';
     async function processPayment(amount) {
         if (isProcessing) return;
         isProcessing = true;
         tg.HapticFeedback.impactOccurred('medium');
         try {
-const res = await fetch(`${BACKEND_URL}/api/create_pay`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-        user_id: userId, 
-        amount: Number(amount)
-    })
-});
-            
+            const res = await fetch(`${BACKEND_URL}/api/create_pay`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ user_id: userId, amount: Number(amount) })
+            });
             const data = await res.json();
-            
-            if (res.ok && data.pay_url) { 
-                tg.openTelegramLink(data.pay_url); 
-                closeVault(); 
-            } else { 
-                tg.showAlert(data.error || 'Крипто-бот недоступен'); 
+            if (res.ok && data.pay_url) {
+                tg.openTelegramLink(data.pay_url);
+                closeVault();
+            } else {
+                tg.showAlert(data.error || 'Ошибка создания платежа');
             }
-        } catch (e) { 
-            tg.showAlert('Ошибка сети: проверь бэкенд'); 
-        } finally { 
-            isProcessing = false; 
+        } catch (e) {
+            tg.showAlert('Ошибка сети');
+        } finally {
+            isProcessing = false;
         }
     }
 
     async function verifyGift() {
-        const val = parseInt(document.getElementById('stars-input').value);
-        if (!val || val < 1) return tg.showAlert('Введите число');
+        const input = document.getElementById('stars-input');
+        const val = parseInt(input.value);
+        if (!val || val < 1) return tg.showAlert('Введите корректное число');
         
         try {
             const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    user_id: userId, 
-                    amount: val 
-                })
+                body: JSON.stringify({ user_id: userId, amount: val })
             });
-            
             const data = await res.json();
-            
             if (data.pay_url) {
-                if (data.pay_url.includes('t.me/')) {
-                    tg.openTelegramLink(data.pay_url);
-                } else {
-                    tg.openInvoice(data.pay_url, (status) => {
-                        if (status === 'paid') tg.showAlert('Готово!');
-                    });
-                }
+                // Новая логика WebApp для инвойсов
+                tg.openInvoice(data.pay_url, (status) => {
+                    if (status === 'paid') tg.showAlert('Баланс пополнен!');
+                });
             } else {
-                tg.showAlert('Сервер не прислал ссылку');
+                tg.showAlert(data.error || 'Ошибка API звезд');
             }
         } catch (e) {
             tg.showAlert('Ошибка: ' + e.message);
         }
     }
 
+    // --- UI ФУНКЦИИ ---
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
-        document.getElementById('pane-ton').innerHTML = PACKS.map(amt => `
-            <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40">
+        const pane = document.getElementById('pane-ton');
+        if(!pane) return;
+        pane.innerHTML = PACKS.map(amt => `
+            <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
                 <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
                 <div class="font-black text-white text-lg">${amt} TON</div>
             </div>
@@ -354,75 +334,75 @@ const res = await fetch(`${BACKEND_URL}/api/create_pay`, {
 
     function setTab(type) {
         const isTon = type === 'ton';
-        document.getElementById('tab-btn-ton').classList.toggle('active', isTon);
-        document.getElementById('tab-btn-stars').classList.toggle('active', !isTon);
-        document.getElementById('pane-ton').classList.toggle('hidden', !isTon);
-        document.getElementById('pane-stars').classList.toggle('hidden', isTon);
+        document.getElementById('tab-btn-ton')?.classList.toggle('active', isTon);
+        document.getElementById('tab-btn-stars')?.classList.toggle('active', !isTon);
+        document.getElementById('pane-ton')?.classList.toggle('hidden', !isTon);
+        document.getElementById('pane-stars')?.classList.toggle('hidden', isTon);
     }
 
-    function openVault(tab) { 
+    function openVault(tab) {
         tg.HapticFeedback.impactOccurred('light');
-        document.getElementById('vault-modal').style.display = 'flex'; 
-        setTab(tab); 
+        document.getElementById('vault-modal').style.display = 'flex';
+        setTab(tab);
     }
-    
+
     function closeVault() { document.getElementById('vault-modal').style.display = 'none'; }
-    function navigateTo(url) { tg.HapticFeedback.impactOccurred('medium'); window.location.href = url; }
 
     window.onload = () => {
         tg.expand();
         tg.ready();
         
-        const firstName = tg.initDataUnsafe?.user?.first_name || "PLAYER";
-        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-        
-        document.getElementById('display-name').innerText = (tg.initDataUnsafe?.user?.username || firstName).toUpperCase();
-        document.getElementById('display-id').innerText = `ID: ${userId}`;
-        document.getElementById('user-avatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${firstName}`;
+        const user = tg.initDataUnsafe?.user;
+        if(user) {
+            document.getElementById('display-name').innerText = (user.username || user.first_name).toUpperCase();
+            document.getElementById('display-id').innerText = `ID: ${userId}`;
+            if(user.photo_url) document.getElementById('user-avatar').src = user.photo_url;
+        }
         
         syncData();
         renderTonPacks();
-        initStars(); 
+        animateStars(); // Запуск фона
         
         setTimeout(() => {
-            document.getElementById('global-loader').style.display = 'none';
-            document.body.classList.add('loaded');
+            const loader = document.getElementById('global-loader');
+            if(loader) loader.style.display = 'none';
         }, 800);
     };
 
-    // Анимация звезд
+    // --- Анимация звезд ---
     const canvas = document.getElementById('stars-canvas');
-    const ctx = canvas.getContext('2d');
-    let starsArr = [];
-    
-    function initStars() {
-        canvas.width = window.innerWidth || document.documentElement.clientWidth;
-        canvas.height = window.innerHeight || document.documentElement.clientHeight;
-        starsArr = Array.from({length: 35}, () => ({ 
-            x: Math.random() * canvas.width, 
-            y: Math.random() * canvas.height, 
-            size: Math.random() * 1.8, 
-            speed: Math.random() * 0.4 + 0.1, 
-            opacity: Math.random() 
-        }));
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        let starsArr = [];
+        
+        function initStars() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            starsArr = Array.from({length: 35}, () => ({ 
+                x: Math.random() * canvas.width, 
+                y: Math.random() * canvas.height, 
+                size: Math.random() * 1.8, 
+                speed: Math.random() * 0.4 + 0.1, 
+                opacity: Math.random() 
+            }));
+        }
+        
+        function animateStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            starsArr.forEach(s => {
+                ctx.beginPath(); 
+                ctx.globalAlpha = s.opacity; 
+                ctx.fillStyle = "#f5b025"; 
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); 
+                ctx.fill();
+                s.y += s.speed; 
+                if (s.y > canvas.height) s.y = -5;
+            });
+            requestAnimationFrame(animateStars);
+        }
+        initStars();
+        window.addEventListener('resize', initStars);
     }
-    
-    function animateStars() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        starsArr.forEach(s => {
-            ctx.beginPath(); 
-            ctx.globalAlpha = s.opacity; 
-            ctx.fillStyle = "#f5b025"; 
-            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); 
-            ctx.fill();
-            s.y += s.speed; 
-            if (s.y > canvas.height) s.y = -5;
-        });
-        requestAnimationFrame(animateStars);
-    }
-    
-    window.addEventListener('resize', initStars);
-    animateStars();
 </script>
 </body>
 </html>
