@@ -3,106 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NowearSpin</title>
+    <title>NowearSpin Plinko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0d0a05; color: white; margin: 0; height: 100vh; overflow: hidden; position: fixed; width: 100%; }
-        #game-view { flex: 1; width: 100%; height: 50vh; }
-        .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; transition: bottom 0.2s; }
+        body { background: #0d0a05; color: white; margin: 0; height: 100vh; position: fixed; width: 100%; overflow: hidden; }
+        #game-view { width: 100%; height: 400px; position: relative; }
+        .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; }
         .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; }
         .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
-        .mode-btn { background: #21190a; padding: 10px; border: 1px solid #4a3b14; border-radius: 10px; flex: 1; font-weight: 900; }
-        .mode-btn.active { border-color: #d4af37; background: #3d300f; }
+        .mult-row { display: flex; justify-content: space-around; width: 100%; color: #d4af37; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
 <body>
 
-<header class="p-4 flex justify-between">
+<header class="p-4 flex justify-between items-center text-sm">
     <div class="font-black text-[#d4af37]">NowearSpin</div>
-    <div class="text-xs">STARS: <span id="v-stars">0</span> | TON: <span id="v-ton">0.00</span></div>
+    <div>STARS: <span id="v-stars">0</span> | TON: <span id="v-ton">0.00</span></div>
 </header>
 
+<div class="mult-row"><span>5x</span><span>1.5x</span><span>0.5x</span><span>0.2x</span><span>0.1x</span><span>0.2x</span><span>0.5x</span><span>1.5x</span><span>5x</span></div>
 <div id="game-view"></div>
 
 <div id="panel" class="ui-panel">
     <div class="flex gap-2 mb-3">
-        <button id="m-stars" onclick="setMode('stars')" class="mode-btn active">STARS</button>
-        <button id="m-balance" onclick="setMode('balance')" class="mode-btn">TON</button>
+        <button id="m-stars" onclick="setMode('stars')" class="bg-[#3d300f] border border-[#d4af37] p-2 rounded-lg flex-1">STARS</button>
+        <button id="m-balance" onclick="setMode('balance')" class="bg-[#21190a] p-2 rounded-lg flex-1">TON</button>
     </div>
     <input id="bet" type="number" class="input-f mb-3" value="10">
-    <button id="btn" onclick="dropBall()" class="btn-play">СБРОСИТЬ ШАРИК</button>
+    <button id="btn" onclick="dropBall()" class="btn-play">ИГРАТЬ</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    
-    // ВСТАВЬ СЮДА СВОИ КЛЮЧИ!
-    const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo");
+    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); // ВСТАВЬ ДАННЫЕ
     const uid = tg.initDataUnsafe?.user?.id || 12345;
-    let mode = 'stars';
-
-    // ФИКС КЛАВИАТУРЫ: Сдвиг панели вверх при появлении клавы
-    window.visualViewport.addEventListener('resize', () => {
-        const panel = document.getElementById('panel');
-        const keyboardHeight = window.innerHeight - window.visualViewport.height;
-        panel.style.bottom = keyboardHeight + 'px';
-    });
+    let mode = 'stars', busy = false;
 
     const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
     const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
+    // Стены (чтобы шарик не улетал)
+    Composite.add(engine.world, [
+        Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
+        Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
+        Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
+    ]);
+
+    // Пины и Зоны
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
     }
-    for (let i = 0; i < 9; i++) Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 490, 38, 40, { isStatic: true, isSensor: true, label: `z-${i}` }));
+    for (let i = 0; i < 9; i++) Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 380, 38, 20, { isStatic: true, isSensor: true, label: `z-${i}` }));
 
     Render.run(render); Runner.run(Runner.create(), engine);
 
-    async function sync() {
-        const { data } = await SB.from('users').select('*').eq('user_id', uid).single();
-        if (data) {
-            document.getElementById('v-stars').innerText = Math.floor(data.stars || 0);
-            document.getElementById('v-ton').innerText = Number(data.balance || 0).toFixed(2);
-        }
-    }
-
-    function setMode(m) {
-        mode = m;
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('m-' + m).classList.add('active');
-    }
-
     async function dropBall() {
+        if (busy) return;
         document.getElementById('bet').blur();
         const val = Number(document.getElementById('bet').value);
-        const { data: u } = await SB.from('users').select(mode).eq('user_id', uid).single();
         
-        if (!u || u[mode] < val) return tg.showAlert("Мало средств!");
-        await SB.from('users').update({ [mode]: u[mode] - val }).eq('user_id', uid);
-        sync();
+        // Тут логика списания из Supabase...
+        busy = true;
+        document.getElementById('btn').disabled = true;
 
-        const ball = Bodies.circle(180 + Math.random() * 40, 10, 8, { label: 'ball', val, mode });
+        const ball = Bodies.circle(180 + Math.random() * 40, 10, 10, { 
+            label: 'ball', val, mode,
+            render: { sprite: { texture: mode === 'stars' ? 'img/star.png' : 'img/ton.png', xScale: 0.5, yScale: 0.5 } }
+        });
         Composite.add(engine.world, ball);
     }
 
-    Events.on(engine, 'collisionStart', async (e) => {
-        for (let p of e.pairs) {
+    Events.on(engine, 'collisionStart', (e) => {
+        e.pairs.forEach(p => {
             if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('z-')) {
-                const win = Math.floor(p.bodyB.val * [5, 0.2, 1.5, 0.5, 0.2, 0.5, 1.5, 0.2, 5][parseInt(p.bodyA.label.split('-')[1])]);
-                const { data: u } = await SB.from('users').select(p.bodyB.mode).eq('user_id', uid).single();
-                await SB.from('users').update({ [p.bodyB.mode]: u[p.bodyB.mode] + win }).eq('user_id', uid);
                 Composite.remove(engine.world, p.bodyB);
-                sync();
+                busy = false;
+                document.getElementById('btn').disabled = false;
             }
-        }
+        });
     });
 
-    sync();
+    // Фикс клавиатуры (подъем панели)
+    window.visualViewport.addEventListener('resize', () => {
+        document.getElementById('panel').style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
+    });
 </script>
 </body>
 </html>
