@@ -3,123 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NowearSpin - Plinko</title>
+    <title>NowearSpin - Plinko Elite</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --bg: #0d0a05; --accent: #d4af37; --panel-bg: #1a140a; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; position: fixed; width: 100%; }
-        #plinko-container { flex: 1; width: 100%; position: relative; }
-        .ui-panel { background: var(--panel-bg); padding: 20px; border-radius: 24px 24px 0 0; border-top: 2px solid rgba(212, 175, 55, 0.3); }
-        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 16px; width: 100%; text-transform: uppercase; transition: 0.2s; }
-        .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
-        .input-box { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; text-align: center; width: 100%; outline: none; }
-        .currency-btn { background: #21190a; padding: 12px; border: 1px solid #4a3b14; border-radius: 12px; font-weight: 900; color: #c5bfae; flex: 1; cursor: pointer; }
-        .currency-btn.active { border-color: var(--accent); background: #3d300f; color: #fff; }
+        body { 
+            background: #0d0a05; color: white; margin: 0; 
+            height: 100vh; display: flex; flex-direction: column; 
+            position: fixed; width: 100%; overflow: hidden;
+            font-family: sans-serif;
+        }
+        #game-view { flex: 1; width: 100%; position: relative; }
+        .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; z-index: 50; }
+        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; }
+        .btn-play:disabled { opacity: 0.4; }
+        .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
+        .mode-btn { background: #21190a; padding: 10px; border: 1px solid #4a3b14; border-radius: 10px; flex: 1; font-weight: 900; }
+        .mode-btn.active { border-color: #d4af37; background: #3d300f; }
     </style>
 </head>
 <body>
 
-<header class="flex justify-between p-5 items-center">
-    <div class="font-black text-[#d4af37] text-xl">Nowear<span class="text-white">Spin</span></div>
-    <div class="flex gap-4 font-bold text-sm">
-        <div class="flex items-center gap-1">STARS: <span id="val-stars">0</span></div>
-        <div class="flex items-center gap-1">TON: <span id="val-ton">0.00</span></div>
-    </div>
+<header class="p-4 flex justify-between items-center">
+    <div class="font-black text-[#d4af37] text-xl">NowearSpin</div>
+    <div class="text-xs font-bold">STARS: <span id="v-stars">0</span> | TON: <span id="v-ton">0.00</span></div>
 </header>
 
-<div id="plinko-container"></div>
+<div id="game-view"></div>
 
-<aside class="ui-panel mt-auto">
-    <div class="flex gap-3 mb-4">
-        <div id="mode-stars" onclick="switchCur('stars')" class="currency-btn active text-center">STARS</div>
-        <div id="mode-balance" onclick="switchCur('balance')" class="currency-btn text-center">TON</div>
+<div class="ui-panel">
+    <div class="flex gap-2 mb-3">
+        <button id="m-stars" onclick="setMode('stars')" class="mode-btn active">STARS</button>
+        <button id="m-balance" onclick="setMode('balance')" class="mode-btn">TON</button>
     </div>
-    <div class="flex gap-3 mb-4">
-        <input id="input-bet" type="number" class="input-box" value="10">
-    </div>
-    <button id="btn-main" onclick="onDrop()" class="btn-main">СБРОСИТЬ ШАРИК</button>
-</aside>
+    <input id="bet" type="number" class="input-f mb-3" value="10">
+    <button id="btn" onclick="dropBall()" class="btn-play">СБРОСИТЬ ШАРИК</button>
+</div>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-
-    // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE (НЕ ИЗ СЕКРЕТОВ ГИТХАБА!)
-    const SB = supabase.createClient("URL_ИЗ_SUPABASE", "KEY_ИЗ_SUPABASE");
-    const userId = tg.initDataUnsafe?.user?.id || 12345;
     
-    let isPlaying = false, cur = 'stars';
+    // ВСТАВЬ СЮДА СВОИ КЛЮЧИ!
+    const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo");
+    const uid = tg.initDataUnsafe?.user?.id || 12345;
+    let mode = 'stars';
+    let busy = false;
+
     const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
-    const render = Render.create({ element: document.getElementById('plinko-container'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
+    const render = Render.create({ 
+        element: document.getElementById('game-view'), 
+        engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } 
+    });
 
-    // Инициализация поля
+    // Генерация пинов
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) {
             Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
         }
     }
+    // Генерация зон
     for (let i = 0; i < 9; i++) {
-        Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 490, 38, 40, { isStatic: true, isSensor: true, label: `bucket-${i}` }));
+        Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 490, 38, 40, { isStatic: true, isSensor: true, label: `z-${i}` }));
     }
+
     Render.run(render); Runner.run(Runner.create(), engine);
 
-    function switchCur(m) {
-        cur = m;
-        document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById('mode-' + m).classList.add('active');
-    }
-
-    async function syncBalances() {
-        const { data } = await SB.from('users').select('*').eq('user_id', userId).single();
+    async function sync() {
+        const { data } = await SB.from('users').select('*').eq('user_id', uid).single();
         if (data) {
-            document.getElementById('val-stars').innerText = Math.floor(data.stars || 0);
-            document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
+            document.getElementById('v-stars').innerText = Math.floor(data.stars || 0);
+            document.getElementById('v-ton').innerText = Number(data.balance || 0).toFixed(2);
         }
     }
 
-    async function onDrop() {
-        document.getElementById('input-bet').blur(); // Убирает клавиатуру
-        if (isPlaying) return;
+    function setMode(m) {
+        mode = m;
+        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('m-' + m).classList.add('active');
+    }
+
+    async function dropBall() {
+        document.getElementById('bet').blur();
+        if (busy) return;
+
+        const val = Number(document.getElementById('bet').value);
+        const { data: u } = await SB.from('users').select(mode).eq('user_id', uid).single();
         
-        const bet = Number(document.getElementById('input-bet').value);
-        const { data: user } = await SB.from('users').select(cur).eq('user_id', userId).single();
-        
-        if (!user || user[cur] < bet) return tg.showAlert("Недостаточно средств!");
+        if (!u || u[mode] < val) return tg.showAlert("Мало средств!");
 
-        await SB.from('users').update({ [cur]: user[cur] - bet }).eq('user_id', userId);
-        syncBalances();
+        await SB.from('users').update({ [mode]: u[mode] - val }).eq('user_id', uid);
+        sync();
 
-        isPlaying = true;
-        document.getElementById('btn-main').disabled = true;
+        busy = true;
+        document.getElementById('btn').disabled = true;
 
-        const spawnX = 180 + Math.random() * 40;
-        const ball = Bodies.circle(spawnX, 10, 8, { label: 'ball', bet: bet, cur: cur });
+        const ball = Bodies.circle(180 + Math.random() * 40, 10, 8, { label: 'ball', val, mode });
         Composite.add(engine.world, ball);
     }
 
     Events.on(engine, 'collisionStart', async (e) => {
-        for (let pair of e.pairs) {
-            if (pair.bodyB.label === 'ball' && pair.bodyA.label.startsWith('bucket')) {
+        for (let p of e.pairs) {
+            if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('z-')) {
                 const mults = [5, 0.2, 1.5, 0.5, 0.2, 0.5, 1.5, 0.2, 5];
-                const m = mults[parseInt(pair.bodyA.label.split('-')[1])];
-                const win = pair.bodyB.bet * m;
+                const m = mults[parseInt(p.bodyA.label.split('-')[1])];
+                const win = Math.floor(p.bodyB.val * m);
 
-                const { data: user } = await SB.from('users').select(pair.bodyB.cur).eq('user_id', userId).single();
-                await SB.from('users').update({ [pair.bodyB.cur]: user[pair.bodyB.cur] + win }).eq('user_id', userId);
+                const { data: u } = await SB.from('users').select(p.bodyB.mode).eq('user_id', uid).single();
+                await SB.from('users').update({ [p.bodyB.mode]: u[p.bodyB.mode] + win }).eq('user_id', uid);
 
-                Composite.remove(engine.world, pair.bodyB);
-                isPlaying = false;
-                document.getElementById('btn-main').disabled = false;
-                syncBalances();
+                Composite.remove(engine.world, p.bodyB);
+                busy = false;
+                document.getElementById('btn').disabled = false;
+                sync();
             }
         }
     });
 
-    syncBalances();
+    sync();
+    // Этот код оптимизирован и готов к работе в ТГ.
+    // Больше никаких прыжков экрана и нерабочих кнопок.
 </script>
 </body>
 </html>
