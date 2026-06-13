@@ -241,7 +241,6 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    // Оставляем fallback на случай, если tg не загрузился, но в идеале здесь должен быть ID
     const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
 
     const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
@@ -250,6 +249,8 @@
 
     let isProcessing = false;
     const BACKEND_URL = 'https://stars-droper-main.vercel.app';
+    let ctx;
+    let starsArr = [];
 
     async function syncData() {
         try {
@@ -307,7 +308,6 @@
             });
             const data = await res.json();
             if (data.pay_url) {
-                // Новая логика WebApp для инвойсов
                 tg.openInvoice(data.pay_url, (status) => {
                     if (status === 'paid') tg.showAlert('Баланс пополнен!');
                 });
@@ -319,7 +319,6 @@
         }
     }
 
-    // --- UI ФУНКЦИИ ---
     function renderTonPacks() {
         const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
         const pane = document.getElementById('pane-ton');
@@ -348,20 +347,59 @@
 
     function closeVault() { document.getElementById('vault-modal').style.display = 'none'; }
 
+    function initStars() {
+        const canvas = document.getElementById('stars-canvas');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        starsArr = Array.from({length: 35}, () => ({ 
+            x: Math.random() * canvas.width, 
+            y: Math.random() * canvas.height, 
+            size: Math.random() * 1.8, 
+            speed: Math.random() * 0.4 + 0.1, 
+            opacity: Math.random() 
+        }));
+    }
+
+    function animateStars() {
+        const canvas = document.getElementById('stars-canvas');
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        starsArr.forEach(s => {
+            ctx.beginPath(); 
+            ctx.globalAlpha = s.opacity; 
+            ctx.fillStyle = "#f5b025"; 
+            ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); 
+            ctx.fill();
+            s.y += s.speed; 
+            if (s.y > canvas.height) s.y = -5;
+        });
+        requestAnimationFrame(animateStars);
+    }
+
     window.onload = () => {
-        tg.expand();
-        tg.ready();
+        if (window.Telegram && window.Telegram.WebApp) {
+            tg.expand();
+            tg.ready();
+        }
         
         const user = tg.initDataUnsafe?.user;
         if(user) {
-            document.getElementById('display-name').innerText = (user.username || user.first_name).toUpperCase();
+            document.getElementById('display-name').innerText = (user.username || user.first_name || "PLAYER").toUpperCase();
             document.getElementById('display-id').innerText = `ID: ${userId}`;
             if(user.photo_url) document.getElementById('user-avatar').src = user.photo_url;
+        } else {
+            document.getElementById('display-name').innerText = "PLAYER";
         }
         
         syncData();
         renderTonPacks();
-        animateStars(); // Запуск фона
+        
+        const canvas = document.getElementById('stars-canvas');
+        if (canvas) {
+            ctx = canvas.getContext('2d');
+            initStars();
+            animateStars();
+        }
         
         setTimeout(() => {
             const loader = document.getElementById('global-loader');
@@ -369,40 +407,7 @@
         }, 800);
     };
 
-    // --- Анимация звезд ---
-    const canvas = document.getElementById('stars-canvas');
-    if(canvas) {
-        const ctx = canvas.getContext('2d');
-        let starsArr = [];
-        
-        function initStars() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            starsArr = Array.from({length: 35}, () => ({ 
-                x: Math.random() * canvas.width, 
-                y: Math.random() * canvas.height, 
-                size: Math.random() * 1.8, 
-                speed: Math.random() * 0.4 + 0.1, 
-                opacity: Math.random() 
-            }));
-        }
-        
-        function animateStars() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            starsArr.forEach(s => {
-                ctx.beginPath(); 
-                ctx.globalAlpha = s.opacity; 
-                ctx.fillStyle = "#f5b025"; 
-                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); 
-                ctx.fill();
-                s.y += s.speed; 
-                if (s.y > canvas.height) s.y = -5;
-            });
-            requestAnimationFrame(animateStars);
-        }
-        initStars();
-        window.addEventListener('resize', initStars);
-    }
+    window.addEventListener('resize', initStars);
 </script>
 </body>
 </html>
