@@ -1,7 +1,4 @@
-import os
-import requests
-import hmac
-import hashlib
+import os, requests, hmac, hashlib
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client
@@ -9,7 +6,7 @@ from supabase import create_client
 app = Flask(__name__)
 CORS(app)
 
-# Настройки
+# Конфиг
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
@@ -25,7 +22,7 @@ def get_or_create_user(user_id):
         new_user = {"user_id": int(user_id), "balance": 0.0, "stars": 0}
         supabase.table('users').insert(new_user).execute()
         return new_user
-    except Exception: return {"user_id": int(user_id), "balance": 0.0, "stars": 0}
+    except: return {"user_id": int(user_id), "balance": 0.0, "stars": 0}
 
 @app.route('/api/create_pay', methods=['POST'])
 def create_pay():
@@ -34,7 +31,9 @@ def create_pay():
     r = requests.post("https://pay.crypt.bot/api/createInvoice", 
         json={"asset": "TON", "amount": amount, "payload": uid},
         headers={"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}).json()
-    return jsonify({"pay_url": r['result']['bot_invoice_url']}) if r.get('ok') else jsonify({"error": "crypto_err"}), 400
+    if r.get('ok'): return jsonify({"pay_url": r['result']['bot_invoice_url']})
+    print(f"CryptoPay Error: {r}") # Лог для Vercel
+    return jsonify({"error": "crypto_err", "details": r.get('error')}), 400
 
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
@@ -43,13 +42,15 @@ def create_stars_pay():
     r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", json={
         "title": "Stars", "payload": uid, "currency": "XTR", "prices": [{"label": "Stars", "amount": amount}]
     }).json()
-    return jsonify({"pay_url": r['result']}) if r.get('ok') else jsonify({"error": "stars_err"}), 400
+    if r.get('ok'): return jsonify({"pay_url": r['result']})
+    print(f"Stars Error: {r}") # СМОТРИ ЭТО В ЛОГАХ VERCEL
+    return jsonify({"error": "stars_err", "details": r.get('description')}), 400
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
-    signature = request.headers.get('crypto-pay-api-signature')
+    sig = request.headers.get('crypto-pay-api-signature')
     secret = hashlib.sha256(CRYPTO_PAY_TOKEN.encode()).digest()
-    if not signature or hmac.new(secret, request.data, hashlib.sha256).hexdigest() != signature:
+    if not sig or hmac.new(secret, request.data, hashlib.sha256).hexdigest() != sig:
         return "Unauthorized", 401
     
     update = request.json or {}
@@ -62,7 +63,7 @@ def crypto_webhook():
     return "OK", 200
 
 @app.route('/api/telegram-webhook', methods=['POST'])
-@app.route('/api/stars-webhook', methods=['POST']) # Алиас для исправления 404
+@app.route('/api/stars-webhook', methods=['POST'])
 def telegram_webhook():
     update = request.json or {}
     if "pre_checkout_query" in update:
@@ -76,5 +77,4 @@ def telegram_webhook():
             supabase.table('users').update({"stars": int(u.get('stars', 0)) + amt}).eq('user_id', uid).execute()
     return "OK", 200
 
-if __name__ == '__main__':
-    app.run()
+if __name__ == '__main__': app.run()
