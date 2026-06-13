@@ -60,14 +60,24 @@ def create_stars_pay():
     uid = str(data.get('user_id'))
     amount = int(data.get('amount'))
     
+    # Запрос к Telegram
     r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", json={
-        "title": "Stars", "description": "Пополнение баланса", "payload": uid, 
-        "currency": "XTR", "prices": [{"label": "Stars", "amount": amount}]
-    }).json()
+        "title": "Stars", 
+        "description": "Пополнение баланса", 
+        "payload": uid, 
+        "currency": "XTR", 
+        "prices": [{"label": "Stars", "amount": amount}]
+    })
     
-    if r.get('ok'):
-        return jsonify({"pay_url": r['result']})
-    return jsonify({"error": "stars_err"}), 400
+    res_data = r.json()
+    
+    if res_data.get('ok'):
+        # Возвращаем именно строку-ссылку
+        return jsonify({"pay_url": res_data['result']})
+    else:
+        # Логируем ошибку, чтобы понять, почему не работает
+        print(f"Telegram API Error: {res_data}")
+        return jsonify({"error": "stars_err", "details": res_data}), 400
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
