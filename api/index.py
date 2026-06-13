@@ -16,46 +16,44 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
 @app.route('/api/create_pay', methods=['POST'])
 def create_pay():
-    try:
-        data = request.get_json()
-        print(f"DEBUG: Input data: {data}")
-        
-        uid = str(data.get('user_id'))
-        amt = f"{float(data.get('amount', 0)):.2f}"
-        
-        r = requests.post("https://pay.crypt.bot/api/createInvoice", 
-            json={"asset": "TON", "amount": amt, "payload": uid},
-            headers={"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN})
-        
-        print(f"DEBUG: Crypto response: {r.status_code} - {r.text}")
-        return jsonify(r.json()), r.status_code
-    except Exception as e:
-        print(f"ERROR: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    data = request.get_json() or {}
+    uid = str(data.get('user_id'))
+    amount = float(data.get('amount', 0))
+    
+    r = requests.post("https://pay.crypt.bot/api/createInvoice", 
+        json={"asset": "TON", "amount": f"{amount:.2f}", "payload": uid},
+        headers={"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN})
+    
+    return jsonify(r.json()), r.status_code
 
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
-    try:
-        data = request.get_json()
-        uid = str(data.get('user_id'))
-        amt = int(data.get('amount', 0))
+    data = request.get_json() or {}
+    uid = str(data.get('user_id'))
+    amount = int(data.get('amount', 0))
+    
+    # Telegram требует минимум 50 для инвойса
+    if amount < 50:
+        return jsonify({"ok": False, "description": "Min amount is 50"}), 400
+    
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": "Stars Topup",
+        "description": f"Пополнение {amount} звезд",
+        "payload": uid,
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }
+    
+    r = requests.post(url, json=payload)
+    resp = r.json()
+    
+    # Если упало - пишем в логи Vercel причину
+    if not resp.get('ok'):
+        print(f"TELEGRAM API ERROR: {resp}")
         
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
-        payload = {
-            "title": "Stars", 
-            "payload": uid, 
-            "currency": "XTR", 
-            "prices": [{"label": "Stars", "amount": amt}]
-        }
-        r = requests.post(url, json=payload)
-        
-        print(f"DEBUG: Stars response: {r.status_code} - {r.text}")
-        return jsonify(r.json()), r.status_code
-    except Exception as e:
-        print(f"ERROR: {str(e)}")
-        return jsonify({"error": str(e)}), 500
+    return jsonify(resp), r.status_code
 
-# Webhooks (оставляем без изменений)
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
     return "OK", 200
