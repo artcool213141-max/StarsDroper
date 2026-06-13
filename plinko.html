@@ -2,159 +2,117 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NowearSpin Plinko Ultimate</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NowearSpin - Plinko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        :root { --accent: #d4af37; --bg: #0d0a05; }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
+        :root { --accent: #d4af37; --bg: #0d0a05; --panel-bg: #1a140a; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
         #plinko-container { width: 100%; height: 50vh; position: relative; }
-        .btn-main { background: var(--accent); color: #000; font-weight: 900; padding: 18px; border-radius: 16px; text-transform: uppercase; transition: 0.3s; }
-        .btn-main:disabled { opacity: 0.4; filter: grayscale(1); }
-        .currency-tab { border: 1px solid #4a3b14; padding: 10px; border-radius: 12px; cursor: pointer; flex: 1; text-align: center; font-weight: bold; }
-        .currency-tab.active { border-color: var(--accent); background: #3d300f; }
+        .ui-panel { background: var(--panel-bg); padding: 20px; border-radius: 24px 24px 0 0; border-top: 2px solid rgba(212, 175, 55, 0.3); }
+        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 16px; width: 100%; text-transform: uppercase; }
+        .btn-main:disabled { opacity: 0.5; filter: grayscale(1); }
+        .input-box { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; text-align: center; width: 100%; outline: none; }
     </style>
 </head>
-<body class="p-4">
+<body>
 
-    <div class="flex justify-between items-center mb-6">
-        <div class="text-xl font-black uppercase italic">Nowear<span class="text-[#d4af37]">Spin</span></div>
-        <div class="flex gap-4 text-xs bg-[#1a140a] p-2 px-4 rounded-full border border-white/5">
-            <div>⭐ <span id="val-stars">0</span></div>
-            <div>💎 <span id="val-ton">0.00</span></div>
-        </div>
+<header class="flex justify-between p-5">
+    <div class="font-black text-[#d4af37] text-xl">Nowear<span class="text-white">Spin</span></div>
+    <div class="flex gap-4 font-bold text-sm">
+        <div>STARS: <span id="val-stars">0</span></div>
+        <div>TON: <span id="val-ton">0.00</span></div>
     </div>
+</header>
 
-    <div id="plinko-container"></div>
+<div id="plinko-container"></div>
 
-    <div class="mt-auto bg-[#141006] p-6 rounded-3xl border border-white/10 shadow-2xl space-y-4">
-        <div class="flex gap-3">
-            <div id="tab-stars" onclick="setMode('stars')" class="currency-tab active">STARS</div>
-            <div id="tab-ton" onclick="setMode('ton')" class="currency-tab">TON</div>
-        </div>
-        
-        <div class="flex gap-2">
-            <input id="bet-amount" type="number" value="10" class="w-full bg-[#050402] p-4 rounded-xl text-center font-black text-white border border-[#4a3b14]">
-        </div>
-
-        <button id="action-btn" onclick="dropBall()" class="btn-main w-full">Сбросить шарик</button>
+<aside class="ui-panel mt-auto">
+    <div class="flex gap-3 mb-4">
+        <input id="input-bet" type="number" class="input-box" value="10">
+        <select id="cur-select" class="input-box w-1/3">
+            <option value="stars">STARS</option>
+            <option value="balance">TON</option>
+        </select>
     </div>
+    <button id="btn-main" onclick="onDrop()" class="btn-main">СБРОСИТЬ ШАРИК</button>
+</aside>
 
 <script>
-    /** * Инициализация Telegram WebApp и Supabase 
-     */
     const tg = window.Telegram.WebApp;
-    const SB = supabase.createClient("URL", "KEY");
-    const userId = tg.initDataUnsafe?.user?.id || 12345;
-
-    let mode = 'stars', isPlaying = false;
-    const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
+    tg.expand();
+    // ИСПОЛЬЗУЙ СВОИ КЛЮЧИ ИЗ MINES (ОНИ ОДИНАКОВЫЕ ДЛЯ ПРОЕКТА)
+    const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo");
     
-    // Множители (настроенные на жесткую игру)
-    const odds = [10, 0.2, 0.5, 0.2, 0.1, 0.2, 0.5, 0.2, 10];
-
+    let isPlaying = false;
+    const userId = tg.initDataUnsafe?.user?.id || 12345;
+    
+    const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
-    const render = Render.create({
-        element: document.getElementById('plinko-container'),
-        engine: engine,
-        options: { width: 400, height: 400, wireframes: false, background: 'transparent', pixelRatio: 2 }
-    });
+    const render = Render.create({ element: document.getElementById('plinko-container'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
-    /** * Создание визуальных элементов 
-     */
-    function setupWorld() {
-        // Добавляем стены
-        Composite.add(engine.world, [
-            Bodies.rectangle(0, 200, 20, 500, { isStatic: true }),
-            Bodies.rectangle(400, 200, 20, 500, { isStatic: true })
-        ]);
-        
-        // Добавляем ряды пинов (увеличено количество для сложности)
-        for (let i = 2; i <= 12; i++) {
-            for (let j = 0; j < i; j++) {
-                Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 32, 50 + i * 32, 3, { 
-                    isStatic: true, render: { fillStyle: '#4a3b14' } 
-                }));
-            }
-        }
-        
-        // Зоны множителей
-        for (let i = 0; i < 9; i++) {
-            Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 390, 35, 20, { 
-                isStatic: true, isSensor: true, label: `slot-${i}` 
-            }));
+    // Генерация поля
+    for (let i = 2; i <= 9; i++) {
+        for (let j = 0; j < i; j++) {
+            Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
         }
     }
+    for (let i = 0; i < 9; i++) {
+        Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 490, 38, 40, { isStatic: true, isSensor: true, label: `bucket-${i}` }));
+    }
+    Render.run(render); Runner.run(Runner.create(), engine);
 
-    /** * Функции баланса и игры 
-     */
-    async function updateUI() {
-        const { data } = await SB.from('users').select('stars, balance').eq('user_id', userId).single();
+    async function syncBalances() {
+        const { data } = await SB.from('users').select('*').eq('user_id', userId).single();
         if (data) {
-            document.getElementById('val-stars').innerText = Math.floor(data.stars);
-            document.getElementById('val-ton').innerText = Number(data.balance).toFixed(2);
+            document.getElementById('val-stars').innerText = Math.floor(data.stars || 0);
+            document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
         }
     }
 
-    function setMode(m) {
-        mode = m;
-        document.querySelectorAll('.currency-tab').forEach(t => t.classList.remove('active'));
-        document.getElementById('tab-' + m).classList.add('active');
-        tg.HapticFeedback.impactOccurred('light');
-    }
-
-    async function dropBall() {
+    async function onDrop() {
         if (isPlaying) return;
         
-        const bet = parseFloat(document.getElementById('bet-amount').value);
-        const { data: user } = await SB.from('users').select('stars, balance').eq('user_id', userId).single();
-        
-        if ((mode === 'stars' ? user.stars : user.balance) < bet) {
-            return tg.showAlert("Недостаточно средств на балансе!");
-        }
+        const bet = Number(document.getElementById('input-bet').value);
+        const col = document.getElementById('cur-select').value;
+
+        const { data: user } = await SB.from('users').select(col).eq('user_id', userId).single();
+        if (!user || user[col] < bet) return tg.showAlert("Недостаточно средств!");
+
+        await SB.from('users').update({ [col]: user[col] - bet }).eq('user_id', userId);
+        syncBalances();
 
         isPlaying = true;
-        document.getElementById('action-btn').disabled = true;
+        document.getElementById('btn-main').disabled = true;
 
-        // Списание средств
-        await SB.from('users').update({ [mode]: (mode === 'stars' ? user.stars : user.balance) - bet }).eq('user_id', userId);
-        updateUI();
-
-        // Спавн шарика
-        const ball = Bodies.circle(200, 10, 8, { label: 'ball', bet, mode, restitution: 0.4 });
+        // "Плохие шансы": спавним шарик ближе к краям, где множители 0.2x
+        const spawnX = 180 + Math.random() * 40;
+        const ball = Bodies.circle(spawnX, 10, 8, { label: 'ball', bet: bet, col: col });
         Composite.add(engine.world, ball);
-        tg.HapticFeedback.impactOccurred('medium');
     }
 
-    // Слушатель столкновений
     Events.on(engine, 'collisionStart', async (e) => {
-        e.pairs.forEach(async (p) => {
-            if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('slot-')) {
-                const idx = parseInt(p.bodyA.label.split('-')[1]);
-                const win = Math.floor(p.bodyB.bet * odds[idx]);
-                
-                Composite.remove(engine.world, p.bodyB);
-                
-                // Начисление
-                const { data: u } = await SB.from('users').select('stars, balance').eq('user_id', userId).single();
-                await SB.from('users').update({ [p.bodyB.mode]: u[p.bodyB.mode] + win }).eq('user_id', userId);
-                
-                updateUI();
+        e.pairs.forEach(async (pair) => {
+            if (pair.bodyB.label === 'ball' && pair.bodyA.label.startsWith('bucket')) {
+                const multipliers = [5, 0.2, 1.5, 0.5, 0.2, 0.5, 1.5, 0.2, 5];
+                const mult = multipliers[parseInt(pair.bodyA.label.split('-')[1])];
+                const win = pair.bodyB.bet * mult;
+
+                const { data: user } = await SB.from('users').select(pair.bodyB.col).eq('user_id', userId).single();
+                await SB.from('users').update({ [pair.bodyB.col]: user[pair.bodyB.col] + win }).eq('user_id', userId);
+
+                Composite.remove(engine.world, pair.bodyB);
                 isPlaying = false;
-                document.getElementById('action-btn').disabled = false;
-                tg.HapticFeedback.notificationOccurred(win > 0 ? 'success' : 'error');
+                document.getElementById('btn-main').disabled = false;
+                syncBalances();
             }
         });
     });
 
-    // Запуск всего
-    setupWorld();
-    Render.run(render);
-    Runner.run(Runner.create(), engine);
-    window.onload = () => { updateUI(); tg.expand(); };
+    syncBalances();
 </script>
 </body>
 </html>
