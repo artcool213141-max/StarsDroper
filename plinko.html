@@ -39,102 +39,67 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const SB_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-    const SB_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
-    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-    const userId = tg.initDataUnsafe?.user?.id || 8015661230;
+    tg.expand();
+    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); 
+    const uid = tg.initDataUnsafe?.user?.id || 12345;
+    let mode = 'stars', busy = false;
 
-    let balance = 0;
-    let isDropping = false; // Флаг блокировки
-    const multiValues = [0.1, 0.2, 0.5, 0.1, 0.1, 0.2, 0.5, 0.2, 0.1];
-
-    const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+    const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
-    const container = document.getElementById('plinko-container');
-
-    const render = Render.create({
-        element: container,
-        engine: engine,
-        options: { width: 400, height: 500, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
-    });
+    const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
     // Стены
     Composite.add(engine.world, [
-        Bodies.rectangle(0, 250, 20, 500, { isStatic: true, render: { visible: false } }),
-        Bodies.rectangle(400, 250, 20, 500, { isStatic: true, render: { visible: false } })
+        Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
+        Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
+        Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
     ]);
 
-    // Пины
+    // Пины и Зоны
     for (let i = 2; i <= 9; i++) {
-        for (let j = 0; j < i; j++) {
-            const x = 200 + (j - (i - 1) / 2) * 41;
-            const y = 60 + i * 42;
-            Composite.add(engine.world, Bodies.circle(x, y, 3.5, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
-        }
+        for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
+    }
+    for (let i = 0; i < 9; i++) Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 380, 38, 20, { isStatic: true, isSensor: true, label: `z-${i}` }));
+
+    Render.run(render); Runner.run(Runner.create(), engine);
+
+    function setMode(newMode) {
+        mode = newMode;
     }
 
-    // Зоны
-    for (let i = 0; i < 9; i++) {
-        const x = 32 + i * 42;
-        Composite.add(engine.world, Bodies.rectangle(x, 490, 38, 40, { isStatic: true, isSensor: true, label: `bucket-${i}`, render: { visible: false } }));
-    }
-
-    Render.run(render);
-    Runner.run(Runner.create(), engine);
-
-    async function syncBalance() {
-        const { data } = await supabaseClient.from('users').select('stars').eq('user_id', userId).single();
-        if (data) { balance = data.stars; document.getElementById('balance').innerText = Math.floor(balance); }
-    }
-
-    function dropBall() {
-        if (isDropping) return; // Блокировка, если шарик уже есть
+    async function dropBall() {
+        if (busy) return;
         
-        const bet = parseInt(document.getElementById('bet-input').value);
-        if (balance < bet) return tg.showAlert("Недостаточно звезд!");
-
-        isDropping = true;
-        document.getElementById('drop-btn').style.opacity = '0.5';
+        busy = true;
+        document.getElementById('btn').disabled = true;
+        document.getElementById('bet').blur();
         
-        balance -= bet;
-        document.getElementById('balance').innerText = Math.floor(balance);
-
-        // УБИЙСТВЕННЫЕ ШАНСЫ: Спавним всегда в левой части (зона 0.2x, 0.5x, 1x)
-        const spawnX = 170 + (Math.random() * 20); 
-
-        const ball = Bodies.circle(spawnX, 10, 8, {
-            restitution: 0.5, friction: 0.02, frictionAir: 0.04,
-            render: { fillStyle: '#d4af37', strokeStyle: '#fff', lineWidth: 2 },
-            label: 'ball', betAmount: bet
+        const val = Number(document.getElementById('bet').value);
+        const ball = Bodies.circle(180 + Math.random() * 40, 10, 10, { 
+            label: 'ball', val, mode,
+            render: { sprite: { texture: mode === 'stars' ? 'img/star.png' : 'img/ton.png', xScale: 0.5, yScale: 0.5 } }
         });
-
         Composite.add(engine.world, ball);
-        tg.HapticFeedback.impactOccurred('medium');
     }
 
-    Events.on(engine, 'collisionStart', (event) => {
-        event.pairs.forEach(async (pair) => {
-            const { bodyA, bodyB } = pair;
-            if (bodyB.label === 'ball' && bodyA.label.startsWith('bucket-')) {
-                const idx = parseInt(bodyA.label.split('-')[1]);
-                const win = Math.floor(bodyB.betAmount * multiValues[idx]);
+    Events.on(engine, 'collisionStart', (e) => {
+        e.pairs.forEach(p => {
+            const isBall = p.bodyA.label === 'ball' || p.bodyB.label === 'ball';
+            const isZone = p.bodyA.label.startsWith('z-') || p.bodyB.label.startsWith('z-');
+            
+            if (isBall && isZone) {
+                const ball = p.bodyA.label === 'ball' ? p.bodyA : p.bodyB;
+                Composite.remove(engine.world, ball);
                 
-                Composite.remove(engine.world, bodyB);
-                
-                balance += win;
-                document.getElementById('balance').innerText = Math.floor(balance);
-                await supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId);
-                
-                tg.HapticFeedback.notificationOccurred(win >= bodyB.betAmount ? 'success' : 'warning');
-                
-                // Разблокируем кнопку
-                isDropping = false;
-                document.getElementById('drop-btn').style.opacity = '1';
+                busy = false;
+                document.getElementById('btn').disabled = false;
             }
         });
     });
 
-    window.onload = () => { syncBalance(); tg.expand(); };
+    window.visualViewport.addEventListener('resize', () => {
+        document.getElementById('panel').style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
+    });
 </script>
 </body>
 </html>
