@@ -12,7 +12,8 @@
         body { background: #0d0a05; color: white; margin: 0; height: 100vh; position: fixed; width: 100%; overflow: hidden; }
         #game-view { width: 100%; height: 400px; position: relative; }
         .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; }
-        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; }
+        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; transition: opacity 0.2s; }
+        .btn-play:disabled { opacity: 0.3; cursor: not-allowed; }
         .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
         .mult-row { display: flex; justify-content: space-around; width: 100%; color: #d4af37; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
     </style>
@@ -39,7 +40,7 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
-    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); // ВСТАВЬ ДАННЫЕ
+    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); 
     const uid = tg.initDataUnsafe?.user?.id || 12345;
     let mode = 'stars', busy = false;
 
@@ -47,14 +48,12 @@
     const engine = Engine.create();
     const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
-    // Стены (чтобы шарик не улетал)
     Composite.add(engine.world, [
         Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
         Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
         Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
     ]);
 
-    // Пины и Зоны
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
     }
@@ -64,10 +63,11 @@
 
     async function dropBall() {
         if (busy) return;
+        
         document.getElementById('bet').blur();
         const val = Number(document.getElementById('bet').value);
         
-        // Тут логика списания из Supabase...
+        // Блокируем кнопку
         busy = true;
         document.getElementById('btn').disabled = true;
 
@@ -81,14 +81,16 @@
     Events.on(engine, 'collisionStart', (e) => {
         e.pairs.forEach(p => {
             if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('z-')) {
+                // Удаляем шарик
                 Composite.remove(engine.world, p.bodyB);
+                
+                // Разблокируем возможность нажать кнопку снова
                 busy = false;
                 document.getElementById('btn').disabled = false;
             }
         });
     });
 
-    // Фикс клавиатуры (подъем панели)
     window.visualViewport.addEventListener('resize', () => {
         document.getElementById('panel').style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
     });
