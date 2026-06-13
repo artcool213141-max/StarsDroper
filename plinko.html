@@ -3,109 +3,123 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NowearSpin Plinko</title>
+    <title>NowearSpin - Plinko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
-        body { 
-            background: #0d0a05; color: white; margin: 0; 
-            height: 100vh; display: flex; flex-direction: column; 
-            overflow: hidden; position: fixed; width: 100%;
-        }
-        #game-container { flex: 1; width: 100%; position: relative; }
-        .footer { 
-            background: #1a140a; padding: 20px; 
-            border-top: 1px solid #4a3b14; z-index: 100;
-        }
-        .btn { 
-            background: #d4af37; color: #0d0a05; font-weight: 900; 
-            padding: 16px; border-radius: 12px; width: 100%; 
-            text-transform: uppercase; transition: 0.2s;
-        }
-        .btn:disabled { opacity: 0.3; }
-        .input-box { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 8px; color: white; width: 100%; }
+        :root { --bg: #0d0a05; --accent: #d4af37; --panel-bg: #1a140a; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; position: fixed; width: 100%; }
+        #plinko-container { flex: 1; width: 100%; position: relative; }
+        .ui-panel { background: var(--panel-bg); padding: 20px; border-radius: 24px 24px 0 0; border-top: 2px solid rgba(212, 175, 55, 0.3); }
+        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 16px; width: 100%; text-transform: uppercase; transition: 0.2s; }
+        .btn-main:disabled { opacity: 0.5; cursor: not-allowed; }
+        .input-box { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; text-align: center; width: 100%; outline: none; }
+        .currency-btn { background: #21190a; padding: 12px; border: 1px solid #4a3b14; border-radius: 12px; font-weight: 900; color: #c5bfae; flex: 1; cursor: pointer; }
+        .currency-btn.active { border-color: var(--accent); background: #3d300f; color: #fff; }
     </style>
 </head>
 <body>
 
-<div id="game-container"></div>
-
-<div class="footer">
-    <div class="flex gap-2 mb-3">
-        <input id="bet" type="number" class="input-box" value="10">
-        <select id="cur" class="input-box w-1/3">
-            <option value="stars">STARS</option>
-            <option value="balance">TON</option>
-        </select>
+<header class="flex justify-between p-5 items-center">
+    <div class="font-black text-[#d4af37] text-xl">Nowear<span class="text-white">Spin</span></div>
+    <div class="flex gap-4 font-bold text-sm">
+        <div class="flex items-center gap-1">STARS: <span id="val-stars">0</span></div>
+        <div class="flex items-center gap-1">TON: <span id="val-ton">0.00</span></div>
     </div>
-    <button id="btn" onclick="executeGame()" class="btn">СБРОСИТЬ ШАРИК</button>
-</div>
+</header>
+
+<div id="plinko-container"></div>
+
+<aside class="ui-panel mt-auto">
+    <div class="flex gap-3 mb-4">
+        <div id="mode-stars" onclick="switchCur('stars')" class="currency-btn active text-center">STARS</div>
+        <div id="mode-balance" onclick="switchCur('balance')" class="currency-btn text-center">TON</div>
+    </div>
+    <div class="flex gap-3 mb-4">
+        <input id="input-bet" type="number" class="input-box" value="10">
+    </div>
+    <button id="btn-main" onclick="onDrop()" class="btn-main">СБРОСИТЬ ШАРИК</button>
+</aside>
 
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
 
-    const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo");
-    const uid = tg.initDataUnsafe?.user?.id || 12345;
-
-    let busy = false;
+    // ВСТАВЬ СЮДА СВОИ КЛЮЧИ ИЗ SUPABASE (НЕ ИЗ СЕКРЕТОВ ГИТХАБА!)
+    const SB = supabase.createClient("URL_ИЗ_SUPABASE", "KEY_ИЗ_SUPABASE");
+    const userId = tg.initDataUnsafe?.user?.id || 12345;
+    
+    let isPlaying = false, cur = 'stars';
     const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
-    const render = Render.create({ 
-        element: document.getElementById('game-container'), 
-        engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } 
-    });
+    const render = Render.create({ element: document.getElementById('plinko-container'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
-    // Генерация мира
+    // Инициализация поля
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) {
             Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
         }
     }
     for (let i = 0; i < 9; i++) {
-        Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 380, 38, 20, { isStatic: true, isSensor: true, label: `b-${i}` }));
+        Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 490, 38, 40, { isStatic: true, isSensor: true, label: `bucket-${i}` }));
     }
-
     Render.run(render); Runner.run(Runner.create(), engine);
 
-    async function executeGame() {
-        // Гасим клавиатуру принудительно
-        document.getElementById('bet').blur();
+    function switchCur(m) {
+        cur = m;
+        document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('mode-' + m).classList.add('active');
+    }
+
+    async function syncBalances() {
+        const { data } = await SB.from('users').select('*').eq('user_id', userId).single();
+        if (data) {
+            document.getElementById('val-stars').innerText = Math.floor(data.stars || 0);
+            document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
+        }
+    }
+
+    async function onDrop() {
+        document.getElementById('input-bet').blur(); // Убирает клавиатуру
+        if (isPlaying) return;
         
-        if (busy) return;
-        const val = Number(document.getElementById('bet').value);
-        const col = document.getElementById('cur').value;
+        const bet = Number(document.getElementById('input-bet').value);
+        const { data: user } = await SB.from('users').select(cur).eq('user_id', userId).single();
+        
+        if (!user || user[cur] < bet) return tg.showAlert("Недостаточно средств!");
 
-        const { data: u } = await SB.from('users').select(col).eq('user_id', uid).single();
-        if (!u || u[col] < val) return tg.showAlert("Мало денег");
+        await SB.from('users').update({ [cur]: user[cur] - bet }).eq('user_id', userId);
+        syncBalances();
 
-        await SB.from('users').update({ [col]: u[col] - val }).eq('user_id', uid);
+        isPlaying = true;
+        document.getElementById('btn-main').disabled = true;
 
-        busy = true;
-        document.getElementById('btn').disabled = true;
-
-        const ball = Bodies.circle(180 + Math.random() * 40, 10, 8, { label: 'ball', bet: val, col: col });
+        const spawnX = 180 + Math.random() * 40;
+        const ball = Bodies.circle(spawnX, 10, 8, { label: 'ball', bet: bet, cur: cur });
         Composite.add(engine.world, ball);
     }
 
     Events.on(engine, 'collisionStart', async (e) => {
         for (let pair of e.pairs) {
-            if (pair.bodyB.label === 'ball' && pair.bodyA.label.startsWith('b-')) {
-                const m = [5, 0.2, 1.5, 0.5, 0.2, 0.5, 1.5, 0.2, 5][parseInt(pair.bodyA.label.split('-')[1])];
-                const win = Math.floor(pair.bodyB.bet * m);
+            if (pair.bodyB.label === 'ball' && pair.bodyA.label.startsWith('bucket')) {
+                const mults = [5, 0.2, 1.5, 0.5, 0.2, 0.5, 1.5, 0.2, 5];
+                const m = mults[parseInt(pair.bodyA.label.split('-')[1])];
+                const win = pair.bodyB.bet * m;
 
-                const { data: u } = await SB.from('users').select(pair.bodyB.col).eq('user_id', uid).single();
-                await SB.from('users').update({ [pair.bodyB.col]: u[pair.bodyB.col] + win }).eq('user_id', uid);
+                const { data: user } = await SB.from('users').select(pair.bodyB.cur).eq('user_id', userId).single();
+                await SB.from('users').update({ [pair.bodyB.cur]: user[pair.bodyB.cur] + win }).eq('user_id', userId);
 
                 Composite.remove(engine.world, pair.bodyB);
-                busy = false;
-                document.getElementById('btn').disabled = false;
+                isPlaying = false;
+                document.getElementById('btn-main').disabled = false;
+                syncBalances();
             }
         }
     });
+
+    syncBalances();
 </script>
 </body>
 </html>
