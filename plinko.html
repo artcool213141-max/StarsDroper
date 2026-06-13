@@ -3,192 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NowearSpin Plinko Final</title>
+    <title>NowearSpin Plinko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@700;900&display=swap');
-        :root { --accent: #d4af37; --bg: #0d0a05; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; }
-        
-        #plinko-container { 
-            width: 100%; 
-            height: 55vh; 
-            position: relative; 
-            margin-top: 10px;
-        }
-        .star-logo {
-            width: 20px;       /* Ширина картинки */
-            height: 20px;      /* Высота картинки */
-            object-fit: contain;
-            display: inline-block;
-            vertical-align: middle; /* Выравнивание по центру текста */
-        }
-        canvas { display: block; margin: 0 auto; max-width: 100%; height: 100% !important; }
-
-        .multiplier-bar { 
-            display: flex; justify-content: space-between; 
-            padding: 0 5px; position: absolute; bottom: 0; width: 100%; z-index: 10;
-        }
-        .x-badge { 
-            flex: 1; margin: 0 2px; height: 26px; background: var(--accent); color: #0d0a05;
-            border-radius: 4px; font-size: 10px; font-weight: 900;
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
-        }
-        .btn-bet { background: var(--accent); color: #0d0a05; font-weight: 900; border-radius: 16px; padding: 18px; width: 100%; transition: 0.2s; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); }
-        .btn-bet:active { transform: scale(0.96); }
+        body { background: #0d0a05; color: white; margin: 0; height: 100vh; position: fixed; width: 100%; overflow: hidden; }
+        #game-view { width: 100%; height: 400px; position: relative; }
+        .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; }
+        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; transition: opacity 0.2s; }
+        .btn-play:disabled { opacity: 0.3; cursor: not-allowed; }
+        .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
+        .mult-row { display: flex; justify-content: space-around; width: 100%; color: #d4af37; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
     </style>
 </head>
-<body class="p-4">
+<body>
 
-    <div class="flex justify-between items-center h-[50px]">
-        <div class="flex items-center gap-3">
-            <div onclick="location.href='games.html'" class="cursor-pointer text-[#d4af37] hover:text-white transition-colors flex items-center justify-center p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                </svg>
-            </div>
-            <div class="font-black text-xl tracking-tighter uppercase">Nowear<span class="text-[#d4af37]">Spin</span></div>
-        </div>
-        <div class="bg-white/5 px-4 py-2 rounded-full border border-white/10 flex items-center gap-2">
-            <span id="balance" class="font-bold text-[#d4af37] text-lg">0</span>
-            <img src="img/star.png" class="star-logo" alt="star">
-        </div>
-    </div>
+<header class="p-4 flex justify-between items-center text-sm">
+    <div class="font-black text-[#d4af37]">NowearSpin</div>
+    <div>STARS: <span id="v-stars">0</span> | TON: <span id="v-ton">0.00</span></div>
+</header>
 
-    <div id="plinko-container">
-        <div class="multiplier-bar">
-            <div class="x-badge">5X</div>
-            <div class="x-badge" style="background: #3a2e0b; color: #fff; opacity: 0.8;">0.2X</div>
-            <div class="x-badge">2X</div>
-            <div class="x-badge">1.2X</div>
-            <div class="x-badge">1X</div>
-            <div class="x-badge">0.5X</div>
-            <div class="x-badge">1.2X</div>
-            <div class="x-badge">2X</div>
-            <div class="x-badge">10X</div>
-        </div>
-    </div>
+<div class="mult-row"><span>5x</span><span>1.5x</span><span>0.5x</span><span>0.2x</span><span>0.1x</span><span>0.2x</span><span>0.5x</span><span>1.5x</span><span>5x</span></div>
+<div id="game-view"></div>
 
-    <div class="mt-auto bg-[#141006] p-5 rounded-3xl border border-white/5 space-y-5">
-        <div class="grid grid-cols-3 gap-3">
-            <div class="text-center bg-white/5 p-2 rounded-xl border border-white/5">
-                <p class="text-[9px] opacity-40 uppercase mb-1">Ставка</p>
-                <input id="bet-input" type="number" value="10" class="bg-transparent w-full text-center font-black text-[#d4af37] outline-none">
-            </div>
-            <div class="text-center bg-white/5 p-2 rounded-xl border border-white/5">
-                <p class="text-[9px] opacity-40 uppercase mb-1">Риск</p>
-                <p class="font-black text-xs mt-1 text-white">MEDIUM</p>
-            </div>
-            <div class="text-center bg-white/5 p-2 rounded-xl border border-white/5">
-                <p class="text-[9px] opacity-40 uppercase mb-1">Ряды</p>
-                <p class="font-black text-xs mt-1 text-white">8</p>
-            </div>
-        </div>
-        <button id="drop-btn" onclick="dropBall()" class="btn-bet uppercase tracking-widest">Сбросить шарик</button>
+<div id="panel" class="ui-panel">
+    <div class="flex gap-2 mb-3">
+        <button id="m-stars" onclick="setMode('stars')" class="bg-[#3d300f] border border-[#d4af37] p-2 rounded-lg flex-1">STARS</button>
+        <button id="m-balance" onclick="setMode('balance')" class="bg-[#21190a] p-2 rounded-lg flex-1">TON</button>
     </div>
+    <input id="bet" type="number" class="input-f mb-3" value="10">
+    <button id="btn" onclick="dropBall()" class="btn-play">ИГРАТЬ</button>
+</div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    const SB_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-    const SB_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
-    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-    const userId = tg.initDataUnsafe?.user?.id || 8015661230;
+    tg.expand();
+    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE"); 
+    const uid = tg.initDataUnsafe?.user?.id || 12345;
+    let mode = 'stars', busy = false;
 
-    let balance = 0;
-    let isDropping = false; // Флаг блокировки
-    const multiValues = [5, 0.2, 2, 1.2, 1, 0.5, 1.2, 2, 10];
-
-    const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
+    const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
     const engine = Engine.create();
-    const container = document.getElementById('plinko-container');
+    const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
 
-    const render = Render.create({
-        element: container,
-        engine: engine,
-        options: { width: 400, height: 500, wireframes: false, background: 'transparent', pixelRatio: window.devicePixelRatio }
-    });
-
-    // Стены
     Composite.add(engine.world, [
-        Bodies.rectangle(0, 250, 20, 500, { isStatic: true, render: { visible: false } }),
-        Bodies.rectangle(400, 250, 20, 500, { isStatic: true, render: { visible: false } })
+        Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
+        Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
+        Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
     ]);
 
-    // Пины
     for (let i = 2; i <= 9; i++) {
-        for (let j = 0; j < i; j++) {
-            const x = 200 + (j - (i - 1) / 2) * 41;
-            const y = 60 + i * 42;
-            Composite.add(engine.world, Bodies.circle(x, y, 3.5, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
-        }
+        for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
     }
+    for (let i = 0; i < 9; i++) Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 380, 38, 20, { isStatic: true, isSensor: true, label: `z-${i}` }));
 
-    // Зоны
-    for (let i = 0; i < 9; i++) {
-        const x = 32 + i * 42;
-        Composite.add(engine.world, Bodies.rectangle(x, 490, 38, 40, { isStatic: true, isSensor: true, label: `bucket-${i}`, render: { visible: false } }));
-    }
+    Render.run(render); Runner.run(Runner.create(), engine);
 
-    Render.run(render);
-    Runner.run(Runner.create(), engine);
-
-    async function syncBalance() {
-        const { data } = await supabaseClient.from('users').select('stars').eq('user_id', userId).single();
-        if (data) { balance = data.stars; document.getElementById('balance').innerText = Math.floor(balance); }
-    }
-
-    function dropBall() {
-        if (isDropping) return; // Блокировка, если шарик уже есть
+    async function dropBall() {
+        if (busy) return;
         
-        const bet = parseInt(document.getElementById('bet-input').value);
-        if (balance < bet) return tg.showAlert("Недостаточно звезд!");
-
-        isDropping = true;
-        document.getElementById('drop-btn').style.opacity = '0.5';
+        document.getElementById('bet').blur();
+        const val = Number(document.getElementById('bet').value);
         
-        balance -= bet;
-        document.getElementById('balance').innerText = Math.floor(balance);
+        // Блокируем кнопку
+        busy = true;
+        document.getElementById('btn').disabled = true;
 
-        // УБИЙСТВЕННЫЕ ШАНСЫ: Спавним всегда в левой части (зона 0.2x, 0.5x, 1x)
-        const spawnX = 170 + (Math.random() * 20); 
-
-        const ball = Bodies.circle(spawnX, 10, 8, {
-            restitution: 0.5, friction: 0.02, frictionAir: 0.04,
-            render: { fillStyle: '#d4af37', strokeStyle: '#fff', lineWidth: 2 },
-            label: 'ball', betAmount: bet
+        const ball = Bodies.circle(180 + Math.random() * 40, 10, 10, { 
+            label: 'ball', val, mode,
+            render: { sprite: { texture: mode === 'stars' ? 'img/star.png' : 'img/ton.png', xScale: 0.5, yScale: 0.5 } }
         });
-
         Composite.add(engine.world, ball);
-        tg.HapticFeedback.impactOccurred('medium');
     }
 
-    Events.on(engine, 'collisionStart', (event) => {
-        event.pairs.forEach(async (pair) => {
-            const { bodyA, bodyB } = pair;
-            if (bodyB.label === 'ball' && bodyA.label.startsWith('bucket-')) {
-                const idx = parseInt(bodyA.label.split('-')[1]);
-                const win = Math.floor(bodyB.betAmount * multiValues[idx]);
+    Events.on(engine, 'collisionStart', (e) => {
+        e.pairs.forEach(p => {
+            if (p.bodyB.label === 'ball' && p.bodyA.label.startsWith('z-')) {
+                // Удаляем шарик
+                Composite.remove(engine.world, p.bodyB);
                 
-                Composite.remove(engine.world, bodyB);
-                
-                balance += win;
-                document.getElementById('balance').innerText = Math.floor(balance);
-                await supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId);
-                
-                tg.HapticFeedback.notificationOccurred(win >= bodyB.betAmount ? 'success' : 'warning');
-                
-                // Разблокируем кнопку
-                isDropping = false;
-                document.getElementById('drop-btn').style.opacity = '1';
+                // Разблокируем возможность нажать кнопку снова
+                busy = false;
+                document.getElementById('btn').disabled = false;
             }
         });
     });
 
-    window.onload = () => { syncBalance(); tg.expand(); };
+    window.visualViewport.addEventListener('resize', () => {
+        document.getElementById('panel').style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
+    });
 </script>
 </body>
 </html>
