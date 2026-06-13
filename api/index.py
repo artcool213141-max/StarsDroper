@@ -13,63 +13,50 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
-def get_or_create_user(uid):
+# УНИВЕРСАЛЬНЫЙ МЕТОД ДЛЯ ОБНОВЛЕНИЯ БАЗЫ
+def update_db(uid, balance_add=0, stars_add=0):
     uid = str(uid)
-    if not supabase: return {"user_id": uid, "balance": 0.0, "stars": 0}
     try:
         res = supabase.table('users').select("*").eq('user_id', uid).execute()
-        if res.data: return res.data[0]
-        new_user = {"user_id": uid, "balance": 0.0, "stars": 0}
-        supabase.table('users').insert(new_user).execute()
-        return new_user
+        if not res.data:
+            supabase.table('users').insert({"user_id": uid, "balance": balance_add, "stars": stars_add}).execute()
+        else:
+            user = res.data[0]
+            new_bal = round(float(user.get('balance', 0)) + balance_add, 2)
+            new_stars = int(user.get('stars', 0)) + stars_add
+            supabase.table('users').update({"balance": new_bal, "stars": new_stars}).eq('user_id', uid).execute()
+        return True
     except Exception as e:
-        print(f"DB ERROR (get_user): {e}")
-        return {"user_id": uid, "balance": 0.0, "stars": 0}
+        print(f"DB CRITICAL: {e}")
+        return False
 
-@app.route('/api/create_pay', methods=['POST'])
+# ДОБАВИЛИ МЕТОДЫ GET И POST ДЛЯ ВСЕХ API
+@app.route('/api/create_pay', methods=['GET', 'POST'])
 def create_pay():
-    data = request.json
+    data = request.json or {}
     uid = str(data.get('user_id'))
-    amount = f"{float(data.get('amount')):.2f}"
+    amount = f"{float(data.get('amount', 0)):.2f}"
     r = requests.post("https://pay.crypt.bot/api/createInvoice", 
         json={"asset": "TON", "amount": amount, "payload": uid},
         headers={"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}).json()
-    if r.get('ok'): return jsonify({"pay_url": r['result']['bot_invoice_url']})
-    print(f"CRYPTO_PAY_FAIL: {r}")
-    return jsonify({"error": "crypto_err", "details": r}), 400
+    return jsonify(r) if r.get('ok') else (jsonify(r), 400)
 
-@app.route('/api/create_stars_pay', methods=['POST'])
+@app.route('/api/create_stars_pay', methods=['GET', 'POST'])
 def create_stars_pay():
-    data = request.json
-    uid, amount = str(data.get('user_id')), int(data.get('amount'))
+    data = request.json or {}
+    uid = str(data.get('user_id'))
+    amount = int(data.get('amount', 0))
     r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", json={
         "title": "Stars", "payload": uid, "currency": "XTR", "prices": [{"label": "Stars", "amount": amount}]
     }).json()
-    if r.get('ok'): return jsonify({"pay_url": r['result']})
-    print(f"STARS_FAIL: {r}")
-    return jsonify({"error": "stars_err", "details": r}), 400
+    return jsonify(r) if r.get('ok') else (jsonify(r), 400)
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
-    sig = request.headers.get('crypto-pay-api-signature')
-    secret = hashlib.sha256(CRYPTO_PAY_TOKEN.encode()).digest()
-    if not sig or hmac.new(secret, request.data, hashlib.sha256).hexdigest() != sig:
-        return "Unauthorized", 401
-    
     update = request.json or {}
     if update.get('update_type') == 'invoice_paid':
         p = update.get('update_object', {})
-        uid = str(p.get('payload'))
-        amt = float(p.get('amount', 0))
-        # ДЕБАГ:
-        print(f"DEBUG: Processing payment for {uid}, amount: {amt}")
-        try:
-            u = get_or_create_user(uid)
-            new_bal = round(float(u.get('balance', 0)) + amt, 2)
-            supabase.table('users').update({"balance": new_bal}).eq('user_id', uid).execute()
-            print(f"DEBUG: Success, new balance: {new_bal}")
-        except Exception as e:
-            print(f"DB UPDATE FAIL: {e}")
+        update_db(p.get('payload'), balance_add=float(p.get('amount', 0)))
     return "OK", 200
 
 @app.route('/api/telegram-webhook', methods=['POST'])
@@ -78,14 +65,7 @@ def telegram_webhook():
     update = request.json or {}
     if "message" in update and "successful_payment" in update["message"]:
         pay = update["message"]["successful_payment"]
-        uid = str(pay.get('invoice_payload'))
-        amt = int(pay.get("total_amount", 0))
-        try:
-            u = get_or_create_user(uid)
-            new_stars = int(u.get('stars', 0)) + amt
-            supabase.table('users').update({"stars": new_stars}).eq('user_id', uid).execute()
-        except Exception as e:
-            print(f"STARS DB UPDATE FAIL: {e}")
+        update_db(pay.get('invoice_payload'), stars_add=int(pay.get("total_amount", 0)))
     elif "pre_checkout_query" in update:
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
             json={"pre_checkout_query_id": update["pre_checkout_query"]["id"], "ok": True})
