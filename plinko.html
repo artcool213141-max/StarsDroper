@@ -20,11 +20,11 @@
             margin-top: 10px;
         }
         .star-logo {
-            width: 20px;       /* Ширина картинки */
-            height: 20px;      /* Высота картинки */
+            width: 20px;       
+            height: 20px;      
             object-fit: contain;
             display: inline-block;
-            vertical-align: middle; /* Выравнивание по центру текста */
+            vertical-align: middle; 
         }
         canvas { display: block; margin: 0 auto; max-width: 100%; height: 100% !important; }
 
@@ -39,7 +39,8 @@
             box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
         }
         .btn-bet { background: var(--accent); color: #0d0a05; font-weight: 900; border-radius: 16px; padding: 18px; width: 100%; transition: 0.2s; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.4); }
-        .btn-bet:active { transform: scale(0.96); }
+        .btn-bet:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-bet:active:not(:disabled) { transform: scale(0.96); }
     </style>
 </head>
 <body class="p-4">
@@ -99,12 +100,14 @@
     const userId = tg.initDataUnsafe?.user?.id || 8015661230;
 
     let balance = 0;
-    let gamesPlayed = 0; // Считаем игры для ограничения 10x
+    let gamesPlayed = 0; 
+    let isBallActive = false; // Флаг блокировки кнопки
     const multiValues = [5, 0.2, 2, 1.2, 1, 0.5, 1.2, 2, 10];
 
     const { Engine, Render, Runner, Bodies, Composite, Events, Body } = Matter;
     const engine = Engine.create();
     const container = document.getElementById('plinko-container');
+    const dropBtn = document.getElementById('drop-btn');
 
     const render = Render.create({
         element: container,
@@ -118,14 +121,12 @@
         }
     });
 
-    // Стены (защита от вылета)
     const wallOpts = { isStatic: true, render: { visible: false } };
     Composite.add(engine.world, [
         Bodies.rectangle(0, 250, 20, 500, wallOpts),
         Bodies.rectangle(400, 250, 20, 500, wallOpts)
     ]);
 
-    // Пины (гвоздики)
     for (let i = 2; i <= 9; i++) {
         for (let j = 0; j < i; j++) {
             const x = 200 + (j - (i - 1) / 2) * 41;
@@ -137,7 +138,6 @@
         }
     }
 
-    // Зоны множителей (сенсоры)
     for (let i = 0; i < 9; i++) {
         const x = 32 + i * 42;
         Composite.add(engine.world, Bodies.rectangle(x, 490, 38, 40, { 
@@ -157,28 +157,30 @@
     }
 
     function dropBall() {
+        if (isBallActive) return; // Блокировка
+        
         const bet = parseInt(document.getElementById('bet-input').value);
         if (balance < bet) return tg.showAlert("Недостаточно звезд!");
+
+        isBallActive = true;
+        dropBtn.disabled = true; // Отключаем кнопку
 
         balance -= bet;
         document.getElementById('balance').innerText = Math.floor(balance);
 
         gamesPlayed++;
         
-        // УМНАЯ ЛОГИКА ШАНСОВ:
-        // Если это НЕ 7-я игра, спавним чуть левее центра, чтобы физически было почти 
-        // невозможно попасть в 10x (который справа).
         let spawnX = 200;
         if (gamesPlayed % 7 !== 0) {
-            spawnX = 185 + (Math.random() * 15); // Тяготеет к центру (1x)
+            spawnX = 185 + (Math.random() * 15);
         } else {
-            spawnX = 215 + (Math.random() * 10); // Даем шанс улететь вправо к 10x
+            spawnX = 215 + (Math.random() * 10);
         }
 
         const ball = Bodies.circle(spawnX, 10, 8, {
             restitution: 0.5,
             friction: 0.02,
-            frictionAir: 0.04, // Плавность полета
+            frictionAir: 0.04,
             render: { fillStyle: '#d4af37', strokeStyle: '#fff', lineWidth: 2 },
             label: 'ball',
             betAmount: bet
@@ -188,7 +190,6 @@
         tg.HapticFeedback.impactOccurred('medium');
     }
 
-
     Events.on(engine, 'collisionStart', (event) => {
         event.pairs.forEach(async (pair) => {
             const { bodyA, bodyB } = pair;
@@ -196,7 +197,6 @@
                 const idx = parseInt(bodyA.label.split('-')[1]);
                 const multiplier = multiValues[idx];
                 
-                // Если выпало 10x раньше срока — сбрасываем счетчик
                 if (multiplier >= 5) gamesPlayed = 0;
 
                 const win = Math.floor(bodyB.betAmount * multiplier);
@@ -207,6 +207,10 @@
                 
                 await supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId);
                 tg.HapticFeedback.notificationOccurred(win >= bodyB.betAmount ? 'success' : 'warning');
+                
+                // Разблокировка после падения
+                isBallActive = false;
+                dropBtn.disabled = false;
             }
         });
     });
