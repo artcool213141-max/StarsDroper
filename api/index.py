@@ -13,32 +13,29 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
-def get_or_create_user(user_id):
-    if not supabase: return {"user_id": int(user_id), "balance": 0.0, "stars": 0}
+def get_or_create_user(uid):
+    uid = str(uid)
+    if not supabase: return {"user_id": uid, "balance": 0.0, "stars": 0}
     try:
-        res = supabase.table('users').select("*").eq('user_id', user_id).execute()
+        res = supabase.table('users').select("*").eq('user_id', uid).execute()
         if res.data: return res.data[0]
-        new_user = {"user_id": int(user_id), "balance": 0.0, "stars": 0}
+        new_user = {"user_id": uid, "balance": 0.0, "stars": 0}
         supabase.table('users').insert(new_user).execute()
         return new_user
     except Exception as e:
-        print(f"DB Error: {e}")
-        return {"user_id": int(user_id), "balance": 0.0, "stars": 0}
+        print(f"DB ERROR (get_user): {e}")
+        return {"user_id": uid, "balance": 0.0, "stars": 0}
 
 @app.route('/api/create_pay', methods=['POST'])
 def create_pay():
     data = request.json
     uid = str(data.get('user_id'))
-    # CryptoPay требует строку с фиксированной точностью
-    amount = f"{float(data.get('amount')):.2f}" 
-    
+    amount = f"{float(data.get('amount')):.2f}"
     r = requests.post("https://pay.crypt.bot/api/createInvoice", 
         json={"asset": "TON", "amount": amount, "payload": uid},
         headers={"Crypto-Pay-API-Token": CRYPTO_PAY_TOKEN}).json()
-    
     if r.get('ok'): return jsonify({"pay_url": r['result']['bot_invoice_url']})
-    
-    print(f"CRITICAL: CryptoPay returned error: {r}") # <-- СМОТРИ ЭТО В ЛОГАХ VERCEL
+    print(f"CRYPTO_PAY_FAIL: {r}")
     return jsonify({"error": "crypto_err", "details": r}), 400
 
 @app.route('/api/create_stars_pay', methods=['POST'])
@@ -48,10 +45,8 @@ def create_stars_pay():
     r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", json={
         "title": "Stars", "payload": uid, "currency": "XTR", "prices": [{"label": "Stars", "amount": amount}]
     }).json()
-    
     if r.get('ok'): return jsonify({"pay_url": r['result']})
-    
-    print(f"CRITICAL: Telegram Stars returned error: {r}") # <-- СМОТРИ ЭТО В ЛОГАХ VERCEL
+    print(f"STARS_FAIL: {r}")
     return jsonify({"error": "stars_err", "details": r}), 400
 
 @app.route('/api/crypto-webhook', methods=['POST'])
@@ -66,26 +61,31 @@ def crypto_webhook():
         p = update.get('update_object', {})
         uid = str(p.get('payload'))
         amt = float(p.get('amount', 0))
-        u = get_or_create_user(uid)
-        if supabase:
+        # ДЕБАГ:
+        print(f"DEBUG: Processing payment for {uid}, amount: {amt}")
+        try:
+            u = get_or_create_user(uid)
             new_bal = round(float(u.get('balance', 0)) + amt, 2)
             supabase.table('users').update({"balance": new_bal}).eq('user_id', uid).execute()
+            print(f"DEBUG: Success, new balance: {new_bal}")
+        except Exception as e:
+            print(f"DB UPDATE FAIL: {e}")
     return "OK", 200
 
 @app.route('/api/telegram-webhook', methods=['POST'])
 @app.route('/api/stars-webhook', methods=['POST'])
 def telegram_webhook():
     update = request.json or {}
-    # Обработка оплаты Звездами
     if "message" in update and "successful_payment" in update["message"]:
         pay = update["message"]["successful_payment"]
         uid = str(pay.get('invoice_payload'))
         amt = int(pay.get("total_amount", 0))
-        u = get_or_create_user(uid)
-        if supabase:
+        try:
+            u = get_or_create_user(uid)
             new_stars = int(u.get('stars', 0)) + amt
             supabase.table('users').update({"stars": new_stars}).eq('user_id', uid).execute()
-    # Обработка Pre-checkout (обязательно!)
+        except Exception as e:
+            print(f"STARS DB UPDATE FAIL: {e}")
     elif "pre_checkout_query" in update:
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
             json={"pre_checkout_query_id": update["pre_checkout_query"]["id"], "ok": True})
