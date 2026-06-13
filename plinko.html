@@ -2,104 +2,122 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NowearSpin Plinko</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0d0a05; color: white; margin: 0; height: 100vh; position: fixed; width: 100%; overflow: hidden; }
-        #game-view { width: 100%; height: 400px; position: relative; }
-        .ui-panel { background: #1a140a; padding: 20px; border-top: 2px solid #4a3b14; position: absolute; bottom: 0; width: 100%; z-index: 10; }
-        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 12px; width: 100%; text-transform: uppercase; }
-        .btn-play:disabled { background: #555; cursor: not-allowed; }
-        .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; border-radius: 12px; color: white; width: 100%; text-align: center; }
-        .mult-row { display: flex; justify-content: space-around; width: 100%; color: #d4af37; font-size: 10px; font-weight: bold; margin-bottom: 5px; }
+        body { background: #0d0a05; color: white; margin: 0; display: flex; flex-direction: column; align-items: center; }
+        #plinko-container { width: 400px; height: 500px; }
+        .ui-panel { width: 400px; padding: 20px; background: #1a140a; }
+        .input-f { background: #050402; border: 1px solid #4a3b14; padding: 12px; width: 100%; text-align: center; color: white; border-radius: 8px; }
+        .btn-play { background: #d4af37; color: #0d0a05; font-weight: 900; padding: 15px; width: 100%; border-radius: 8px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<header class="p-4 flex justify-between items-center text-sm">
-    <div class="font-black text-[#d4af37]">NowearSpin</div>
-    <div>STARS: <span id="v-stars">0</span> | TON: <span id="v-ton">0.00</span></div>
-</header>
+<div class="p-4 text-center">STARS: <span id="balance">0</span></div>
 
-<div class="mult-row"><span>5x</span><span>1.5x</span><span>0.5x</span><span>0.2x</span><span>0.1x</span><span>0.2x</span><span>0.5x</span><span>1.5x</span><span>5x</span></div>
-<div id="game-view"></div>
+<div id="plinko-container"></div>
 
-<div id="panel" class="ui-panel">
-    <div class="flex gap-2 mb-3">
-        <button id="m-stars" onclick="setMode('stars')" class="bg-[#3d300f] border border-[#d4af37] p-2 rounded-lg flex-1">STARS</button>
-        <button id="m-balance" onclick="setMode('balance')" class="bg-[#21190a] p-2 rounded-lg flex-1">TON</button>
-    </div>
-    <input id="bet" type="number" class="input-f mb-3" value="10">
-    <button id="btn" onclick="dropBall()" class="btn-play">ИГРАТЬ</button>
+<div class="ui-panel">
+    <input id="bet-input" type="number" class="input-f" value="10">
+    <button id="drop-btn" onclick="dropBall()" class="btn-play">ИГРАТЬ</button>
 </div>
 
 <script>
     const tg = window.Telegram.WebApp;
-    tg.expand();
-    const SB = supabase.createClient("URL_SUPABASE", "KEY_SUPABASE");
-    const uid = tg.initDataUnsafe?.user?.id || 12345;
-    let mode = 'stars', busy = false;
+    const SB_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+    const SB_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+    const userId = tg.initDataUnsafe?.user?.id || 8015661230;
 
-    const { Engine, Render, Bodies, Composite, Events, Runner } = Matter;
+    let balance = 0;
+    let isDropping = false;
+    const multiValues = [5, 0.2, 2, 1.2, 1, 0.5, 1.2, 2, 10];
+
+    const { Engine, Render, Runner, Bodies, Composite, Events } = Matter;
     const engine = Engine.create();
-    const render = Render.create({ element: document.getElementById('game-view'), engine, options: { width: 400, height: 400, wireframes: false, background: 'transparent' } });
+    const container = document.getElementById('plinko-container');
 
+    const render = Render.create({
+        element: container,
+        engine: engine,
+        options: { width: 400, height: 500, wireframes: false, background: 'transparent' }
+    });
+
+    // Добавляем границы, чтобы шарик не улетал
     Composite.add(engine.world, [
-        Bodies.rectangle(200, 410, 400, 20, { isStatic: true }),
-        Bodies.rectangle(0, 200, 20, 400, { isStatic: true }),
-        Bodies.rectangle(400, 200, 20, 400, { isStatic: true })
+        Bodies.rectangle(200, 505, 400, 10, { isStatic: true }), // Пол
+        Bodies.rectangle(0, 250, 10, 500, { isStatic: true }), // Левая стена
+        Bodies.rectangle(400, 250, 10, 500, { isStatic: true }) // Правая стена
     ]);
 
+    // Пины
     for (let i = 2; i <= 9; i++) {
-        for (let j = 0; j < i; j++) Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 4, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
+        for (let j = 0; j < i; j++) {
+            Composite.add(engine.world, Bodies.circle(200 + (j - (i - 1) / 2) * 41, 60 + i * 42, 3.5, { isStatic: true, render: { fillStyle: '#4a3b14' } }));
+        }
     }
-    for (let i = 0; i < 9; i++) Composite.add(engine.world, Bodies.rectangle(32 + i * 42, 380, 38, 20, { isStatic: true, isSensor: true, label: `z-${i}` }));
 
-    Render.run(render); Runner.run(Runner.create(), engine);
+    // Зоны (убедитесь, что они видны)
+    for (let i = 0; i < 9; i++) {
+        Composite.add(engine.world, Bodies.rectangle(23 + i * 44, 480, 30, 20, { 
+            isStatic: true, isSensor: true, label: 'bucket-' + i, 
+            render: { fillStyle: '#4a3b14' } 
+        }));
+    }
+
+    Render.run(render);
+    Runner.run(Runner.create(), engine);
+
+    async function syncBalance() {
+        const { data } = await supabaseClient.from('users').select('stars').eq('user_id', userId).single();
+        if (data) { balance = data.stars; document.getElementById('balance').innerText = Math.floor(balance); }
+    }
 
     function dropBall() {
-        if (busy) return;
+        if (isDropping) return;
         
-        busy = true;
-        const btn = document.getElementById('btn');
-        btn.disabled = true;
-        btn.style.opacity = "0.5";
-        
-        document.getElementById('bet').blur();
-        const val = Number(document.getElementById('bet').value);
+        const bet = parseInt(document.getElementById('bet-input').value);
+        if (balance < bet) return alert("Недостаточно звезд!");
 
-        const ball = Bodies.circle(180 + Math.random() * 40, 10, 10, { 
-            label: 'ball', val, mode,
-            restitution: 0.5,
-            render: { fillStyle: '#d4af37' } // Если картинок нет, будет видно желтый шарик
+        isDropping = true;
+        document.getElementById('drop-btn').style.opacity = '0.5';
+        
+        balance -= bet;
+        document.getElementById('balance').innerText = Math.floor(balance);
+
+        const ball = Bodies.circle(180 + Math.random() * 40, 10, 8, {
+            restitution: 0.6,
+            render: { fillStyle: '#d4af37' },
+            label: 'ball', betAmount: bet
         });
+
         Composite.add(engine.world, ball);
     }
 
-    Events.on(engine, 'collisionStart', (e) => {
-        e.pairs.forEach(p => {
-            const isBall = p.bodyA.label === 'ball' || p.bodyB.label === 'ball';
-            const isZone = p.bodyA.label.startsWith('z-') || p.bodyB.label.startsWith('z-');
-
-            if (isBall && isZone && busy) {
-                const ball = p.bodyA.label === 'ball' ? p.bodyA : p.bodyB;
-                Composite.remove(engine.world, ball);
+    Events.on(engine, 'collisionStart', (event) => {
+        event.pairs.forEach((pair) => {
+            if (pair.bodyB.label === 'ball' && pair.bodyA.label.startsWith('bucket-')) {
+                const idx = parseInt(pair.bodyA.label.split('-')[1]);
+                const win = Math.floor(pair.bodyB.betAmount * multiValues[idx]);
                 
-                busy = false;
-                const btn = document.getElementById('btn');
-                btn.disabled = false;
-                btn.style.opacity = "1";
+                Composite.remove(engine.world, pair.bodyB);
+                
+                balance += win;
+                document.getElementById('balance').innerText = Math.floor(balance);
+                supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId).then();
+                
+                isDropping = false;
+                document.getElementById('drop-btn').style.opacity = '1';
             }
         });
     });
 
-    window.visualViewport.addEventListener('resize', () => {
-        document.getElementById('panel').style.bottom = (window.innerHeight - window.visualViewport.height) + 'px';
-    });
+    window.onload = () => { syncBalance(); tg.expand(); };
 </script>
 </body>
 </html>
