@@ -9,30 +9,24 @@ from supabase import create_client, Client
 app = Flask(__name__)
 CORS(app)
 
-# 1. Безопасное получение переменных
+# Получение переменных окружения
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_PAY_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-# 2. Инициализация клиента Supabase с проверкой
+# Инициализация Supabase
+supabase = None
 if SUPABASE_URL and SUPABASE_KEY:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-else:
-    supabase = None
-    print("ВНИМАНИЕ: Supabase не настроен. Проверьте переменные окружения Vercel!")
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def get_or_create_user(user_id):
-    if not supabase: 
+    if not supabase:
         return {"user_id": int(user_id), "balance": 0.0, "stars": 0}
-    
     try:
-        # Пробуем найти
         res = supabase.table('users').select("*").eq('user_id', user_id).execute()
-        if res.data: 
+        if res.data:
             return res.data[0]
-        
-        # Если нет — создаем
         new_user = {"user_id": int(user_id), "balance": 0.0, "stars": 0}
         supabase.table('users').insert(new_user).execute()
         return new_user
@@ -60,30 +54,17 @@ def create_stars_pay():
     uid = str(data.get('user_id'))
     amount = int(data.get('amount'))
     
-    # Добавили timeout=5, чтобы не ждать вечно
-    try:
-        r = requests.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", 
-            json={
-                "title": "Stars", 
-                "description": "Пополнение баланса", 
-                "payload": uid, 
-                "currency": "XTR", 
-                "prices": [{"label": "Stars", "amount": amount}]
-            },
-            timeout=5 
-        )
-        res_data = r.json()
-        
-        if r.status_code == 200 and res_data.get('ok'):
-            return jsonify({"pay_url": res_data['result']})
-        else:
-            return jsonify({"error": "stars_err", "details": res_data}), 400
-            
-    except requests.exceptions.Timeout:
-        return jsonify({"error": "timeout"}), 504
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    r = requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink", json={
+        "title": "Stars",
+        "description": "Пополнение баланса",
+        "payload": uid,
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }).json()
+    
+    if r.get('ok'):
+        return jsonify({"pay_url": r['result']})
+    return jsonify({"error": "stars_err", "details": r}), 400
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
@@ -116,6 +97,5 @@ def telegram_webhook():
             supabase.table('users').update({"stars": int(u.get('stars', 0)) + amt}).eq('user_id', uid).execute()
     return "OK", 200
 
-# Это критически важно для Vercel
 if __name__ == '__main__':
     app.run()
