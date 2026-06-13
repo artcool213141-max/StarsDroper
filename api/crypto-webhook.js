@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -7,39 +6,29 @@ export default async function handler(req, res) {
     if (req.method !== 'POST') return res.status(200).send('OK');
 
     try {
-        const { update_type, payload } = req.body;
+        const { message, pre_checkout_query } = req.body;
+        
+        // Автоматическое подтверждение для Telegram Stars
+        if (pre_checkout_query) {
+            return res.status(200).json({ ok: true });
+        }
 
-        if (update_type === 'invoice_paid') {
-            // Исправлено: теперь берем ID из правильного места
-            const userId = String(payload.payload); 
-            const sum = parseFloat(payload.amount);
-            
-            console.log(`Зачисление: ${sum} для юзера ${userId}`);
+        const { successful_payment } = req.body.message || {};
+        if (successful_payment) {
+            const payload = successful_payment.invoice_payload; // "user_12345_amt_50"
+            const userId = payload.split('_')[1];
+            const amount = parseInt(payload.split('_')[3]);
 
-            // 1. Получаем данные (замени 'balance' на реальное имя колонки из БД!)
-            const { data: user, error: fetchError } = await supabase
-                .from('users')
-                .select('balance') 
-                .eq('user_id', userId)
-                .single();
+            console.log(`Зачисление: ${amount} для юзера ${userId}`);
 
-            // Если юзера нет, создаем его (или обрабатываем ошибку)
-            const currentBalance = user?.balance || 0;
-            const newBalance = parseFloat(currentBalance) + sum;
+            const { data: user } = await supabase.from('users').select('stars').eq('user_id', userId).single();
+            const newStars = (user?.stars || 0) + amount;
 
-            // 2. Обновляем (замени 'balance' на реальное имя колонки из БД!)
-            const { error: updateError } = await supabase
-                .from('users')
-                .update({ balance: newBalance })
-                .eq('user_id', userId);
-
-            if (updateError) throw updateError;
-            console.log(`УСПЕХ: Баланс ${userId} обновлен до ${newBalance}`);
+            await supabase.from('users').update({ stars: newStars }).eq('user_id', userId);
         }
 
         return res.status(200).send('OK');
     } catch (err) {
-        console.error("КРИТИЧЕСКАЯ ОШИБКА:", err.message);
-        return res.status(200).send('OK'); 
+        return res.status(200).send('OK');
     }
 }
