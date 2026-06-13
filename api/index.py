@@ -135,4 +135,4 @@ def get_balance(user_id):
 if __name__ == '__main__':
     app.run(debug=True)
 
-app=app 
+app = app
