@@ -319,12 +319,14 @@
         }
     }
 
-    function renderTonPacks() {
-        const PACKS = [0,5 ,1, 3, 5, 10, 20, 50, 100, 250];
+function renderTonPacks() {
+        // Добавили 0.05 в массив. Важно: используем точку, а не запятую!
+        const PACKS = [0.05, 1, 3, 5, 10, 20, 50, 100, 250];
         const pane = document.getElementById('pane-ton');
         if(!pane) return;
+        
         pane.innerHTML = PACKS.map(amt => `
-            <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
+            <div onclick="processPayment('${amt}')" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40 cursor-pointer">
                 <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
                 <div class="font-black text-white text-lg">${amt} TON</div>
             </div>
