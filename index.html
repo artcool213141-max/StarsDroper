@@ -1,33 +1,33 @@
-<div class="fixed inset-0 bg-[#050505] flex flex-col items-center justify-center p-6 text-center z-50">
-    <!-- Иконка с анимацией -->
-    <div class="relative mb-8">
-        <div class="absolute inset-0 bg-yellow-500 rounded-full blur-[40px] opacity-20 animate-pulse"></div>
-        <svg class="w-20 h-20 text-yellow-500 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+<div class="fixed inset-0 z-[9999] flex flex-col items-center justify-center p-6 text-center" 
+     style="background: linear-gradient(135deg, #1a1505 0%, #000000 100%);">
+    
+    <!-- Золотой ореол -->
+    <div class="absolute w-64 h-64 bg-yellow-500/10 rounded-full blur-[100px]"></div>
+
+    <!-- Иконка -->
+    <div class="relative mb-6">
+        <svg class="w-20 h-20 text-yellow-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm0-4h-2V7h2v8z"/>
         </svg>
     </div>
 
-    <!-- Заголовок -->
-    <h1 class="orbitron text-2xl font-black uppercase text-white tracking-widest mb-2">Технические работы</h1>
-    <p class="text-gray-400 text-xs uppercase tracking-widest mb-8">NowearSpin обновляет систему для твоего удобства</p>
+    <!-- Текст -->
+    <h1 class="font-black uppercase tracking-[0.2em] text-white text-2xl mb-2" 
+        style="text-shadow: 0 0 20px rgba(234, 179, 8, 0.5);">
+        Технические работы
+    </h1>
+    
+    <div class="w-16 h-[2px] bg-yellow-500 mb-6 shadow-[0_0_10px_rgba(234,179,8,0.8)]"></div>
 
-    <!-- Индикатор -->
-    <div class="bg-white/5 border border-white/10 rounded-2xl p-4 w-full max-w-sm">
-        <div class="flex justify-between items-center mb-3">
-            <span class="text-[10px] font-bold text-gray-500 uppercase">Статус обновлений</span>
-            <span class="flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-yellow-500 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-            </span>
-        </div>
-        <div class="w-full bg-black h-1.5 rounded-full overflow-hidden">
-            <div class="bg-yellow-500 h-full w-[65%] animate-pulse"></div>
-        </div>
-        <p class="text-[9px] text-yellow-500 mt-2 font-bold uppercase">Осталось совсем немного...</p>
-    </div>
+    <p class="text-yellow-500/70 text-[11px] font-bold uppercase tracking-widest mb-8 max-w-[200px]">
+        NowearSpin готовится к обновлению. 
+        Возвращайся совсем скоро — будет мощно.
+    </p>
 
-    <!-- Футер -->
-    <div class="mt-12">
-        <p class="text-[9px] text-gray-600 font-bold uppercase">Следи за новостями в канале</p>
+    <!-- Статус -->
+    <div class="border border-yellow-500/30 px-6 py-2 rounded-full">
+        <span class="text-[10px] font-black uppercase text-yellow-500 tracking-[0.2em] animate-pulse">
+            Обновление системы...
+        </span>
     </div>
 </div>
