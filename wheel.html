@@ -124,7 +124,8 @@
     tg.enableClosingConfirmation();
 
     // rarity: 0 - нищий дроп (1, 15, 50), 1 - ценный
-    const ALL_ITEMS = {
+const ALL_ITEMS = {
+        "star_cheap": { price: 1, img: "star.png", rarity: 0 }, // Исправил ключ
         "star__1": { price: 1, img: "star.png", rarity: 0 },
         "star_15": { price: 15, img: "star.png", rarity: 0 },
         "raketa.png": { price: 50, img: "raketa.png", rarity: 0 },
@@ -205,15 +206,17 @@
         const JUNK = ALL_KEYS.filter(k => ALL_ITEMS[k].rarity === 0);
         const RARE = ALL_KEYS.filter(k => ALL_ITEMS[k].rarity === 1);
 
-        for(let i=0; i<(isFree ? 1 : multi); i++) {
+for(let i=0; i<(isFree ? 1 : multi); i++) {
             let winKey;
             if (isFree) {
-                winKey = "star_1"; // Халява = только звезда за 1
+                winKey = "star_cheap"; // Теперь ключ совпадает с объектом выше
             } else {
-                // Платный: 90% шанс на мусор, 10% на ценное
-                winKey = (Math.random() < 0.9) ? JUNK[Math.floor(Math.random()*JUNK.length)] : RARE[Math.floor(Math.random()*RARE.length)];
+                // ЛОГИКА: 95% Ракета, 5% Редкое за 500
+                winKey = (Math.random() < 0.95) ? "raketa.png" : "2025.jpg";
             }
+            
             currentWins.push(ALL_ITEMS[winKey]);
+            // Важно: если картинка меняется, она должна быть в ALL_ITEMS
             document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
