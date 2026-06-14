@@ -53,6 +53,7 @@ def webhook():
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
+# --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
 def create_crypto_pay():
     data = request.get_json() or {}
@@ -68,34 +69,37 @@ def create_crypto_pay():
 
 @app.route('/api/crypto-webhook', methods=['POST', 'GET'])
 def crypto_webhook():
-    # 1. Если просто открыли ссылку в браузере — говорим, что всё ок
     if request.method == 'GET':
         return "Webhook is active!", 200
 
-    # 2. Обработка платежа
     update = request.get_json()
+    logger.info(f"Получен webhook от CryptoBot: {update}")
     
-    # Если это не оплата, выходим сразу
     if update.get('update_type') != 'invoice_paid':
-        return "Not an invoice", 200
+        return "OK", 200
 
     try:
-        payload = update['payload']
-        user_id = str(payload['payload'])
-        amount_ton = float(payload['asset_pay_amount'])
+        payload = update.get('payload', {})
+        user_id = str(payload.get('payload'))
+        amount_ton = float(payload.get('asset_pay_amount', 0))
         
-        # Запрос в базу
-        # Если юзер есть - прибавляем, если нет - создаем
+        logger.info(f"Попытка начисления: user_id={user_id}, amount={amount_ton}")
+        
         res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
         
         if res.data and len(res.data) > 0:
             old_bal = float(res.data[0].get('balance') or 0)
             new_bal = old_bal + amount_ton
             supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
+            logger.info("Баланс успешно обновлен")
         else:
             supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
+            logger.info("Новый юзер создан, баланс записан")
             
         return "OK", 200
     except Exception as e:
-        print("ОШИБКА:", str(e))
+        logger.error(f"КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
         return "Error", 500
+
+if __name__ == '__main__':
+    app.run()
