@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.js" },
-    { "src": "/(.*)", "dest": "/$1" }
+  "rewrites": [
+    { "source": "/api/create_crypto_pay", "destination": "/api/crypto.py" },
+    { "source": "/api/crypto-webhook", "destination": "/api/crypto.py" },
+    { "source": "/api/(.*)", "destination": "/api/index.py" },
+    { "source": "/(.*)", "destination": "/$1" }
   ]
 }
