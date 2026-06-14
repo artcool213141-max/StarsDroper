@@ -348,7 +348,7 @@ async function verifyGift() {
 }
 
     function renderTonPacks() {
-        const PACKS = [0.5, 1, 3, 5, 10, 20, 50, 100, 250];
+        const PACKS = [0.05, 1, 3, 5, 10, 20, 50, 100, 250];
         document.getElementById('pane-ton').innerHTML = PACKS.map(amt => `
             <div onclick="processPayment(${amt})" class="bg-white/5 border border-white/10 p-4 rounded-2xl text-center active:scale-95 transition-all hover:border-yellow-400/40">
                 <div class="text-[9px] text-yellow-400 Richmond font-black uppercase mb-1">Пополнить</div>
