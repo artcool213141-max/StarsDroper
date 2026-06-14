@@ -69,19 +69,24 @@ def create_crypto_pay():
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
     update = request.get_json()
+    # Логируем, чтобы видеть в консоли Vercel, что пришло
+    print("DEBUG WEBHOOK:", update) 
+
     if update.get('update_type') == 'invoice_paid':
         payload = update['payload']
-        user_id = str(payload['payload'])
-        amount_ton = float(payload['asset_pay_amount'])
-        balance_to_add = int(amount_ton * 100)
+        user_id = str(payload['payload']) # Это твой uid
+        amount_ton = float(payload['asset_pay_amount']) # Сумма в TON (например, 0.5)
+        
         if supabase:
+            # Получаем текущий баланс
             res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
-            if res.data:
-                new_bal = (res.data[0].get('balance', 0) or 0) + balance_to_add
+            
+            # Если пользователь есть - прибавляем, если нет - создаем
+            if res.data and len(res.data) > 0:
+                old_bal = float(res.data[0].get('balance', 0) or 0)
+                new_bal = old_bal + amount_ton
                 supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
             else:
-                supabase.table("users").insert({"user_id": user_id, "balance": balance_to_add}).execute()
+                supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
+                
     return "OK", 200
-
-if __name__ == '__main__':
-    app.run()
