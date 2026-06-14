@@ -32,7 +32,6 @@ def create_stars_pay():
     uid = str(data.get('user_id'))
     amount = int(data.get('amount', 0))
     
-    # Telegram требует минимум 50 для инвойса
     if amount < 50:
         return jsonify({"ok": False, "description": "Min amount is 50"}), 400
     
@@ -48,11 +47,11 @@ def create_stars_pay():
     r = requests.post(url, json=payload)
     resp = r.json()
     
-    # Если упало - пишем в логи Vercel причину
-    if not resp.get('ok'):
-        print(f"TELEGRAM API ERROR: {resp}")
-        
-    return jsonify(resp), r.status_code
+    if resp.get('ok'):
+        # Возвращаем именно тот ключ, который ждет твой index.html
+        return jsonify({"pay_url": resp['result']}), 200
+    else:
+        return jsonify(resp), r.status_code
 
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
