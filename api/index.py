@@ -72,34 +72,32 @@ def crypto_webhook():
     if request.method == 'GET':
         return "Webhook is active!", 200
 
-    update = request.get_json()
-    logger.info(f"Получен webhook от CryptoBot: {update}")
+    data = request.get_json()
     
-    if update.get('update_type') != 'invoice_paid':
+    # Если это не оплата, просто выходим
+    if data.get('update_type') != 'invoice_paid':
         return "OK", 200
 
     try:
-        payload = update.get('payload', {})
+        payload = data.get('payload', {})
         user_id = str(payload.get('payload'))
-        amount_ton = float(payload.get('asset_pay_amount', 0))
         
-        logger.info(f"Попытка начисления: user_id={user_id}, amount={amount_ton}")
+        # Бот может присылать разные ключи для суммы. 
+        # Проверяем все варианты: asset_pay_amount или просто amount
+        amount_ton = float(payload.get('asset_pay_amount') or payload.get('amount') or 0)
         
+        # Обновление базы
         res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
         
         if res.data and len(res.data) > 0:
             old_bal = float(res.data[0].get('balance') or 0)
             new_bal = old_bal + amount_ton
             supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
-            logger.info("Баланс успешно обновлен")
         else:
             supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
-            logger.info("Новый юзер создан, баланс записан")
             
         return "OK", 200
     except Exception as e:
-        logger.error(f"КРИТИЧЕСКАЯ ОШИБКА: {str(e)}")
-        return "Error", 500
-
-if __name__ == '__main__':
-    app.run()
+        # Теперь код не упадет, если нет logger
+        print(f"CRITICAL ERROR: {str(e)}") 
+        return "OK", 200 # Возвращаем 200, чтобы бот не спамил ошибками
