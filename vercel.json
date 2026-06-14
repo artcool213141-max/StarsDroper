@@ -1,8 +1,6 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/create_crypto_pay", "destination": "/api/crypto.py" },
-    { "source": "/api/crypto-webhook", "destination": "/api/crypto.py" },
     { "source": "/api/(.*)", "destination": "/api/index.py" },
     { "source": "/(.*)", "destination": "/$1" }
   ]
