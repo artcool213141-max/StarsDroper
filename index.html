@@ -163,41 +163,31 @@
                 <div class="h-1 w-12 bg-yellow-400 rounded-full mx-auto mt-1 shadow-lg shadow-yellow-400/50"></div>
             </div>
 
-<div class="mt-6">
-    <div onclick="showPage('cases')" class="game-card">
-        <img src="/img/case3.png" alt="Cases" onerror="this.src='https://img.icons8.com/fluency/96/box.png'">
-        <div>
-            <div class="card-title">Кейсы</div>
-            <div class="card-desc">Открывай и выигрывай</div>
+<div id="page-home" class="page">
+    <div class="mt-6">
+        <div onclick="showPage('cases')" class="game-card">
+            <img src="/img/case3.png" alt="Cases" onerror="this.src='https://img.icons8.com/fluency/96/box.png'">
+            <div>
+                <div class="card-title">Кейсы</div>
+                <div class="card-desc">Открывай и выигрывай</div>
+            </div>
+            <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
         </div>
-        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
+        <div onclick="showPage('wheel')" class="game-card">...</div>
+        <div onclick="showPage('update')" class="game-card">...</div>
     </div>
+</div>
 
-    <div onclick="showPage('wheel')" class="game-card">
-        <img src="/spin.png" alt="Wheel" onerror="this.src='https://img.icons8.com/fluency/96/lucky-wheel.png'">
-        <div>
-            <div class="card-title">Колесо удачи</div>
-            <div class="card-desc">Испытай свой фарт</div>
-        </div>
-        <div class="ml-auto"><div class="w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping"></div></div>
+<div id="page-cases" class="page hidden">
+    <div class="p-6 text-white text-center">
+        <h2 class="text-2xl font-black italic">КЕЙСЫ</h2>
+        <p class="text-gray-400 mt-4">Контент кейсов будет здесь...</p>
     </div>
+</div>
 
-    <div onclick="showPage('update')" class="game-card">
-        <img src="/helmet.png" alt="Upgrade" onerror="this.src='https://img.icons8.com/fluency/96/shield.png'">
-        <div>
-            <div class="card-title">Апгрейд</div>
-            <div class="card-desc">Прокачай свои шансы</div>
-        </div>
-        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
-    </div>
-
-    <div onclick="showPage('games')" class="game-card">
-        <img src="/mini.png" alt="Games" onerror="this.src='https://img.icons8.com/fluency/96/controller.png'">
-        <div>
-            <div class="card-title">Мини-игры</div>
-            <div class="card-desc">Играй и зарабатывай</div>
-        </div>
-        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
+<div id="page-wheel" class="page hidden">
+    <div class="p-6 text-white text-center">
+        <h2 class="text-2xl font-black italic">КОЛЕСО УДАЧИ</h2>
     </div>
 </div>
 
@@ -254,16 +244,27 @@
     let ctx;
     let starsArr = [];
 
-    function showPage(pageId) {
-    // Скрываем все страницы
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    // Показываем целевую страницу
-    const page = document.getElementById('page-' + pageId);
-    if(page) page.classList.remove('hidden');
+function showPage(pageId) {
+    tg.HapticFeedback.impactOccurred('light');
     
-    // Вибрация
-    if(window.Telegram && window.Telegram.WebApp) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    // 1. Скрываем все страницы
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    
+    // 2. Показываем нужную
+    const target = document.getElementById('page-' + pageId);
+    if (target) {
+        target.classList.remove('hidden');
+    }
+
+    // 3. Управление BackButton
+    if (pageId === 'home') {
+        tg.BackButton.hide();
+    } else {
+        tg.BackButton.show();
+        tg.BackButton.onClick(() => {
+            showPage('home');
+            tg.BackButton.hide();
+        });
     }
 }
 
