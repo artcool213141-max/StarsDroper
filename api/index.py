@@ -32,7 +32,7 @@ def create_stars_pay():
     uid = str(data.get('user_id'))
     amount = int(data.get('amount', 0))
     
-    if amount < 50:
+    if amount < 1:
         return jsonify({"ok": False, "description": "Min amount is 50"}), 400
     
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
