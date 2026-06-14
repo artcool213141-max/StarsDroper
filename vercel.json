@@ -4,8 +4,16 @@
     { "src": "api/index.py", "use": "@vercel/python" }
   ],
   "routes": [
-    { "src": "/api/(.*)", "dest": "api/index.py" },
-    { "src": "/(.*)\\.html", "dest": "/$1.html" },
-    { "src": "/(.*)", "dest": "/index.html" }
+    { "src": "/api/create_pay", "dest": "/api/index.py" },
+    { "src": "/api/create_stars_pay", "dest": "/api/index.py" },
+    { "src": "/api/crypto-webhook", "dest": "/api/index.py" },
+    { "src": "/api/stars-webhook", "dest": "/api/index.py" },
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/case.html", "dest": "/case.html" },
+    { "src": "/wheel.html", "dest": "/wheel.html" },
+    { "src": "/update.html", "dest": "/update.html" },
+    { "src": "/games.html", "dest": "/games.html" },
+    { "src": "/profile.html", "dest": "/profile.html" },
+    { "src": "/(.*)\\.(png|jpg|jpeg|gif|svg|ico|css|js)", "dest": "/$1.$2" }
   ]
 }
