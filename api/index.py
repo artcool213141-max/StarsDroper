@@ -81,3 +81,47 @@ def stars_webhook(): return "OK", 200
 
 if __name__ == '__main__':
     app.run()
+
+
+# --- ЭТО ДОБАВИТЬ В КОНЕЦ ФАЙЛА, ПОСЛЕ ВСЕГО ---
+
+# Роут для генерации Crypto-инвойса
+@app.route('/api/create_crypto_pay', methods=['POST'])
+def create_crypto_pay():
+    data = request.get_json() or {}
+    uid = str(data.get('user_id'))
+    amount = float(data.get('amount'))
+    
+    headers = {"Crypto-Pay-API-Token": CRYPTO_TOKEN}
+    payload = {"asset": "TON", "amount": str(amount), "payload": uid}
+    
+    r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers)
+    resp = r.json()
+    
+    if resp.get('ok'):
+        return jsonify({"pay_url": resp['result']['pay_url']}), 200
+    return jsonify(resp), 400
+
+# Роут для вебхука CryptoBot
+@app.route('/api/crypto-webhook', methods=['POST'])
+def crypto_webhook():
+    update = request.get_json()
+    
+    if update.get('update_type') == 'invoice_paid':
+        payload = update['payload']
+        user_id = str(payload['payload'])
+        amount_ton = float(payload['asset_pay_amount'])
+        balance_to_add = int(amount_ton * 100) # Твой коэффициент
+        
+        if supabase:
+            try:
+                res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
+                if res.data:
+                    current_bal = res.data[0].get('balance', 0) or 0
+                    supabase.table("users").update({"balance": current_bal + balance_to_add}).eq("user_id", user_id).execute()
+                else:
+                    supabase.table("users").insert({"user_id": user_id, "balance": balance_to_add}).execute()
+            except Exception as e:
+                print(f"Crypto DB Error: {e}")
+                
+    return "OK", 200
