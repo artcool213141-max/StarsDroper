@@ -66,27 +66,36 @@ def create_crypto_pay():
         return jsonify({"pay_url": resp['result']['pay_url']}), 200
     return jsonify(resp), 400
 
-@app.route('/api/crypto-webhook', methods=['POST'])
+@app.route('/api/crypto-webhook', methods=['POST', 'GET'])
 def crypto_webhook():
-    update = request.get_json()
-    # Логируем, чтобы видеть в консоли Vercel, что пришло
-    print("DEBUG WEBHOOK:", update) 
+    # 1. Если просто открыли ссылку в браузере — говорим, что всё ок
+    if request.method == 'GET':
+        return "Webhook is active!", 200
 
-    if update.get('update_type') == 'invoice_paid':
+    # 2. Обработка платежа
+    update = request.get_json()
+    
+    # Если это не оплата, выходим сразу
+    if update.get('update_type') != 'invoice_paid':
+        return "Not an invoice", 200
+
+    try:
         payload = update['payload']
-        user_id = str(payload['payload']) # Это твой uid
-        amount_ton = float(payload['asset_pay_amount']) # Сумма в TON (например, 0.5)
+        user_id = str(payload['payload'])
+        amount_ton = float(payload['asset_pay_amount'])
         
-        if supabase:
-            # Получаем текущий баланс
-            res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
+        # Запрос в базу
+        # Если юзер есть - прибавляем, если нет - создаем
+        res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
+        
+        if res.data and len(res.data) > 0:
+            old_bal = float(res.data[0].get('balance') or 0)
+            new_bal = old_bal + amount_ton
+            supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
+        else:
+            supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
             
-            # Если пользователь есть - прибавляем, если нет - создаем
-            if res.data and len(res.data) > 0:
-                old_bal = float(res.data[0].get('balance', 0) or 0)
-                new_bal = old_bal + amount_ton
-                supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
-            else:
-                supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
-                
-    return "OK", 200
+        return "OK", 200
+    except Exception as e:
+        print("ОШИБКА:", str(e))
+        return "Error", 500
