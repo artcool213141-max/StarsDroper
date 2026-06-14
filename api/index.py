@@ -32,8 +32,9 @@ def create_stars_pay():
     uid = str(data.get('user_id'))
     amount = int(data.get('amount', 0))
     
+    # Минимальное количество звезд теперь 1
     if amount < 1:
-        return jsonify({"ok": False, "description": "Min amount is 50"}), 400
+        return jsonify({"ok": False, "description": "Min amount is 1"}), 400
     
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
     payload = {
@@ -48,9 +49,11 @@ def create_stars_pay():
     resp = r.json()
     
     if resp.get('ok'):
-        # Возвращаем именно тот ключ, который ждет твой index.html
+        # Возвращаем pay_url, который ожидает твой JS
         return jsonify({"pay_url": resp['result']}), 200
     else:
+        # Логируем ошибку, если Telegram отказал
+        print(f"TELEGRAM API ERROR: {resp}")
         return jsonify(resp), r.status_code
 
 @app.route('/api/crypto-webhook', methods=['POST'])
@@ -61,4 +64,5 @@ def crypto_webhook():
 def stars_webhook():
     return "OK", 200
 
-if __name__ == '__main__': app.run()
+if __name__ == '__main__':
+    app.run()
