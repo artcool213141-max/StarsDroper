@@ -114,193 +114,154 @@
         </div>
     </div>
 
-    <script>
-        const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
-        const SB_KEY = "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx";
-        const SB = supabase.createClient(SB_URL, SB_KEY);
-        const tg = window.Telegram.WebApp;
-        
-        tg.expand();
-        tg.enableClosingConfirmation();
+<script>
+    const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
+    const SB_KEY = "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx";
+    const SB = supabase.createClient(SB_URL, SB_KEY);
+    const tg = window.Telegram.WebApp;
 
-        const ALL_ITEMS = {
-            "star.png": { price: 15, img: "star.png" },
-            "raketa.png": { price: 50, img: "raketa.png" },
-            "2025.jpg": { price: 500, img: "2025.jpg" },
-            "bear.png": { price: 3500, img: "bear.png" },
-            "car.png": { price: 5000, img: "car.png" },
-            "helmet.png": { price: 25000, img: "helmet.png" },
-            "kepka.png": { price: 100000, img: "kepka.png" }
-        };
+    tg.expand();
+    tg.enableClosingConfirmation();
 
-        const ALL_KEYS = Object.keys(ALL_ITEMS);
-        let user = null, isSpinning = false, multi = 1, currentWins = [];
+    const ALL_ITEMS = {
+        "star.png": { price: 15, img: "star.png" },
+        "raketa.png": { price: 50, img: "raketa.png" },
+        "2025.jpg": { price: 500, img: "2025.jpg" },
+        "bear.png": { price: 3500, img: "bear.png" },
+        "car.png": { price: 5000, img: "car.png" },
+        "helmet.png": { price: 25000, img: "helmet.png" },
+        "kepka.png": { price: 100000, img: "kepka.png" }
+    };
 
-        async function checkAuth() {
-            let userId = tg.initDataUnsafe?.user?.id || 8015661230;
+    const ALL_KEYS = Object.keys(ALL_ITEMS);
+    let user = null, isSpinning = false, multi = 1, currentWins = [];
 
-            try {
-                let { data, error } = await SB.from('users').select('*').eq('user_id', userId).single();
-                
-                if (error || !data) {
-                    const { data: newUser } = await SB.from('users').insert([
-                        { user_id: userId, stars: 500, inventory: [], spin_count: 0 }
-                    ]).select().single();
-                    data = newUser;
-                }
-
-                user = data;
-                document.getElementById('val-stars').innerText = Math.floor(user.stars || 0);
-                updateUI();
-            } catch (e) {
-                document.getElementById('spin-btn').innerText = "ОШИБКА СЕТИ";
-            }
-        }
-
-        function updateUI() {
-            if (!user) return;
-            const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
-            const isFree = (Date.now() - lastFree) > 86400000;
-            const btn = document.getElementById('spin-btn');
-            
-            if (isFree) {
-                btn.innerText = "ХАЛЯВНЫЙ СПИН";
-                btn.style.background = "#10b981"; 
-                btn.style.boxShadow = "0 0 25px rgba(16, 185, 129, 0.4)";
-                btn.style.color = "#fff";
-                btn.disabled = isSpinning;
-            } else {
-                btn.style.background = ""; 
-                btn.style.boxShadow = "";
-                btn.style.color = "";
-                const cost = 100 * multi;
-                btn.innerText = `ИСПЫТАТЬ УДАЧУ ЗА ${cost} ★`;
-                btn.disabled = isSpinning || (user.stars < cost);
-            }
-            if (!isSpinning) initWheels();
-        }
-
-        function initWheels() {
-            const container = document.getElementById('wheels-container');
-            container.innerHTML = '';
-            const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
-            const isFree = (Date.now() - lastFree) > 86400000;
-            const displayMulti = isFree ? 1 : multi;
-
-            for(let i=0; i<displayMulti; i++) {
-                let content = '';
-                for(let j=0; j<140; j++) {
-                    const k = ALL_KEYS[Math.floor(Math.random()*ALL_KEYS.length)];
-                    content += `<div class="item"><img src="img/${ALL_ITEMS[k].img}" onerror="this.src='img/star.png'"></div>`;
-                }
-                container.innerHTML += `
-                    <div class="wheel-track">
-                        <div class="pointer"></div>
-                        <div class="wheel-line" id="line-${i}">${content}</div>
-                    </div>`;
-            }
-        }
-
-        function setMulti(m) {
-            const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
-            if (isSpinning || (Date.now() - lastFree) > 86400000) return; 
-            
-            multi = parseInt(m);
-            document.querySelectorAll('.multi-btn').forEach(b => b.classList.remove('active'));
-            document.querySelector(`[data-m="${m}"]`).classList.add('active');
-            updateUI();
-        }
-
-        async function startSpin() {
-            if (isSpinning || !user) return;
-            tg.HapticFeedback.impactOccurred('medium');
-
-            const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
-            const isFree = (Date.now() - lastFree) > 86400000;
-            
-            let curMulti = isFree ? 1 : multi;
-            const cost = isFree ? 0 : 100 * curMulti;
-
-            if (!isFree && user.stars < cost) return;
-
-            isSpinning = true;
-            document.getElementById('spin-btn').disabled = true;
-            currentWins = [];
-            let tempStep = user.spin_count || 0;
-
-            const RARE_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price >= 100 && ALL_ITEMS[k].price <= 500); 
-            const JUNK_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price < 100);
-
-            for(let i=0; i<curMulti; i++) {
-                tempStep++;
-                let winKey = (tempStep % 7 === 0) ? RARE_KEYS[Math.floor(Math.random()*RARE_KEYS.length)] : JUNK_KEYS[Math.floor(Math.random()*JUNK_KEYS.length)];
-                currentWins.push(ALL_ITEMS[winKey]);
-                
-                const line = document.getElementById(`line-${i}`);
-                line.querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
-            }
-
-            const upd = isFree ? { last_free_spin: new Date().toISOString(), spin_count: tempStep } 
-                               : { stars: user.stars - cost, spin_count: tempStep };
-
-            const { error } = await SB.from('users').update(upd).eq('user_id', user.user_id);
-            if (error) { location.reload(); return; }
-
-            user.stars = upd.stars || user.stars;
-            user.spin_count = tempStep;
-            if (isFree) user.last_free_spin = upd.last_free_spin;
-            
+    // Принудительное обновление баланса из базы
+    async function syncBalance() {
+        if (!user) return;
+        const { data, error } = await SB.from('users').select('stars').eq('user_id', user.user_id).single();
+        if (!error && data) {
+            user.stars = data.stars;
             document.getElementById('val-stars').innerText = Math.floor(user.stars);
+        }
+    }
 
-            for(let i=0; i<curMulti; i++) {
-                const line = document.getElementById(`line-${i}`);
-                const offset = (130 * 88) - (window.innerWidth / 2) + 44;
-                line.style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
-                line.style.transform = `translateX(-${offset}px)`;
+    async function checkAuth() {
+        let userId = tg.initDataUnsafe?.user?.id || 8015661230;
+        let { data, error } = await SB.from('users').select('*').eq('user_id', userId).single();
+        
+        if (error || !data) {
+            // Новый пользователь: stars: 0 (без бонуса)
+            const { data: newUser } = await SB.from('users').insert([
+                { user_id: userId, stars: 0, inventory: [], spin_count: 0 }
+            ]).select().single();
+            data = newUser;
+        }
+
+        user = data;
+        document.getElementById('val-stars').innerText = Math.floor(user.stars || 0);
+        updateUI();
+    }
+
+    function updateUI() {
+        if (!user) return;
+        const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+        const isFree = (Date.now() - lastFree) > 86400000;
+        const btn = document.getElementById('spin-btn');
+        
+        if (isFree) {
+            btn.innerText = "ХАЛЯВНЫЙ СПИН";
+            btn.style.background = "#10b981";
+            btn.disabled = isSpinning;
+        } else {
+            const cost = 100 * multi;
+            btn.innerText = `ИСПЫТАТЬ УДАЧУ ЗА ${cost} ★`;
+            btn.disabled = isSpinning || (user.stars < cost);
+        }
+        if (!isSpinning) initWheels();
+    }
+
+    function initWheels() {
+        const container = document.getElementById('wheels-container');
+        container.innerHTML = '';
+        const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+        const isFree = (Date.now() - lastFree) > 86400000;
+        const displayMulti = isFree ? 1 : multi;
+
+        for(let i=0; i<displayMulti; i++) {
+            let content = '';
+            for(let j=0; j<140; j++) {
+                const k = ALL_KEYS[Math.floor(Math.random()*ALL_KEYS.length)];
+                content += `<div class="item"><img src="img/${ALL_ITEMS[k].img}" onerror="this.src='img/star.png'"></div>`;
             }
+            container.innerHTML += `<div class="wheel-track"><div class="pointer"></div><div class="wheel-line" id="line-${i}">${content}</div></div>`;
+        }
+    }
 
-            setTimeout(() => {
-                tg.HapticFeedback.notificationOccurred('success');
-                showModal();
-            }, 8000);
+    async function startSpin() {
+        await syncBalance(); // Обязательная сверка с базой перед списанием
+        if (isSpinning || !user) return;
+        
+        const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+        const isFree = (Date.now() - lastFree) > 86400000;
+        let curMulti = isFree ? 1 : multi;
+        const cost = isFree ? 0 : 100 * curMulti;
+
+        if (!isFree && user.stars < cost) {
+            tg.showAlert("Недостаточно звезд!");
+            return;
         }
 
-        function showModal() {
-            const container = document.getElementById('win-items-container');
-            container.innerHTML = '';
-            let total = 0;
-            currentWins.forEach(w => {
-                total += w.price;
-                container.innerHTML += `
-                    <div class="bg-white/5 p-2 rounded-xl border border-[#d4af37]/20">
-                        <img src="img/${w.img}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'">
-                        <p class="text-[10px] font-black text-[#d4af37] mt-1">${w.price}★</p>
-                    </div>`;
-            });
-            document.getElementById('total-win-price').innerText = total;
-            document.getElementById('win-modal').style.display = 'flex';
+        isSpinning = true;
+        document.getElementById('spin-btn').disabled = true;
+        currentWins = [];
+        let tempStep = user.spin_count || 0;
+
+        const RARE_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price >= 100 && ALL_ITEMS[k].price <= 500); 
+        const JUNK_KEYS = ALL_KEYS.filter(k => ALL_ITEMS[k].price < 100);
+
+        for(let i=0; i<curMulti; i++) {
+            tempStep++;
+            let winKey = (tempStep % 7 === 0) ? RARE_KEYS[Math.floor(Math.random()*RARE_KEYS.length)] : JUNK_KEYS[Math.floor(Math.random()*JUNK_KEYS.length)];
+            currentWins.push(ALL_ITEMS[winKey]);
+            document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
-        async function claimPrize(type) {
-            tg.HapticFeedback.impactOccurred('light');
-            document.getElementById('sell-btn').disabled = true;
-            document.getElementById('keep-btn').disabled = true;
+        const upd = isFree ? { last_free_spin: new Date().toISOString(), spin_count: tempStep } 
+                           : { stars: user.stars - cost, spin_count: tempStep };
 
-            const { data: fresh } = await SB.from('users').select('*').eq('user_id', user.user_id).single();
-            
-            if (type === 'sell') {
-                const sum = currentWins.reduce((s, w) => s + w.price, 0);
-                await SB.from('users').update({ stars: (fresh.stars || 0) + sum }).eq('user_id', user.user_id);
-            } else {
-                const inv = fresh.inventory || [];
-                currentWins.forEach(w => inv.push({...w, id: Date.now() + Math.random()}));
-                await SB.from('users').update({ inventory: inv }).eq('user_id', user.user_id);
-            }
+        const { error } = await SB.from('users').update(upd).eq('user_id', user.user_id);
+        if (error) { location.reload(); return; }
 
-            location.reload();
+        user.stars = upd.stars ?? user.stars;
+        document.getElementById('val-stars').innerText = Math.floor(user.stars);
+
+        for(let i=0; i<curMulti; i++) {
+            const line = document.getElementById(`line-${i}`);
+            line.style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
+            line.style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
         }
 
-        checkAuth();
-    </script>
+        setTimeout(() => { showModal(); }, 8000);
+    }
+
+    async function claimPrize(type) {
+        await syncBalance(); // Финальная проверка перед начислением
+        const sum = currentWins.reduce((s, w) => s + w.price, 0);
+        
+        if (type === 'sell') {
+            await SB.from('users').update({ stars: user.stars + sum }).eq('user_id', user.user_id);
+        } else {
+            const inv = user.inventory || [];
+            currentWins.forEach(w => inv.push({...w, id: Date.now() + Math.random()}));
+            await SB.from('users').update({ inventory: inv }).eq('user_id', user.user_id);
+        }
+        location.reload();
+    }
+
+    // Слушатели событий
+    window.addEventListener('focus', syncBalance);
+    checkAuth();
+</script>
 </body>
 </html>
