@@ -10,7 +10,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-# 1. Генерация инвойса (Вызывается из JS, возвращает pay_url)
+# 1. Генерация инвойса
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
     data = request.get_json() or {}
@@ -33,33 +33,39 @@ def create_stars_pay():
         return jsonify({"pay_url": resp['result']}), 200
     return jsonify(resp), 400
 
-# 2. Webhook (Вызывается Telegram-ом при оплате)
+# 2. Webhook (обновляет баланс в таблице 'users')
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
     
-    # Pre-checkout (Telegram спрашивает: готов ли бот?)
+    # Pre-checkout
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
-    # Successful Payment (Оплата прошла, пишем в базу)
+    # Successful Payment
     if 'message' in update and 'successful_payment' in update['message']:
         payment = update['message']['successful_payment']
-        user_id = update['message']['from']['id']
-        amount = payment['total_amount']
-        charge_id = payment['telegram_payment_charge_id']
+        user_id = str(update['message']['from']['id'])
+        stars_bought = payment['total_amount']
         
         if supabase:
             try:
-                supabase.table("payments").insert({
-                    "user_id": str(user_id),
-                    "amount": amount,
-                    "charge_id": charge_id,
-                    "status": "paid"
-                }).execute()
+                # 1. Получаем текущее значение
+                response = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+                
+                if response.data:
+                    # Если пользователь есть - прибавляем
+                    current_stars = response.data[0].get('stars', 0)
+                    new_balance = current_stars + stars_bought
+                    supabase.table("users").update({"stars": new_balance}).eq("user_id", user_id).execute()
+                else:
+                    # Если нет - создаем
+                    supabase.table("users").insert({"user_id": user_id, "stars": stars_bought}).execute()
+                
+                print(f"DEBUG: Баланс пользователя {user_id} обновлен на +{stars_bought}")
             except Exception as e:
                 print(f"DB Error: {e}")
             
