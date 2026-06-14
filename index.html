@@ -163,44 +163,43 @@
                 <div class="h-1 w-12 bg-yellow-400 rounded-full mx-auto mt-1 shadow-lg shadow-yellow-400/50"></div>
             </div>
 
-            <div class="mt-6">
-                <div onclick="navigateTo('case.html')" class="game-card">
-                    <img src="img/case3.png" alt="Cases" onerror="this.src='https://img.icons8.com/fluency/96/box.png'">
-                    <div>
-                        <div class="card-title">Кейсы</div>
-                        <div class="card-desc">Открывай и выигрывай</div>
-                    </div>
-                    <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
-                </div>
-
-                <div onclick="navigateTo('wheel.html')" class="game-card">
-                    <img src="spin.png" alt="Wheel" onerror="this.src='https://img.icons8.com/fluency/96/lucky-wheel.png'">
-                    <div>
-                        <div class="card-title">Колесо удачи</div>
-                        <div class="card-desc">Испытай свой фарт</div>
-                    </div>
-                    <div class="ml-auto"><div class="w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping"></div></div>
-                </div>
-
-                <div onclick="navigateTo('update.html')" class="game-card">
-                    <img src="helmet.png" alt="Upgrade" onerror="this.src='https://img.icons8.com/fluency/96/shield.png'">
-                    <div>
-                        <div class="card-title">Апгрейд</div>
-                        <div class="card-desc">Прокачай свои шансы</div>
-                    </div>
-                    <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
-                </div>
-
-                <div onclick="navigateTo('games.html')" class="game-card">
-                    <img src="mini.png" alt="Games" onerror="this.src='https://img.icons8.com/fluency/96/controller.png'">
-                    <div>
-                        <div class="card-title">Мини-игры</div>
-                        <div class="card-desc">Играй и зарабатывай</div>
-                    </div>
-                    <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
-                </div>
-            </div>
+<div class="mt-6">
+    <div onclick="showPage('cases')" class="game-card">
+        <img src="/img/case3.png" alt="Cases" onerror="this.src='https://img.icons8.com/fluency/96/box.png'">
+        <div>
+            <div class="card-title">Кейсы</div>
+            <div class="card-desc">Открывай и выигрывай</div>
         </div>
+        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
+    </div>
+
+    <div onclick="showPage('wheel')" class="game-card">
+        <img src="/spin.png" alt="Wheel" onerror="this.src='https://img.icons8.com/fluency/96/lucky-wheel.png'">
+        <div>
+            <div class="card-title">Колесо удачи</div>
+            <div class="card-desc">Испытай свой фарт</div>
+        </div>
+        <div class="ml-auto"><div class="w-2.5 h-2.5 bg-yellow-400 rounded-full animate-ping"></div></div>
+    </div>
+
+    <div onclick="showPage('update')" class="game-card">
+        <img src="/helmet.png" alt="Upgrade" onerror="this.src='https://img.icons8.com/fluency/96/shield.png'">
+        <div>
+            <div class="card-title">Апгрейд</div>
+            <div class="card-desc">Прокачай свои шансы</div>
+        </div>
+        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
+    </div>
+
+    <div onclick="showPage('games')" class="game-card">
+        <img src="/mini.png" alt="Games" onerror="this.src='https://img.icons8.com/fluency/96/controller.png'">
+        <div>
+            <div class="card-title">Мини-игры</div>
+            <div class="card-desc">Играй и зарабатывай</div>
+        </div>
+        <div class="ml-auto opacity-30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7"></path></svg></div>
+    </div>
+</div>
 
         <div class="dock-bar">
             <div onclick="openVault('ton')" class="dock-btn">
@@ -254,6 +253,19 @@
     const API_BASE = '/api'; 
     let ctx;
     let starsArr = [];
+
+    function showPage(pageId) {
+    // Скрываем все страницы
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    // Показываем целевую страницу
+    const page = document.getElementById('page-' + pageId);
+    if(page) page.classList.remove('hidden');
+    
+    // Вибрация
+    if(window.Telegram && window.Telegram.WebApp) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+    }
+}
 
     async function syncData() {
         try {
