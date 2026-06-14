@@ -120,21 +120,30 @@
             </div>
         </section>
 
-        <section class="glass-card p-6 mb-6 border-yellow-400/10">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
-                    <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
-                </div>
-                <button onclick="shareInvite()" class="bg-yellow-500 text-black p-2 rounded-lg active:scale-90 transition-transform shadow-[0_0_15px_rgba(245,176,37,0.4)]">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"></path></svg>
-                </button>
-            </div>
-            <div class="flex gap-2 items-center">
-                <div class="flex-1 bg-black/20 border border-white/5 rounded-xl p-3 text-[9px] font-mono break-all text-gray-400 select-all overflow-hidden whitespace-nowrap text-ellipsis" id="ref-link-display">Генерация ссылки...</div>
-                <button onclick="copyRefLink()" class="bg-white/5 border border-white/10 px-3 py-2.5 rounded-xl text-[9px] font-black uppercase text-yellow-400 active:bg-yellow-500/20 transition-colors">Копировать</button>
-            </div>
-        </section>
+<section class="glass-card p-6 mb-6 border-yellow-400/10">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
+            <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
+        </div>
+        
+        <!-- Индикатор разработки -->
+        <div class="flex items-center gap-2 bg-yellow-500/5 px-3 py-1.5 rounded-full border border-yellow-500/10">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-500 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+            </span>
+            <span class="text-[8px] font-black uppercase text-yellow-500/80 tracking-widest">В разработке</span>
+        </div>
+    </div>
+
+    <!-- Заглушка вместо активной ссылки -->
+    <div class="relative w-full bg-black/20 border border-white/5 rounded-xl p-4 text-center">
+        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+            Скоро доступно
+        </p>
+    </div>
+</section>
 
         <section class="glass-card p-6 min-h-[300px]">
             <div class="flex justify-between items-center mb-6">
