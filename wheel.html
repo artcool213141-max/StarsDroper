@@ -124,7 +124,7 @@
     tg.enableClosingConfirmation();
 
     const ALL_ITEMS = {
-        "star.png": { price: 15, img: "star.png" },
+        "star.png": { price: 5, img: "star.png" },
         "raketa.png": { price: 50, img: "raketa.png" },
         "2025.jpg": { price: 500, img: "2025.jpg" },
         "bear.png": { price: 3500, img: "bear.png" },
@@ -243,6 +243,24 @@
         }
 
         setTimeout(() => { showModal(); }, 8000);
+    }
+
+    function showModal() {
+        const container = document.getElementById('win-items-container');
+        container.innerHTML = '';
+        let total = 0;
+        
+        currentWins.forEach(w => {
+            total += w.price;
+            container.innerHTML += `
+                <div class="bg-white/5 p-2 rounded-xl border border-[#d4af37]/20">
+                    <img src="img/${w.img}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'">
+                    <p class="text-[10px] font-black text-[#d4af37] mt-1">${w.price}★</p>
+                </div>`;
+        });
+        
+        document.getElementById('total-win-price').innerText = total;
+        document.getElementById('win-modal').style.display = 'flex';
     }
 
     async function claimPrize(type) {
