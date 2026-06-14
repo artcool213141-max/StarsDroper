@@ -53,19 +53,6 @@ def webhook():
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
-@app.route('/api/create_crypto_pay', methods=['POST'])
-def create_crypto_pay():
-    data = request.get_json() or {}
-    uid = str(data.get('user_id'))
-    amount = float(data.get('amount'))
-    headers = {"Crypto-Pay-API-Token": CRYPTO_TOKEN}
-    payload = {"asset": "TON", "amount": str(amount), "payload": uid}
-    r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers)
-    resp = r.json()
-    if resp.get('ok'):
-        return jsonify({"pay_url": resp['result']['pay_url']}), 200
-    return jsonify(resp), 400
-
 @app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
     update = request.get_json()
@@ -74,6 +61,7 @@ def crypto_webhook():
         user_id = str(payload['payload'])
         amount_ton = float(payload['asset_pay_amount'])
         balance_to_add = int(amount_ton * 100)
+        
         if supabase:
             res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
             if res.data:
@@ -82,6 +70,3 @@ def crypto_webhook():
             else:
                 supabase.table("users").insert({"user_id": user_id, "balance": balance_to_add}).execute()
     return "OK", 200
-
-if __name__ == '__main__':
-    app.run()
