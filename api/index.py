@@ -35,39 +35,23 @@ def create_stars_pay():
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
-    
-    # Обрабатываем только успешные платежи (Stars)
+    if 'pre_checkout_query' in update:
+        query_id = update['pre_checkout_query']['id']
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
+                      json={"pre_checkout_query_id": query_id, "ok": True})
+        return "OK", 200
+
     if 'message' in update and 'successful_payment' in update['message']:
-        payment = update['message']['successful_payment']
         user_id = str(update['message']['from']['id'])
-        stars_bought = payment['total_amount']
-        
-        # ЛОГИКА: 1 звезда = верификация
-        is_verification = (stars_bought == 1)
-        
-        try:
-            # Получаем текущие данные из Supabase
-            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
-            
-            # Если юзер есть — берем данные, если нет — дефолт
-            current_stars = res.data.get('stars', 0) if res.data else 0
-            is_already_paid = res.data.get('is_paid_75', False) if res.data else False
-            
-            # Обновляем
-            update_data = {
-                "user_id": user_id,
-                "stars": current_stars + stars_bought,
-                "is_paid_75": is_already_paid or is_verification
-            }
-            
-            supabase.table("users").upsert(update_data).execute()
-            print(f"User {user_id} updated: Stars +{stars_bought}, Verified={is_verification}")
-            
-        except Exception as e:
-            print(f"Error updating DB: {e}")
-            return "OK", 200 # Возвращаем 200, чтобы не спамить в логи Telegram
-            
+        stars_bought = update['message']['successful_payment']['total_amount']
+        if supabase:
+            res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+            if res.data:
+                supabase.table("users").update({"stars": res.data[0].get('stars', 0) + stars_bought}).eq("user_id", user_id).execute()
+            else:
+                supabase.table("users").insert({"user_id": user_id, "stars": stars_bought}).execute()
     return "OK", 200
+
 # --- TON (CRYPTOBOT) ---
 # --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
