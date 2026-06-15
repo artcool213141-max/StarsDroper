@@ -371,43 +371,89 @@
         isSelling = false;
     }
 
-    async function withdrawToBot() {
-        const priceVerification = 150;
-        if (!user.is_paid_75) {
-            if ((user.stars || 0) < priceVerification) {
-                tg.showAlert(`🛑 ТРЕБУЕТСЯ ВЕРИФИКАЦИЯ\nСтоимость: ${priceVerification} ⭐`);
-                return;
-            }
-            tg.showConfirm(`Списать ${priceVerification} Stars для верификации вывода предметов?`, async (ok) => {
-                if (ok) {
-                    await _supabase.from('users').update({ 
-                        stars: user.stars - priceVerification, 
-                        is_paid_75: true 
-                    }).eq('user_id', userId);
-                    loadUser();
+async function withdrawToBot() {
+    // Проверка, что предмет выбран
+    if (selectedIdx === -1) return;
+    
+    // Флаг верификации из объекта user
+    const isVerified = user.is_paid_75 === true || user.is_paid_75 === 1;
+
+    if (!isVerified) {
+        // --- ЛОГИКА ВЕРИФИКАЦИИ (50 Звезд) ---
+        tg.showConfirm(`Для первого вывода необходима верификация (50 Stars).\nВы будете перенаправлены к оплате.`, async (ok) => {
+            if (!ok) return;
+
+            try {
+                // Создаем ссылку на оплату через ваш бэкенд
+                const response = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ user_id: userId, amount: 50 })
+                });
+                const data = await response.json();
+
+                if (data.pay_url) {
+                    tg.openInvoice(data.pay_url, (status) => {
+                        if (status === 'paid' || status === 'approved') {
+                            tg.showAlert("✅ Верификация успешно пройдена! Теперь нажмите 'Вывести' снова.");
+                            loadUser(); // Обновляем данные пользователя
+                        }
+                    });
+                } else {
+                    tg.showAlert("Ошибка создания счета. Попробуйте позже.");
                 }
-            });
-            return;
-        }
-        const it = user.inventory[selectedIdx];
-        const fileName = it.img.split('/').pop();
-        const text = `🚀 ЗАЯВКА НА ВЫВОД\nID: ${userId}\nПредмет: ${fileName}`;
-        try {
-            const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: ADMIN_ID, text: text })
-            });
-            if (res.ok) {
-                let newInv = [...user.inventory];
-                newInv.splice(selectedIdx, 1);
-                await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
-                tg.showAlert("✅ Заявка на вывод успешно отправлена администратору!");
-                closeModal(); 
-                loadUser();
+            } catch (err) {
+                tg.showAlert("Ошибка соединения с сервером.");
             }
-        } catch(e) { tg.showAlert("Ошибка соединения с сетью"); }
+        });
+        return;
     }
+
+    // --- ЛОГИКА ОБЫЧНОГО ВЫВОДА (35 Звезд с баланса) ---
+    if ((user.stars || 0) < 35) {
+        tg.showAlert("🛑 Недостаточно звезд. Для вывода требуется 35 ⭐ на балансе бота.");
+        return;
+    }
+
+    tg.showConfirm(`Вывести предмет за 35 Stars?`, async (ok) => {
+        if (!ok) return;
+
+        // Списываем звезды и сразу отправляем заявку
+        try {
+            // 1. Списание
+            const { error: updateErr } = await _supabase
+                .from('users')
+                .update({ stars: user.stars - 35 })
+                .eq('user_id', userId);
+
+            if (updateErr) throw new Error("Ошибка базы данных");
+
+            // 2. Отправка уведомления админу
+            const it = user.inventory[selectedIdx];
+            const fileName = it.img.split('/').pop();
+            
+            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    chat_id: ADMIN_ID, 
+                    text: `🚀 НОВЫЙ ВЫВОД\nID: ${userId}\nПредмет: ${fileName}\nСтатус: Оплачено 35 звезд` 
+                })
+            });
+
+            // 3. Удаление предмета из инвентаря в БД
+            let newInv = [...user.inventory];
+            newInv.splice(selectedIdx, 1);
+            await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
+
+            tg.showAlert("✅ Заявка на вывод успешно отправлена!");
+            closeModal();
+            loadUser();
+        } catch (err) {
+            tg.showAlert("Произошла ошибка при обработке вывода.");
+        }
+    });
+}
 
     function shareInvite() {
         const url = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
