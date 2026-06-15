@@ -375,31 +375,33 @@ window.onload = async () => {
     tg.ready();
     tg.expand();
     
-    // Даем WebApp микро-паузу, если данные еще не прокинулись
+    // Пытаемся получить пользователя
     let user = tg.initDataUnsafe?.user;
     
+    // Если объект пустой, пробуем еще раз через небольшую задержку
     if (!user) {
-        console.warn("Данные пользователя не получены, ждем...");
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 300));
         user = tg.initDataUnsafe?.user;
     }
 
+    // Если всё равно нет данных — используем заглушку, но логируем ошибку
+    const username = user?.username || user?.first_name || "PLAYER";
     const userId = String(user?.id || '8015661230');
-    const firstName = user?.first_name || "PLAYER";
     const photoUrl = user?.photo_url;
     
     // Обновляем UI
-    document.getElementById('display-name').innerText = (user?.username || firstName).toUpperCase();
+    document.getElementById('display-name').innerText = username.toUpperCase();
     document.getElementById('display-id').innerText = `ID: ${userId}`;
     
     const avatar = document.getElementById('user-avatar');
     if (photoUrl) {
         avatar.src = photoUrl;
     } else {
-        avatar.src = `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${firstName}`;
+        // Если фото нет, используем красивый сервис для инициалов
+        avatar.src = `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${username}`;
     }
 
-    syncData(userId); // Передаем userId в функцию синхронизации
+    syncData(userId);
     renderTonPacks();
     initStars(); 
     
