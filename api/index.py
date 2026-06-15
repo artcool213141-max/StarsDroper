@@ -12,61 +12,48 @@ CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN") # Добавили токен 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
 # --- 1. STARS PAYMENT ---
-@app.route('/api/create_stars_pay', methods=['POST'])
-def create_stars_pay():
-    data = request.get_json() or {}
-    uid = str(data.get('user_id', '0'))
-    amount = int(data.get('amount', 25))
-    
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
-    payload = {
-        "title": "Stars Topup",
-        "description": f"Пополнение {amount} звезд",
-        "payload": f"uid_{uid}",
-        "currency": "XTR",
-        "prices": [{"label": "Stars", "amount": amount}]
-    }
-    r = requests.post(url, json=payload)
-    resp = r.json()
-    if resp.get('ok'):
-        return jsonify({"pay_url": resp['result']}), 200
-    return jsonify(resp), 400
-
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
+    
+    # 1. ОБЯЗАТЕЛЬНО: Ответ на пред-чекаут запрос
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
-    # --- ВОТ СЮДА ВСТАВЛЯЕШЬ ЭТОТ БЛОК ---
+    # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
-        stars_bought = update['message']['successful_payment']['total_amount']
+        payment_info = update['message']['successful_payment']
+        stars_bought = payment_info['total_amount']
         
-        # Логика верификации: если купили 50 звезд (или 1 для теста)
-        is_verification = (stars_bought == 1) # ПОМЕНЯЙ НА 1, ЕСЛИ ТЕСТИРУЕШЬ
+        # Логика: если купили 1 звезду, считаем это верификацией
+        is_verification = (stars_bought == 1) 
         
         if supabase:
-            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).execute()
-            
-            if res.data:
-                # Обновляем звезды и ставим флаг True, если это была покупка верификации
-                update_data = {"stars": res.data[0].get('stars', 0) + stars_bought}
-                if is_verification:
-                    update_data["is_paid_75"] = True
-                    
-                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-            else:
-                # Создаем новую запись, если юзера еще нет
-                insert_data = {"user_id": user_id, "stars": stars_bought}
-                if is_verification:
-                    insert_data["is_paid_75"] = True
-                supabase.table("users").insert(insert_data).execute()
+            try:
+                # Получаем текущие данные
+                res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
+                
+                current_stars = res.data.get('stars', 0) if res.data else 0
+                is_already_paid = res.data.get('is_paid_75', False) if res.data else False
+                
+                # Подготавливаем данные
+                update_data = {
+                    "user_id": user_id,
+                    "stars": current_stars + stars_bought,
+                    "is_paid_75": is_already_paid or is_verification
+                }
+                
+                # Upsert - создает или обновляет запись
+                supabase.table("users").upsert(update_data).execute()
+            except Exception as e:
+                print(f"Database error: {e}")
+                return "Internal Error", 500
+        
         return "OK", 200
-    # -------------------------------------
 
     return "OK", 200
 
