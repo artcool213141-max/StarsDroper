@@ -377,10 +377,10 @@ window.onload = async () => {
     tg.ready();
     tg.expand();
     
-    let user = tg.initDataUnsafe?.user;
+    // Получаем пользователя ТОЛЬКО из ТГ
+    const user = tg.initDataUnsafe?.user;
     
     if (!user) {
-        // Если данных нет вообще (запуск не через ТГ), останавливаемся
         document.getElementById('display-name').innerText = "ОШИБКА АВТОРИЗАЦИИ";
         document.getElementById('display-id').innerText = "ЗАПУСТИТЕ ЧЕРЕЗ БОТА";
         document.getElementById('global-loader').style.display = 'none';
@@ -388,7 +388,7 @@ window.onload = async () => {
         return; 
     }
 
-    // Теперь используем ТОЛЬКО реальный ID
+    // Присваиваем глобальный ID
     userId = String(user.id);
     const username = user.username || user.first_name || "PLAYER";
     
@@ -402,10 +402,8 @@ window.onload = async () => {
     renderTonPacks();
     initStars(); 
     
-    setTimeout(() => {
-        document.getElementById('global-loader').style.display = 'none';
-        document.body.classList.add('loaded');
-    }, 800);
+    document.getElementById('global-loader').style.display = 'none';
+    document.body.classList.add('loaded');
 };
 
     // Анимация звезд
