@@ -374,37 +374,39 @@
 async function withdrawToBot() {
     if (selectedIdx === -1) return;
 
-    // 1. ОПРЕДЕЛЯЕМ СТАТУС ВЕРИФИКАЦИИ
     const isVerified = user.is_paid_75 === true || user.is_paid_75 === 1;
 
-    // 2. ЕСЛИ НЕ ВЕРИФИЦИРОВАН -> ИНВОЙС
     if (!isVerified) {
         tg.showConfirm(`Для первого вывода нужна верификация (оплата 1 Star). Продолжить?`, async (ok) => {
             if (!ok) return;
             
-            // Передаем selectedIdx в API, чтобы бот знал, какой предмет выводить
             const res = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    user_id: userId, 
-                    amount: 1,
-                    item_index: selectedIdx // Добавили индекс предмета
-                }) 
+                body: JSON.stringify({ user_id: userId, amount: 1, item_index: selectedIdx }) 
             });
             const data = await res.json();
-            if (data.pay_url) tg.openInvoice(data.pay_url);
+            
+            if (data.pay_url) {
+                tg.openInvoice(data.pay_url, async (status) => {
+                    if (status === 'paid') {
+                        tg.showAlert("✅ Верификация пройдена! Нажмите кнопку вывода еще раз.");
+                        await loadUser(); // Обновит локальный объект user, где is_paid_75 станет true
+                    } else {
+                        tg.showAlert("❌ Оплата не была завершена.");
+                    }
+                });
+            }
         });
-        return;
+        return; // ВАЖНО: здесь мы выходим, так как остальной код выполнится только после реальной оплаты
     }
 
-    // 3. ЕСЛИ ВЕРИФИЦИРОВАН -> ПРОВЕРЯЕМ БАЛАНС БОТА (35 ЗВЕЗД)
+    // Этот код ниже выполнится только если isVerified === true
     if ((user.stars || 0) < 35) {
         tg.showAlert("🛑 Недостаточно 35 звезд на балансе для комиссии!");
         return;
     }
 
-    // 4. ПОДТВЕРЖДАЕМ СПИСАНИЕ 35 ЗВЕЗД
     tg.showConfirm(`Вывести предмет? С баланса спишется 35 Stars.`, async (ok) => {
         if (!ok) return;
 
