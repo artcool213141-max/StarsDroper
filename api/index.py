@@ -40,23 +40,25 @@ def webhook():
         user_id = str(update['message']['from']['id'])
         stars_bought = update['message']['successful_payment']['total_amount']
         
-        # Если купили 1 звезду — это верификация для is_paid_75
+        # Если купили 1 звезду — это верификация
         is_verification = (stars_bought == 1)
         
         if supabase:
             try:
-                # Ищем юзера и берем данные
                 res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
                 
                 if res.data:
-                    # Обновляем существующего
+                    # Логика: если было Null или False, а пришла 1 звезда -> ставим True
+                    current_paid = res.data.get('is_paid_75')
+                    new_paid = True if is_verification else (current_paid == True)
+                    
                     update_data = {
                         "stars": (res.data.get('stars') or 0) + stars_bought,
-                        "is_paid_75": (res.data.get('is_paid_75') or False) or is_verification
+                        "is_paid_75": new_paid
                     }
                     supabase.table("users").update(update_data).eq("user_id", user_id).execute()
                 else:
-                    # Создаем нового, если его еще нет в базе
+                    # Создаем запись с учетом верификации
                     supabase.table("users").insert({
                         "user_id": user_id, 
                         "stars": stars_bought, 
