@@ -35,21 +35,40 @@ def create_stars_pay():
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
-    if 'pre_checkout_query' in update:
-        query_id = update['pre_checkout_query']['id']
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
-                      json={"pre_checkout_query_id": query_id, "ok": True})
-        return "OK", 200
-
+    
+    # 1. УБРАЛИ pre_checkout_query (для Stars он не нужен и только мешает)
+    
+    # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
         stars_bought = update['message']['successful_payment']['total_amount']
+        
+        # Если купили 1 звезду — это верификация
+        is_verification = (stars_bought == 1)
+        
         if supabase:
-            res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
-            if res.data:
-                supabase.table("users").update({"stars": res.data[0].get('stars', 0) + stars_bought}).eq("user_id", user_id).execute()
-            else:
-                supabase.table("users").insert({"user_id": user_id, "stars": stars_bought}).execute()
+            try:
+                # Ищем юзера
+                res = supabase.table("users").select("stars, is_verified").eq("user_id", user_id).execute()
+                
+                if res.data and len(res.data) > 0:
+                    old_data = res.data[0]
+                    # Обновляем звезды и ставим верификацию, если пришла 1 звезда
+                    update_data = {
+                        "stars": old_data.get('stars', 0) + stars_bought,
+                        "is_verified": old_data.get('is_verified', False) or is_verification
+                    }
+                    supabase.table("users").update(update_data).eq("user_id", user_id).execute()
+                else:
+                    # Создаем юзера сразу с учетом верификации
+                    supabase.table("users").insert({
+                        "user_id": user_id, 
+                        "stars": stars_bought, 
+                        "is_verified": is_verification
+                    }).execute()
+            except Exception as e:
+                print(f"DB Error: {e}")
+                
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
