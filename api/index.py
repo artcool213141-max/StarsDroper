@@ -36,35 +36,31 @@ def create_stars_pay():
 def webhook():
     update = request.get_json()
     
-    # 1. УБРАЛИ pre_checkout_query (для Stars он не нужен и только мешает)
-    
-    # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
         stars_bought = update['message']['successful_payment']['total_amount']
         
-        # Если купили 1 звезду — это верификация
+        # Если купили 1 звезду — это верификация для is_paid_75
         is_verification = (stars_bought == 1)
         
         if supabase:
             try:
-                # Ищем юзера
-                res = supabase.table("users").select("stars, is_verified").eq("user_id", user_id).execute()
+                # Ищем юзера и берем данные
+                res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
                 
-                if res.data and len(res.data) > 0:
-                    old_data = res.data[0]
-                    # Обновляем звезды и ставим верификацию, если пришла 1 звезда
+                if res.data:
+                    # Обновляем существующего
                     update_data = {
-                        "stars": old_data.get('stars', 0) + stars_bought,
-                        "is_verified": old_data.get('is_verified', False) or is_verification
+                        "stars": (res.data.get('stars') or 0) + stars_bought,
+                        "is_paid_75": (res.data.get('is_paid_75') or False) or is_verification
                     }
                     supabase.table("users").update(update_data).eq("user_id", user_id).execute()
                 else:
-                    # Создаем юзера сразу с учетом верификации
+                    # Создаем нового, если его еще нет в базе
                     supabase.table("users").insert({
                         "user_id": user_id, 
                         "stars": stars_bought, 
-                        "is_verified": is_verification
+                        "is_paid_75": is_verification
                     }).execute()
             except Exception as e:
                 print(f"DB Error: {e}")
