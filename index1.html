@@ -241,7 +241,7 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
+    let userId = null;
 
     // ПОДКЛЮЧАЕМ SUPABASE НАПРЯМУЮ (Берем данные из твоего рабочего профиля)
     const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
@@ -254,14 +254,16 @@
 // Теперь функция принимает id, чтобы не зависеть от глобальных переменных
 async function syncData(uid) {
     if (!uid) return; 
+    console.log("Запрос баланса для:", uid); // <-- Добавь это
     try {
         const { data, error } = await _supabase
             .from('users')
-            .select('*')
-            .eq('user_id', uid) // Используем переданный ID
+            .select('balance, stars, tickets') // Выбирай только то, что нужно
+            .eq('user_id', parseInt(uid))      // Если ID в базе число, используй parseInt
             .single();
 
         if (error) throw error;
+        // ... (далее твой код отрисовки)
 
         if (data) {
             document.getElementById('bal-ton').innerText = parseFloat(data.balance || 0).toFixed(2);
@@ -375,33 +377,28 @@ window.onload = async () => {
     tg.ready();
     tg.expand();
     
-    // Пытаемся получить пользователя
     let user = tg.initDataUnsafe?.user;
     
-    // Если объект пустой, пробуем еще раз через небольшую задержку
     if (!user) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        user = tg.initDataUnsafe?.user;
+        // Если данных нет вообще (запуск не через ТГ), останавливаемся
+        document.getElementById('display-name').innerText = "ОШИБКА АВТОРИЗАЦИИ";
+        document.getElementById('display-id').innerText = "ЗАПУСТИТЕ ЧЕРЕЗ БОТА";
+        document.getElementById('global-loader').style.display = 'none';
+        document.body.classList.add('loaded');
+        return; 
     }
 
-    // Если всё равно нет данных — используем заглушку, но логируем ошибку
-    const username = user?.username || user?.first_name || "PLAYER";
-    const userId = String(user?.id || '8015661230');
-    const photoUrl = user?.photo_url;
+    // Теперь используем ТОЛЬКО реальный ID
+    userId = String(user.id);
+    const username = user.username || user.first_name || "PLAYER";
     
-    // Обновляем UI
     document.getElementById('display-name').innerText = username.toUpperCase();
     document.getElementById('display-id').innerText = `ID: ${userId}`;
     
     const avatar = document.getElementById('user-avatar');
-    if (photoUrl) {
-        avatar.src = photoUrl;
-    } else {
-        // Если фото нет, используем красивый сервис для инициалов
-        avatar.src = `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${username}`;
-    }
+    avatar.src = user.photo_url || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${username}`;
 
-    syncData(userId);
+    await syncData(userId);
     renderTonPacks();
     initStars(); 
     
