@@ -373,36 +373,26 @@ async function verifyGift() {
     function navigateTo(url) { tg.HapticFeedback.impactOccurred('medium'); window.location.href = url; }
 
 // Замени блок window.onload на этот, чтобы гарантировать загрузку данных
-window.onload = async () => {
-    tg.ready();
-    tg.expand();
-    
-    const user = tg.initDataUnsafe?.user;
-    
-    if (!user) {
-        document.getElementById('display-name').innerText = "ОШИБКА АВТОРИЗАЦИИ";
-        document.getElementById('display-id').innerText = "ЗАПУСТИТЕ ЧЕРЕЗ БОТА";
-        document.getElementById('global-loader').style.display = 'none';
-        document.body.classList.add('loaded');
-        return; 
-    }
-
-    // Инициализация данных пользователя
-    userId = String(user.id);
-    document.getElementById('display-name').innerText = (user.username || user.first_name || "PLAYER").toUpperCase();
-    document.getElementById('display-id').innerText = `ID: ${userId}`;
-    
-    const avatar = document.getElementById('user-avatar');
-    avatar.src = user.photo_url || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${user.first_name}`;
-
-    // Сначала данные, потом показ интерфейса
-    await syncData(userId);
-    renderTonPacks();
-    initStars(); 
-    
-    document.getElementById('global-loader').style.display = 'none';
-    document.body.classList.add('loaded');
-};
+    window.onload = () => {
+        tg.expand();
+        tg.ready();
+        
+        const firstName = tg.initDataUnsafe?.user?.first_name || "PLAYER";
+        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
+        
+        document.getElementById('display-name').innerText = (tg.initDataUnsafe?.user?.username || firstName).toUpperCase();
+        document.getElementById('display-id').innerText = `ID: ${userId}`;
+        document.getElementById('user-avatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${firstName}`;
+        
+        syncData();
+        renderTonPacks();
+        initStars(); 
+        
+        setTimeout(() => {
+            document.getElementById('global-loader').style.display = 'none';
+            document.body.classList.add('loaded');
+        }, 800);
+    };
 
     // Анимация звезд
     const canvas = document.getElementById('stars-canvas');
