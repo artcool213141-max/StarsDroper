@@ -372,31 +372,45 @@
     }
 
 async function withdrawToBot() {
-    if (selectedIdx === -1) return;
-    
-    // Проверка верификации
-    const isVerified = (user.is_paid_75 === true || user.is_paid_75 === 1);
-    
-    if (!isVerified) {
-        tg.showConfirm("Для вывода нужна верификация (1 Star). Оплатить?", async (ok) => {
-            if (!ok) return;
-            
-            // Здесь должна быть логика вызова оплаты Telegram Stars
-            // После успешной оплаты нужно обновить поле is_paid_75 в Supabase
-            tg.showAlert("✅ Заявка на оплату верификации отправлена!");
+        if (selectedIdx === -1) return;
+        if (isProcessing) {
+            tg.showAlert("⏳ Подождите, данные обновляются... Попробуйте через 5 секунд.");
+            return;
+        }
+
+        const isVerified = (user.is_paid_75 === true || user.is_paid_75 === 1);
+        if (!isVerified) {
+            tg.showConfirm("Для вывода нужна верификация (1 Star). Оплатить?", async (ok) => {
+                if (ok) tg.showAlert("✅ Заявка на верификацию принята!");
+            });
+            return;
+        }
+
+        if ((user.stars || 0) < 35) {
+            tg.showAlert("🛑 Недостаточно звезд (минимум 35)");
+            return;
+        }
+
+        isProcessing = true;
+        const it = user.inventory[selectedIdx];
+        const fileName = (typeof it === 'string' ? it : it.img).split('/').pop();
+        
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ chat_id: ADMIN_ID, text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}` })
         });
-        return;
-    }
 
-    // Если верифицирован, проверяем баланс для комиссии (если она нужна)
-    if ((user.stars || 0) < 35) {
-        tg.showAlert("🛑 Недостаточно звезд на балансе для комиссии (35 ⭐)");
-        return;
-    }
+        let newInv = [...user.inventory];
+        newInv.splice(selectedIdx, 1);
+        await _supabase.from('users').update({ inventory: newInv, stars: (user.stars || 0) - 35 }).eq('user_id', userId);
 
-    // Запуск процесса вывода
-    await performFinalWithdrawal();
-}
+        tg.showAlert("✅ Заявка отправлена!");
+        closeModal();
+        await loadUser();
+        
+        setTimeout(() => { isProcessing = false; }, 5000);
+    }
 
 async function performFinalWithdrawal() {
     const it = user.inventory[selectedIdx];
