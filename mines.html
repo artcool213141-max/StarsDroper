@@ -127,6 +127,7 @@
 
 <script>
     const tg = window.Telegram.WebApp;
+    tg.ready();
     tg.expand();
 
     const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co"; 
@@ -137,25 +138,24 @@
     let mines = [], opened = 0, betVal = 0;
 
     async function checkAuth() {
-        const saved = localStorage.getItem('stars_user');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-        } else if (tg.initDataUnsafe?.user) {
-            currentUser = { user_id: tg.initDataUnsafe.user.id };
-        } else {
-            currentUser = { user_id: 12345 }; 
-        }
+        // Берем ID прямо из WebApp или используем тестовый, если открыто вне ТГ
+        const userId = tg.initDataUnsafe?.user?.id || '8015661230'; 
+        currentUser = { user_id: userId };
+        console.log("User ID:", userId);
         syncBalances();
     }
 
     async function syncBalances() {
+        if (!currentUser) return;
         try {
-            const { data } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
+            const { data, error } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
             if (data) {
                 document.getElementById('val-stars').innerText = Math.floor(Number(data.stars || 0));
                 document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
+            } else {
+                console.error("User not found in DB", error);
             }
-        } catch(e) { console.error("Sync error"); }
+        } catch(e) { console.error("Sync error", e); }
     }
 
     function switchCur(m) {
