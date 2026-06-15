@@ -32,45 +32,66 @@ def create_stars_pay():
         return jsonify({"pay_url": resp['result']}), 200
     return jsonify(resp), 400
 
+# --- 1. STARS PAYMENT ---
+@app.route('/api/create_stars_pay', methods=['POST'])
+def create_stars_pay():
+    data = request.get_json() or {}
+    uid = str(data.get('user_id', '0'))
+    amount = int(data.get('amount', 1))
+    
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    
+    payload = {
+        "title": "Stars Topup",
+        "description": "Пополнение баланса Stars",
+        "payload": f"uid_{uid}",
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }
+    
+    try:
+        r = requests.post(url, json=payload)
+        resp = r.json()
+        
+        if not resp.get('ok'):
+            print(f"!!! TELEGRAM API ERROR: {resp}")
+            return jsonify({"error": "Telegram API error", "details": resp}), 400
+            
+        return jsonify({"pay_url": resp['result']}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
     
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
-        payment = update['message']['successful_payment']
-        stars_bought = payment['total_amount']
+        stars_bought = update['message']['successful_payment']['total_amount']
         
-        # ЛОГИКА: 1 звезда = верификация
-        # Если пришла 1 звезда, ставим true. Если больше - просто добавляем звезды.
-        is_verification = (stars_bought == 1)
+        is_verification = (stars_bought == 1) 
         
-        try:
-            # Получаем текущего юзера
-            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
-            
-            if res.data:
-                # Обновляем старого
-                current_paid = res.data.get('is_paid_75')
-                # Если была оплата 1 звезды, is_paid_75 становится True и остается True
-                new_paid = True if is_verification else (current_paid == True)
+        if supabase:
+            try:
+                res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
                 
-                supabase.table("users").update({
-                    "stars": (res.data.get('stars') or 0) + stars_bought,
-                    "is_paid_75": new_paid
-                }).eq("user_id", user_id).execute()
-            else:
-                # Создаем нового
-                supabase.table("users").insert({
+                current_stars = res.data.get('stars', 0) if res.data else 0
+                is_already_paid = res.data.get('is_paid_75', False) if res.data else False
+                
+                update_data = {
                     "user_id": user_id,
-                    "stars": stars_bought,
-                    "is_paid_75": is_verification
-                }).execute()
-        except Exception as e:
-            print(f"WEBHOOK ERROR: {e}")
-            
-    return "OK", 200
+                    "stars": current_stars + stars_bought,
+                    "is_paid_75": is_already_paid or is_verification
+                }
+                
+                supabase.table("users").upsert(update_data).execute()
+            except Exception as e:
+                print(f"Database error: {e}")
+                return "Internal Error", 500
+        
+        return "OK", 200
 
+    return "OK", 200
 # --- TON (CRYPTOBOT) ---
 # --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
