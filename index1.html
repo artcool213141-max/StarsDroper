@@ -377,7 +377,6 @@ window.onload = async () => {
     tg.ready();
     tg.expand();
     
-    // Получаем пользователя ТОЛЬКО из ТГ
     const user = tg.initDataUnsafe?.user;
     
     if (!user) {
@@ -388,16 +387,15 @@ window.onload = async () => {
         return; 
     }
 
-    // Присваиваем глобальный ID
+    // Инициализация данных пользователя
     userId = String(user.id);
-    const username = user.username || user.first_name || "PLAYER";
-    
-    document.getElementById('display-name').innerText = username.toUpperCase();
+    document.getElementById('display-name').innerText = (user.username || user.first_name || "PLAYER").toUpperCase();
     document.getElementById('display-id').innerText = `ID: ${userId}`;
     
     const avatar = document.getElementById('user-avatar');
-    avatar.src = user.photo_url || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${username}`;
+    avatar.src = user.photo_url || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${user.first_name}`;
 
+    // Сначала данные, потом показ интерфейса
     await syncData(userId);
     renderTonPacks();
     initStars(); 
