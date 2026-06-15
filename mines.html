@@ -244,25 +244,47 @@
         }
     }
 
-    function finishGame(win) {
-        isPlaying = false;
-        const userSelectedCount = parseInt(document.getElementById('mines-count').value);
-        const minesToShow = mines.slice(0, userSelectedCount);
+function finishGame(win) {
+    isPlaying = false;
+    const userSelectedCount = parseInt(document.getElementById('mines-count').value);
+    
+    // 1. Берем наш список разрешенных к показу мин
+    let minesToShow = mines.slice(0, userSelectedCount);
 
-        document.querySelectorAll('.cell').forEach((c, i) => {
-            if (minesToShow.includes(i)) {
-                c.classList.add('open');
-                c.innerHTML = `<img src="img/bomb.png" style="${win ? 'opacity:0.4' : ''}">`;
-            }
-        });
-        setTimeout(() => {
-            document.getElementById('btn-main').classList.remove('btn-cashout');
-            document.getElementById('btn-main').innerText = "ИГРАТЬ";
-            document.getElementById('stats-area').classList.add('invisible');
-            syncBalances();
-            renderGrid();
-        }, 2500);
+    // 2. Если игрок проиграл, и мина, на которую он нажал, 
+    // не попала в список показа — принудительно ее туда добавляем, 
+    // чтобы не было лишних мин на поле
+    if (!win) {
+        // Находим, куда нажал игрок (последняя открытая ячейка с миной)
+        const lastClicked = Array.from(document.querySelectorAll('.cell')).findIndex(c => c.innerHTML.includes('bomb.png'));
+        
+        // Если этой мины нет в списке показа — заменяем одну из "лишних" на эту
+        if (lastClicked !== -1 && !minesToShow.includes(lastClicked)) {
+            minesToShow[0] = lastClicked; 
+        }
     }
+
+    document.querySelectorAll('.cell').forEach((c, i) => {
+        // 3. Очищаем все бомбы перед отрисовкой, чтобы не было "лишних"
+        if (c.innerHTML.includes('bomb.png')) {
+            c.innerHTML = '';
+        }
+
+        // 4. Рисуем только те мины, которые есть в нашем утвержденном списке
+        if (minesToShow.includes(i)) {
+            c.classList.add('open');
+            c.innerHTML = `<img src="img/bomb.png" style="${win ? 'opacity:0.4' : ''}">`;
+        }
+    });
+    
+    setTimeout(() => {
+        document.getElementById('btn-main').classList.remove('btn-cashout');
+        document.getElementById('btn-main').innerText = "ИГРАТЬ";
+        document.getElementById('stats-area').classList.add('invisible');
+        syncBalances();
+        renderGrid();
+    }, 2500);
+}
 
     checkAuth();
     renderGrid();
