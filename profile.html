@@ -384,7 +384,7 @@ async function withdrawToBot() {
             const res = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: userId, amount: 50 }) // Верни 50 после тестов
+                body: JSON.stringify({ user_id: userId, amount: 1 }) // Верни 50 после тестов
             });
             const data = await res.json();
             if (data.pay_url) tg.openInvoice(data.pay_url);
