@@ -373,26 +373,39 @@ async function verifyGift() {
     function navigateTo(url) { tg.HapticFeedback.impactOccurred('medium'); window.location.href = url; }
 
 // Замени блок window.onload на этот, чтобы гарантировать загрузку данных
-    window.onload = () => {
-        tg.expand();
-        tg.ready();
-        
-        const firstName = tg.initDataUnsafe?.user?.first_name || "PLAYER";
-        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-        
-        document.getElementById('display-name').innerText = (tg.initDataUnsafe?.user?.username || firstName).toUpperCase();
-        document.getElementById('display-id').innerText = `ID: ${userId}`;
-        document.getElementById('user-avatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${firstName}`;
-        
-        syncData();
-        renderTonPacks();
-        initStars(); 
-        
-        setTimeout(() => {
-            document.getElementById('global-loader').style.display = 'none';
-            document.body.classList.add('loaded');
-        }, 800);
-    };
+window.onload = async () => {
+    tg.ready();
+    tg.expand();
+    
+    // ВАЖНО: Получаем объект пользователя
+    const user = tg.initDataUnsafe?.user;
+    
+    // Теперь ПЕРЕОПРЕДЕЛЯЕМ глобальную userId тем, что пришло из ТГ
+    // Если пользователя нет (запуск не через бота), будет null
+    userId = user ? String(user.id) : null; 
+
+    if (!userId) {
+        document.getElementById('display-name').innerText = "ЗАПУСТИТЕ ЧЕРЕЗ БОТА";
+        document.getElementById('global-loader').style.display = 'none';
+        document.body.classList.add('loaded');
+        return; 
+    }
+
+    const username = user.username || user.first_name || "PLAYER";
+    document.getElementById('display-name').innerText = username.toUpperCase();
+    document.getElementById('display-id').innerText = `ID: ${userId}`;
+    
+    const avatar = document.getElementById('user-avatar');
+    avatar.src = user.photo_url || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${username}`;
+
+    // Передаем актуальный userId в функцию
+    await syncData(userId); 
+    renderTonPacks();
+    initStars(); 
+    
+    document.getElementById('global-loader').style.display = 'none';
+    document.body.classList.add('loaded');
+};
 
     // Анимация звезд
     const canvas = document.getElementById('stars-canvas');
