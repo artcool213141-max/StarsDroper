@@ -41,15 +41,33 @@ def webhook():
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
+    # --- ВОТ СЮДА ВСТАВЛЯЕШЬ ЭТОТ БЛОК ---
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
         stars_bought = update['message']['successful_payment']['total_amount']
+        
+        # Логика верификации: если купили 50 звезд (или 1 для теста)
+        is_verification = (stars_bought == 1) # ПОМЕНЯЙ НА 1, ЕСЛИ ТЕСТИРУЕШЬ
+        
         if supabase:
-            res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).execute()
+            
             if res.data:
-                supabase.table("users").update({"stars": res.data[0].get('stars', 0) + stars_bought}).eq("user_id", user_id).execute()
+                # Обновляем звезды и ставим флаг True, если это была покупка верификации
+                update_data = {"stars": res.data[0].get('stars', 0) + stars_bought}
+                if is_verification:
+                    update_data["is_paid_75"] = True
+                    
+                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
             else:
-                supabase.table("users").insert({"user_id": user_id, "stars": stars_bought}).execute()
+                # Создаем новую запись, если юзера еще нет
+                insert_data = {"user_id": user_id, "stars": stars_bought}
+                if is_verification:
+                    insert_data["is_paid_75"] = True
+                supabase.table("users").insert(insert_data).execute()
+        return "OK", 200
+    # -------------------------------------
+
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
