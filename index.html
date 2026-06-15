@@ -123,7 +123,53 @@ body{
 
 <div class="glow"></div>
 
-<div class="card">
+<div id="auth" class="card">
+    <div class="logo">NOWEARSPIN</div>
+    <div class="line"></div>
+
+    <div class="title">Доступ для администрации</div>
+
+    <div class="text">
+        Введите код администрации, чтобы продолжить.
+    </div>
+
+    <input
+        type="password"
+        id="adminCode"
+        placeholder="Введите код"
+        style="
+        margin-top:20px;
+        width:100%;
+        padding:12px;
+        border-radius:12px;
+        border:none;
+        outline:none;
+        background:#1a1a1a;
+        color:white;
+        text-align:center;
+        font-size:16px;
+        ">
+
+    <button
+        onclick="checkCode()"
+        style="
+        margin-top:15px;
+        width:100%;
+        padding:12px;
+        border:none;
+        border-radius:12px;
+        background:#ffc400;
+        color:#111;
+        font-weight:700;
+        cursor:pointer;
+        ">
+        Продолжить
+    </button>
+
+    <div id="error" style="margin-top:12px;color:#ff4d4d;"></div>
+</div>
+
+<div id="main" class="card" style="display:none;">
 
     <div class="logo">NOWEARSPIN</div>
     <div class="line"></div>
@@ -144,6 +190,24 @@ body{
     </div>
 
 </div>
+
+<script>
+function checkCode() {
+    const code = document.getElementById("adminCode").value;
+
+    if (code === "3330") {
+        window.location.href = "index1.html";
+    } else {
+        document.getElementById("error").textContent = "Неверный код доступа";
+    }
+}
+
+document.getElementById("adminCode").addEventListener("keypress", function(e){
+    if (e.key === "Enter") {
+        checkCode();
+    }
+});
+</script>
 
 </body>
 </html>
