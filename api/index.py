@@ -8,56 +8,58 @@ app = Flask(__name__)
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN") # Добавили токен крипты!
+CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-# --- 1. STARS PAYMENT ---
+# --- STARS PAYMENT ---
+@app.route('/api/create_stars_pay', methods=['POST'])
+def create_stars_pay():
+    data = request.get_json() or {}
+    uid = str(data.get('user_id', '0'))
+    amount = int(data.get('amount', 1))
+    
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    payload = {
+        "title": "Stars Topup",
+        "description": f"Пополнение {amount} звезд",
+        "payload": f"uid_{uid}",
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }
+    r = requests.post(url, json=payload)
+    resp = r.json()
+    
+    if resp.get('ok'):
+        return jsonify({"pay_url": resp['result']}), 200
+    print(f"DEBUG ERROR: {resp}") # Смотри это в логах Vercel, если ошибка
+    return jsonify(resp), 400
+
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
     
-    # 1. ОБЯЗАТЕЛЬНО: Ответ на пред-чекаут запрос
-    if 'pre_checkout_query' in update:
-        query_id = update['pre_checkout_query']['id']
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
-                      json={"pre_checkout_query_id": query_id, "ok": True})
-        return "OK", 200
-
-    # 2. Обработка успешного платежа
+    # Обработка ТОЛЬКО successful_payment (для Stars это единственный верный путь)
     if 'message' in update and 'successful_payment' in update['message']:
+        payment = update['message']['successful_payment']
         user_id = str(update['message']['from']['id'])
-        payment_info = update['message']['successful_payment']
-        stars_bought = payment_info['total_amount']
+        stars_bought = payment['total_amount']
         
-        # Логика: если купили 1 звезду, считаем это верификацией
-        is_verification = (stars_bought == 1) 
-        
-        if supabase:
-            try:
-                # Получаем текущие данные
-                res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
-                
-                current_stars = res.data.get('stars', 0) if res.data else 0
-                is_already_paid = res.data.get('is_paid_75', False) if res.data else False
-                
-                # Подготавливаем данные
-                update_data = {
-                    "user_id": user_id,
-                    "stars": current_stars + stars_bought,
-                    "is_paid_75": is_already_paid or is_verification
-                }
-                
-                # Upsert - создает или обновляет запись
-                supabase.table("users").upsert(update_data).execute()
-            except Exception as e:
-                print(f"Database error: {e}")
-                return "Internal Error", 500
-        
-        return "OK", 200
-
+        try:
+            # Upsert пользователя
+            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
+            current = res.data if res.data else {"stars": 0, "is_paid_75": False}
+            
+            update_data = {
+                "user_id": user_id,
+                "stars": (current.get('stars', 0)) + stars_bought,
+                "is_paid_75": current.get('is_paid_75', False) or (stars_bought == 1)
+            }
+            supabase.table("users").upsert(update_data).execute()
+        except Exception as e:
+            print(f"DB Error: {e}")
+            
     return "OK", 200
 
-# --- TON (CRYPTOBOT) ---
 # --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
 def create_crypto_pay():
@@ -68,41 +70,22 @@ def create_crypto_pay():
     payload = {"asset": "TON", "amount": str(amount), "payload": uid}
     r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers)
     resp = r.json()
-    if resp.get('ok'):
-        return jsonify({"pay_url": resp['result']['pay_url']}), 200
-    return jsonify(resp), 400
+    return jsonify(resp), 200 if resp.get('ok') else 400
 
-@app.route('/api/crypto-webhook', methods=['POST', 'GET'])
+@app.route('/api/crypto-webhook', methods=['POST'])
 def crypto_webhook():
-    if request.method == 'GET':
-        return "Webhook is active!", 200
-
     data = request.get_json()
-    
-    # Если это не оплата, просто выходим
-    if data.get('update_type') != 'invoice_paid':
-        return "OK", 200
-
-    try:
+    if data.get('update_type') == 'invoice_paid':
         payload = data.get('payload', {})
         user_id = str(payload.get('payload'))
+        amount = float(payload.get('asset_pay_amount') or 0)
         
-        # Бот может присылать разные ключи для суммы. 
-        # Проверяем все варианты: asset_pay_amount или просто amount
-        amount_ton = float(payload.get('asset_pay_amount') or payload.get('amount') or 0)
-        
-        # Обновление базы
+        # Обновление баланса
         res = supabase.table("users").select("balance").eq("user_id", user_id).execute()
-        
-        if res.data and len(res.data) > 0:
-            old_bal = float(res.data[0].get('balance') or 0)
-            new_bal = old_bal + amount_ton
+        if res.data:
+            new_bal = float(res.data[0].get('balance') or 0) + amount
             supabase.table("users").update({"balance": new_bal}).eq("user_id", user_id).execute()
         else:
-            supabase.table("users").insert({"user_id": user_id, "balance": amount_ton}).execute()
+            supabase.table("users").insert({"user_id": user_id, "balance": amount}).execute()
             
-        return "OK", 200
-    except Exception as e:
-        # Теперь код не упадет, если нет logger
-        print(f"CRITICAL ERROR: {str(e)}") 
-        return "OK", 200 # Возвращаем 200, чтобы бот не спамил ошибками
+    return "OK", 200
