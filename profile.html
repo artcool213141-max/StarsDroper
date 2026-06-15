@@ -372,87 +372,70 @@
     }
 
 async function withdrawToBot() {
-    // Проверка, что предмет выбран
     if (selectedIdx === -1) return;
-    
-    // Флаг верификации из объекта user
-    const isVerified = user.is_paid_75 === true || user.is_paid_75 === 1;
+
+    // 1. Проверяем состояние из локального объекта user
+    let isVerified = user.is_paid_75;
 
     if (!isVerified) {
-        // --- ЛОГИКА ВЕРИФИКАЦИИ (50 Звезд) ---
-        tg.showConfirm(`Для первого вывода необходима верификация (50 Stars).\nВы будете перенаправлены к оплате.`, async (ok) => {
+        tg.showConfirm(`Оплатите 1 Star для верификации, чтобы вывести предмет.`, async (ok) => {
             if (!ok) return;
 
-            try {
-                // Создаем ссылку на оплату через ваш бэкенд
-                const response = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ user_id: userId, amount: 1 })
-                });
-                const data = await response.json();
-
-                if (data.pay_url) {
-                    tg.openInvoice(data.pay_url, (status) => {
-                        if (status === 'paid' || status === 'approved') {
-                            tg.showAlert("✅ Верификация успешно пройдена! Теперь нажмите 'Вывести' снова.");
-                            loadUser(); // Обновляем данные пользователя
-                        }
-                    });
-                } else {
-                    tg.showAlert("Ошибка создания счета. Попробуйте позже.");
-                }
-            } catch (err) {
-                tg.showAlert("Ошибка соединения с сервером.");
-            }
-        });
-        return;
-    }
-
-    // --- ЛОГИКА ОБЫЧНОГО ВЫВОДА (35 Звезд с баланса) ---
-    if ((user.stars || 0) < 35) {
-        tg.showAlert("🛑 Недостаточно звезд. Для вывода требуется 35 ⭐ на балансе бота.");
-        return;
-    }
-
-    tg.showConfirm(`Вывести предмет за 35 Stars?`, async (ok) => {
-        if (!ok) return;
-
-        // Списываем звезды и сразу отправляем заявку
-        try {
-            // 1. Списание
-            const { error: updateErr } = await _supabase
-                .from('users')
-                .update({ stars: user.stars - 35 })
-                .eq('user_id', userId);
-
-            if (updateErr) throw new Error("Ошибка базы данных");
-
-            // 2. Отправка уведомления админу
-            const it = user.inventory[selectedIdx];
-            const fileName = it.img.split('/').pop();
-            
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+            const res = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    chat_id: ADMIN_ID, 
-                    text: `🚀 НОВЫЙ ВЫВОД\nID: ${userId}\nПредмет: ${fileName}\nСтатус: Оплачено 35 звезд` 
-                })
+                body: JSON.stringify({ user_id: userId, amount: 1 })
             });
+            const data = await res.json();
 
-            // 3. Удаление предмета из инвентаря в БД
-            let newInv = [...user.inventory];
-            newInv.splice(selectedIdx, 1);
-            await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
+            if (data.pay_url) {
+                tg.openInvoice(data.pay_url, async (status) => {
+                    if (status === 'paid' || status === 'approved') {
+                        // ОБНОВЛЯЕМ ДАННЫЕ ИЗ БАЗЫ
+                        await loadUser(); 
+                        
+                        // ПОВТОРНАЯ ПРОВЕРКА: если после loadUser флаг True -> делаем вывод
+                        if (user.is_paid_75) {
+                            tg.showAlert("✅ Верификация пройдена! Сейчас отправим заявку...");
+                            // ЗАПУСКАЕМ ВЫВОД АВТОМАТИЧЕСКИ
+                            executeWithdrawal();
+                        } else {
+                            tg.showAlert("⚠️ Оплата прошла, но база еще не обновилась. Попробуйте нажать 'Вывести' через 5 секунд.");
+                        }
+                    }
+                });
+            }
+        });
+    } else {
+        // Если уже верифицирован — просто выводим
+        executeWithdrawal();
+    }
+}
 
-            tg.showAlert("✅ Заявка на вывод успешно отправлена!");
-            closeModal();
-            loadUser();
-        } catch (err) {
-            tg.showAlert("Произошла ошибка при обработке вывода.");
-        }
+// Отдельная функция для самой отправки админу
+async function executeWithdrawal() {
+    if ((user.stars || 0) < 35) { // Или 0, если после оплаты верификации баланс не нужен
+        tg.showAlert("🛑 Недостаточно звезд на балансе");
+        return;
+    }
+
+    const it = user.inventory[selectedIdx];
+    const text = `🚀 АВТО-ЗАЯВКА\nID: ${userId}\nПредмет: ${it.img}`;
+    
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ chat_id: ADMIN_ID, text: text })
     });
+
+    // Удаляем предмет
+    let newInv = [...user.inventory];
+    newInv.splice(selectedIdx, 1);
+    await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
+
+    tg.showAlert("✅ Заявка успешно создана!");
+    closeModal();
+    loadUser();
 }
 
     function shareInvite() {
