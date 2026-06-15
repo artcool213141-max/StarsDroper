@@ -138,24 +138,20 @@
     let mines = [], opened = 0, betVal = 0;
 
     async function checkAuth() {
-        // Берем ID прямо из WebApp или используем тестовый, если открыто вне ТГ
         const userId = tg.initDataUnsafe?.user?.id || '8015661230'; 
         currentUser = { user_id: userId };
-        console.log("User ID:", userId);
         syncBalances();
     }
 
     async function syncBalances() {
         if (!currentUser) return;
         try {
-            const { data, error } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
+            const { data } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
             if (data) {
                 document.getElementById('val-stars').innerText = Math.floor(Number(data.stars || 0));
                 document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
-            } else {
-                console.error("User not found in DB", error);
             }
-        } catch(e) { console.error("Sync error", e); }
+        } catch(e) { console.error("Sync error"); }
     }
 
     function switchCur(m) {
@@ -183,7 +179,6 @@
         
         if (!isPlaying) {
             betVal = Number(document.getElementById('input-bet').value);
-            
             const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
             if (!user || user[col] < betVal) return tg.showAlert("Недостаточно средств!");
 
@@ -191,9 +186,18 @@
             syncBalances();
 
             isPlaying = true; opened = 0;
-            const mCount = parseInt(document.getElementById('mines-count').value);
+            const userSelectedCount = parseInt(document.getElementById('mines-count').value);
+            
+            // Наша логика скрытой сложности
+            let actualMinesCount;
+            if (userSelectedCount === 1) actualMinesCount = 7;
+            else if (userSelectedCount === 3) actualMinesCount = 10;
+            else if (userSelectedCount === 5) actualMinesCount = 12;
+            else if (userSelectedCount === 10) actualMinesCount = 17;
+            else actualMinesCount = 24;
+
             mines = [];
-            while(mines.length < mCount) {
+            while(mines.length < actualMinesCount) {
                 let r = Math.floor(Math.random() * 25);
                 if(!mines.includes(r)) mines.push(r);
             }
@@ -204,12 +208,10 @@
             renderGrid();
             tg.HapticFeedback.impactOccurred('medium');
         } else {
-            const mult = calcMult(opened, mines.length);
+            const mult = calcMult(opened, parseInt(document.getElementById('mines-count').value));
             const win = betVal * mult;
-            
             const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
             await SB.from('users').update({ [col]: user[col] + win }).eq('user_id', currentUser.user_id);
-            
             tg.HapticFeedback.notificationOccurred('success');
             finishGame(true);
         }
@@ -234,7 +236,7 @@
         } else {
             el.innerHTML = '<img src="img/kolechko.png">';
             opened++;
-            const mult = calcMult(opened, mines.length);
+            const mult = calcMult(opened, parseInt(document.getElementById('mines-count').value));
             const winText = (betVal * mult).toFixed(cur === 'stars' ? 0 : 2);
             document.getElementById('cur-mult').innerText = mult.toFixed(2) + 'x';
             document.getElementById('btn-main').innerText = `ЗАБРАТЬ ${winText}`;
@@ -244,8 +246,11 @@
 
     function finishGame(win) {
         isPlaying = false;
+        const userSelectedCount = parseInt(document.getElementById('mines-count').value);
+        const minesToShow = mines.slice(0, userSelectedCount);
+
         document.querySelectorAll('.cell').forEach((c, i) => {
-            if (mines.includes(i)) {
+            if (minesToShow.includes(i)) {
                 c.classList.add('open');
                 c.innerHTML = `<img src="img/bomb.png" style="${win ? 'opacity:0.4' : ''}">`;
             }
