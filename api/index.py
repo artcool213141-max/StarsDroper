@@ -38,35 +38,37 @@ def webhook():
     
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
-        stars_bought = update['message']['successful_payment']['total_amount']
+        payment = update['message']['successful_payment']
+        stars_bought = payment['total_amount']
         
-        # Если купили 1 звезду — это верификация
+        # ЛОГИКА: 1 звезда = верификация
+        # Если пришла 1 звезда, ставим true. Если больше - просто добавляем звезды.
         is_verification = (stars_bought == 1)
         
-        if supabase:
-            try:
-                res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
+        try:
+            # Получаем текущего юзера
+            res = supabase.table("users").select("stars, is_paid_75").eq("user_id", user_id).maybe_single().execute()
+            
+            if res.data:
+                # Обновляем старого
+                current_paid = res.data.get('is_paid_75')
+                # Если была оплата 1 звезды, is_paid_75 становится True и остается True
+                new_paid = True if is_verification else (current_paid == True)
                 
-                if res.data:
-                    # Логика: если было Null или False, а пришла 1 звезда -> ставим True
-                    current_paid = res.data.get('is_paid_75')
-                    new_paid = True if is_verification else (current_paid == True)
-                    
-                    update_data = {
-                        "stars": (res.data.get('stars') or 0) + stars_bought,
-                        "is_paid_75": new_paid
-                    }
-                    supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-                else:
-                    # Создаем запись с учетом верификации
-                    supabase.table("users").insert({
-                        "user_id": user_id, 
-                        "stars": stars_bought, 
-                        "is_paid_75": is_verification
-                    }).execute()
-            except Exception as e:
-                print(f"DB Error: {e}")
-                
+                supabase.table("users").update({
+                    "stars": (res.data.get('stars') or 0) + stars_bought,
+                    "is_paid_75": new_paid
+                }).eq("user_id", user_id).execute()
+            else:
+                # Создаем нового
+                supabase.table("users").insert({
+                    "user_id": user_id,
+                    "stars": stars_bought,
+                    "is_paid_75": is_verification
+                }).execute()
+        except Exception as e:
+            print(f"WEBHOOK ERROR: {e}")
+            
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
