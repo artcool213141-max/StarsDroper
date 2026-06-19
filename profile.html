@@ -318,11 +318,14 @@ function renderGrid() {
 async function withdrawToBot() {
     if (!user || selectedIdx === -1) return;
     
-    const price = user.is_paid_75 ? 35 : 50;
+    // Определяем статус оплаты: если поле null/undefined, считаем как false
+    const isPaid = user.is_paid_75 === true; 
+    const price = isPaid ? 35 : 50;
     const currentStars = user.stars || 0;
 
+    // Проверка баланса
     if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно средств!\nДля ${user.is_paid_75 ? 'вывода' : 'верификации'} нужно ${price} ⭐`);
+        tg.showAlert(`🛑 Недостаточно средств!\nДля ${isPaid ? 'вывода' : 'верификации'} нужно ${price} ⭐`);
         return;
     }
 
@@ -330,29 +333,43 @@ async function withdrawToBot() {
         if (!ok) return;
 
         try {
+            // 1. Списываем звезды и устанавливаем is_paid_75 в true
             const { error: updErr } = await _supabase.from('users').update({ 
                 stars: currentStars - price,
-                is_paid_75: true 
+                is_paid_75: true // Теперь принудительно ставим true
             }).eq('user_id', userId);
 
             if (updErr) throw updErr;
 
+            // 2. Отправляем уведомление в бота
             const it = user.inventory[selectedIdx];
             const fileName = it.img.split('/').pop();
+            
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ chat_id: ADMIN_ID, text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: ${user.is_paid_75 ? 'Повторный' : 'Верификация'}` })
+                body: JSON.stringify({ 
+                    chat_id: ADMIN_ID, 
+                    text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: ${isPaid ? 'Повторный' : 'Верификация (первый вывод)'}` 
+                })
             });
 
+            // 3. Удаляем предмет из инвентаря
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
             
-            tg.showAlert("✅ Заявка отправлена!");
+            tg.showAlert("✅ Заявка успешно отправлена!");
             closeModal();
-            loadUser();
+            
+            // 4. Обновляем локальный объект пользователя, чтобы UI сразу изменился
+            user.stars = currentStars - price;
+            user.is_paid_75 = true;
+            user.inventory = newInv;
+            renderGrid(); // Обновляем инвентарь на экране
+            
         } catch(e) {
+            console.error("Ошибка вывода:", e);
             tg.showAlert("Ошибка: " + e.message);
         }
     });
