@@ -378,7 +378,7 @@ if (!isPaid) {
         return;
     }
 
-    // СЦЕНАРИЙ 2: ВЕРИФИЦИРОВАН (Списание с баланса)
+// СЦЕНАРИЙ 2: ВЕРИФИЦИРОВАН (Списание с баланса)
     if (currentStars < price) {
         tg.showAlert(`🛑 Недостаточно средств!`);
         return;
@@ -387,26 +387,36 @@ if (!isPaid) {
     tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
         if (!ok) return;
 
-        isProcessing = true; // Блокируем кнопку
-        closeModal(); // Закрываем сразу, чтобы нельзя было кликнуть повторно
+        isProcessing = true;
+        closeModal();
 
         try {
-            await createOrderRecord();
-            await _supabase.from('users').update({ stars: currentStars - price }).eq('user_id', userId);
-
+            // 1. Сначала Flask (заявка)
+            const orderResp = await createOrderRecord();
+            
+            // 2. ОДНИМ ЗАПРОСОМ обновляем инвентарь и баланс
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
-            await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
+            
+            const { error } = await _supabase
+                .from('users')
+                .update({ 
+                    stars: currentStars - price,
+                    inventory: newInv
+                })
+                .eq('user_id', userId);
+
+            if (error) throw error; // Если здесь ошибка, она вылетит в catch
             
             tg.showAlert("✅ Заявка успешно создана!");
             loadUser();
         } catch(e) {
+            console.error("DEBUG ERROR:", e); // СМОТРИ ЭТО В F12 -> CONSOLE
             tg.showAlert("Ошибка: " + e.message);
         } finally {
-            isProcessing = false; // Разблокируем
+            isProcessing = false;
         }
     });
-}
 
 function openItem(i) {
     selectedIdx = i;
