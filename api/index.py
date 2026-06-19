@@ -43,13 +43,28 @@ def webhook():
 
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
-        stars_bought = update['message']['successful_payment']['total_amount']
+        payment_info = update['message']['successful_payment']
+        stars_bought = payment_info['total_amount']
+        
+        # ЛОГИКА ВЕРИФИКАЦИИ: 
+        # Если пришло 50 звезд (сумма верификации), значит это оплата "подарка"
+        is_verification = (stars_bought == 50)
+        
         if supabase:
             res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+            
+            update_data = {"stars": (res.data[0].get('stars', 0) if res.data else 0) + stars_bought}
+            
+            # Если это оплата верификации — ставим true
+            if is_verification:
+                update_data["is_paid_75"] = True
+                
             if res.data:
-                supabase.table("users").update({"stars": res.data[0].get('stars', 0) + stars_bought}).eq("user_id", user_id).execute()
+                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
             else:
-                supabase.table("users").insert({"user_id": user_id, "stars": stars_bought}).execute()
+                update_data["user_id"] = user_id
+                supabase.table("users").insert(update_data).execute()
+                
     return "OK", 200
 
 # --- TON (CRYPTOBOT) ---
