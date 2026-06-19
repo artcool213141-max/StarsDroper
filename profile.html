@@ -320,7 +320,7 @@ async function withdrawToBot() {
 
     // Определяем, верифицирован ли пользователь
     const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 35 : 50;
+    const price = isPaid ? 35 : 1;
     const currentStars = user.stars || 0;
 
     // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН (нужна оплата 50)
