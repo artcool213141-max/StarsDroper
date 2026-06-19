@@ -341,11 +341,13 @@ async function withdrawToBot() {
     };
 
     // СЦЕНАРИЙ 1: НЕ ВЕРИФИЦИРОВАН (Инвойс)
-    if (!isPaid) {
+if (!isPaid) {
         tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
             if (!ok) return;
             
             isProcessing = true; // Блокируем кнопку
+            closeModal();        // ЗАКРЫВАЕМ СРАЗУ, чтобы нельзя было кликнуть повторно
+            
             await _supabase.from('users').update({ pending_item: it.img }).eq('user_id', userId);
 
             try {
@@ -358,15 +360,15 @@ async function withdrawToBot() {
 
                 if (data.pay_url) {
                     tg.openInvoice(data.pay_url, (status) => {
-                        isProcessing = false; // Разблокируем
+                        isProcessing = false;
                         if (status === 'paid') {
-                            closeModal(); // Закрываем сразу после оплаты
                             tg.showAlert("✅ Оплата прошла! Заявка создана автоматически.");
                             loadUser();
                         }
                     });
                 } else {
                     isProcessing = false;
+                    tg.showAlert("Ошибка создания инвойса.");
                 }
             } catch (e) { 
                 isProcessing = false;
