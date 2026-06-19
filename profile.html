@@ -330,6 +330,56 @@ function renderGrid() {
     });
 }
 
+async function handlePromo() {
+    const promoCode = prompt("Введите промокод:");
+    if (!promoCode) return;
+
+    try {
+        // 1. Ищем код в таблице promo_codes
+        const { data: promo, error: promoError } = await sb
+            .from('promo_codes')
+            .select('*')
+            .eq('code', promoCode)
+            .eq('is_active', true)
+            .single();
+
+        if (promoError || !promo) {
+            return tg.showAlert("❌ Промокод не найден или уже использован!");
+        }
+
+        // 2. Получаем текущие балансы пользователя
+        const { data: user } = await sb
+            .from('users')
+            .select('stars, balance, tickets')
+            .eq('user_id', userId)
+            .single();
+
+        // 3. Определяем, что именно даем (в таблице promo_codes должны быть колонки type и reward)
+        // type: 'stars' | 'balance' | 'tickets'
+        const rewardType = promo.type; 
+        const rewardAmount = promo.reward;
+        
+        const updateData = {};
+        updateData[rewardType] = user[rewardType] + rewardAmount;
+
+        // 4. Обновляем баланс пользователя
+        await sb.from('users').update(updateData).eq('user_id', userId);
+
+        // 5. Деактивируем промокод
+        await sb.from('promo_codes').update({ is_active: false }).eq('code', promoCode);
+
+        // 6. Уведомление и обновление интерфейса
+        tg.showAlert(`✅ Успешно! Вы получили: ${rewardAmount} ${rewardType}`);
+        
+        // Вызываем функцию обновления UI, которая у тебя должна быть
+        updateBalance(); 
+
+    } catch (e) {
+        console.error("Ошибка промо:", e);
+        tg.showAlert("Ошибка сервера при активации.");
+    }
+}
+
 // ЕДИНАЯ ФУНКЦИЯ ВЫВОДА
 let isProcessing = false; // Блокировщик нажатий
 
