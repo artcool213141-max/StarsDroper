@@ -337,7 +337,7 @@ async function withdrawToBot() {
     if (!user || selectedIdx === -1 || isProcessing) return;
 
     const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 35 : 1; 
+    const price = isPaid ? 50 : 45; 
     const currentStars = user.stars || 0;
     
     const it = user.inventory[selectedIdx];
@@ -358,7 +358,7 @@ async function withdrawToBot() {
 
     // СЦЕНАРИЙ 1: НЕ ВЕРИФИЦИРОВАН (Инвойс)
 if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость:  45⭐.`, async (ok) => {
             if (!ok) return;
             
             isProcessing = true; // Блокируем кнопку
@@ -370,7 +370,7 @@ if (!isPaid) {
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 1 })
+                    body: JSON.stringify({ user_id: userId, amount: 45 })
                 });
                 const data = await response.json();
 
