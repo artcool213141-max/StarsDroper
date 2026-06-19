@@ -317,15 +317,46 @@ function renderGrid() {
 // ЕДИНАЯ ФУНКЦИЯ ВЫВОДА
 async function withdrawToBot() {
     if (!user || selectedIdx === -1) return;
-    
-    // Определяем статус оплаты: если поле null/undefined, считаем как false
-    const isPaid = user.is_paid_75 === true; 
+
+    // Определяем, верифицирован ли пользователь
+    const isPaid = user.is_paid_75 === true;
     const price = isPaid ? 35 : 50;
     const currentStars = user.stars || 0;
 
-    // Проверка баланса
+    // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН (нужна оплата 50)
+    if (!isPaid) {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 50 ⭐.\nПродолжить к оплате?`, async (ok) => {
+            if (!ok) return;
+
+            try {
+                // Вызываем ваш Python-бэкенд для создания инвойса
+                const response = await fetch('/api/create_stars_pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: userId, amount: 50 })
+                });
+                const data = await response.json();
+
+                if (data.pay_url) {
+                    // Открываем окно оплаты Telegram
+                    tg.openInvoice(data.pay_url, (status) => {
+                        if (status === 'paid') {
+                            tg.showAlert("✅ Оплата прошла! Теперь вы можете оформить вывод.");
+                        }
+                    });
+                } else {
+                    tg.showAlert("Ошибка при создании счета. Попробуйте позже.");
+                }
+            } catch (e) {
+                console.error("Ошибка сети:", e);
+            }
+        });
+        return; // Прерываем выполнение, так как оплата еще не завершена
+    }
+
+    // СЦЕНАРИЙ 2: Пользователь ВЕРИФИЦИРОВАН (список уже оплачен)
     if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно средств!\nДля ${isPaid ? 'вывода' : 'верификации'} нужно ${price} ⭐`);
+        tg.showAlert(`🛑 Недостаточно средств!\nДля вывода нужно ${price} ⭐`);
         return;
     }
 
@@ -333,15 +364,14 @@ async function withdrawToBot() {
         if (!ok) return;
 
         try {
-            // 1. Списываем звезды и устанавливаем is_paid_75 в true
+            // 1. Списываем звезды
             const { error: updErr } = await _supabase.from('users').update({ 
-                stars: currentStars - price,
-                is_paid_75: true // Теперь принудительно ставим true
+                stars: currentStars - price
             }).eq('user_id', userId);
 
             if (updErr) throw updErr;
 
-            // 2. Отправляем уведомление в бота
+            // 2. Уведомляем администратора
             const it = user.inventory[selectedIdx];
             const fileName = it.img.split('/').pop();
             
@@ -350,7 +380,7 @@ async function withdrawToBot() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     chat_id: ADMIN_ID, 
-                    text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: ${isPaid ? 'Повторный' : 'Верификация (первый вывод)'}` 
+                    text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: Повторный вывод` 
                 })
             });
 
@@ -362,11 +392,10 @@ async function withdrawToBot() {
             tg.showAlert("✅ Заявка успешно отправлена!");
             closeModal();
             
-            // 4. Обновляем локальный объект пользователя, чтобы UI сразу изменился
+            // 4. Обновляем локальные данные
             user.stars = currentStars - price;
-            user.is_paid_75 = true;
             user.inventory = newInv;
-            renderGrid(); // Обновляем инвентарь на экране
+            renderGrid();
             
         } catch(e) {
             console.error("Ошибка вывода:", e);
