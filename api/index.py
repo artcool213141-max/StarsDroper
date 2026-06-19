@@ -48,7 +48,7 @@ def webhook():
         
         # ЛОГИКА ВЕРИФИКАЦИИ: 
         # Если пришло 50 звезд (сумма верификации), значит это оплата "подарка"
-        is_verification = (stars_bought == 50)
+        is_verification = (stars_bought == 1)
         
         if supabase:
             res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
