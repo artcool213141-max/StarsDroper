@@ -441,9 +441,26 @@ function openItem(i) {
     const it = user.inventory[i];
     const fileName = it.img.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
+    
     document.getElementById('modal-img').src = `img/${fileName}`;
     document.getElementById('modal-name').innerText = info.name;
     document.getElementById('sell-btn').innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
+    
+    // ДОБАВЛЯЕМ ПРОВЕРКУ
+    const withdrawBtn = document.querySelector('[onclick="withdrawToBot()"]');
+    const userStars = user.stars || 0;
+    
+    // Если звезд меньше 45 - прячем кнопку или делаем её неактивной
+    if (userStars < 45) {
+        withdrawBtn.style.opacity = "0.3";
+        withdrawBtn.style.pointerEvents = "none";
+        withdrawBtn.innerText = "НУЖНО 45 ⭐ ДЛЯ ВЫВОДА";
+    } else {
+        withdrawBtn.style.opacity = "1";
+        withdrawBtn.style.pointerEvents = "auto";
+        withdrawBtn.innerText = "ВЫВЕСТИ В БОТ";
+    }
+    
     document.getElementById('item-modal').style.display = 'flex';
 }
 
