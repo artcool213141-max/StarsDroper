@@ -48,45 +48,49 @@ def webhook():
         user_id = str(update['message']['from']['id'])
         payment_info = update['message']['successful_payment']
         
-        print(f"DEBUG: Получена оплата от {user_id} на сумму {payment_info['total_amount']}")
+        print(f"DEBUG: Начало обработки оплаты для {user_id}")
         
-        # Получаем текущие данные юзера
-        res = supabase.table("users").select("stars", "pending_item", "inventory").eq("user_id", user_id).execute()
-        
-        if res.data:
-            user_data = res.data[0]
-            new_stars = user_data.get('stars', 0) + payment_info['total_amount']
+        try:
+            # Получаем текущие данные юзера
+            res = supabase.table("users").select("stars", "pending_item", "inventory").eq("user_id", user_id).execute()
             
-            # Данные для обновления пользователя
-            update_data = {
-                "stars": new_stars, 
-                "is_paid_75": True
-            }
-            
-            # Логика авто-заявки
-            pending_item = user_data.get('pending_item')
-            if pending_item:
-                print(f"DEBUG: Найдена заявка на вывод: {pending_item}")
+            if res.data:
+                user_data = res.data[0]
+                new_stars = (user_data.get('stars') or 0) + payment_info['total_amount']
                 
-                # А. Записываем в таблицу orders (ОБЯЗАТЕЛЬНО)
-                order_insert = supabase.table("orders").insert({
-                    "user_id": user_id,
-                    "item_name": "Gift", 
-                    "item_img": pending_item,
-                    "status": "pending"
-                }).execute()
-                print("DEBUG: Запись в orders создана")
+                # Подготовка данных для обновления
+                update_data = {
+                    "stars": new_stars,
+                    "is_paid_75": True
+                }
                 
-                # Б. Фильтруем инвентарь (удаляем предмет)
-                inv = user_data.get('inventory', [])
-                new_inv = [i for i in inv if i.get('img') != pending_item]
+                pending_item = user_data.get('pending_item')
                 
-                update_data["inventory"] = new_inv
-                update_data["pending_item"] = None
-            
-            # В. Финальное обновление пользователя
-            upd_res = supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-            print("DEBUG: Данные пользователя в Supabase обновлены")
+                if pending_item:
+                    print(f"DEBUG: Найдена заявка на вывод: {pending_item}")
+                    
+                    # 1. Вставка в таблицу orders (ОБЯЗАТЕЛЬНО)
+                    order_res = supabase.table("orders").insert({
+                        "user_id": user_id,
+                        "item_name": "Gift", 
+                        "item_img": pending_item,
+                        "status": "pending"
+                    }).execute()
+                    
+                    # 2. Фильтрация инвентаря
+                    inv = user_data.get('inventory') or []
+                    new_inv = [i for i in inv if i.get('img') != pending_item]
+                    
+                    # 3. Обновление пользователя
+                    update_data["inventory"] = new_inv
+                    update_data["pending_item"] = None
+                
+                # Финальное сохранение
+                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
+                print(f"DEBUG: Успешно обновлено: {user_id}")
+                
+        except Exception as e:
+            print(f"CRITICAL ERROR in webhook: {str(e)}")
             
     return "OK", 200
 
