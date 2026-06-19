@@ -35,36 +35,46 @@ def create_stars_pay():
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
+    
+    # 1. Обработка pre_checkout_query (оставляем как было)
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
+    # 2. Обработка УСПЕШНОЙ ОПЛАТЫ (сюда вставляем новый код)
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
         payment_info = update['message']['successful_payment']
-        stars_bought = payment_info['total_amount']
         
-        # ЛОГИКА ВЕРИФИКАЦИИ: 
-        # Если пришло 50 звезд (сумма верификации), значит это оплата "подарка"
-        is_verification = (stars_bought == 1)
+        # Получаем текущие данные юзера из базы
+        res = supabase.table("users").select("stars", "pending_item", "inventory").eq("user_id", user_id).execute()
         
-        if supabase:
-            res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+        if res.data:
+            user_data = res.data[0]
+            new_stars = user_data.get('stars', 0) + payment_info['total_amount']
+            update_data = {"stars": new_stars, "is_paid_75": True}
             
-            update_data = {"stars": (res.data[0].get('stars', 0) if res.data else 0) + stars_bought}
+            # Логика авто-заявки
+            pending_item = user_data.get('pending_item')
+            if pending_item:
+                # Уведомление в Телеграм
+                requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                    "chat_id": ADMIN_ID,
+                    "text": f"🚀 АВТО-ЗАЯВКА: {user_id}\nПредмет: {pending_item}\nСтатус: Оплачено и выведено!"
+                })
+                
+                # Фильтруем инвентарь (удаляем предмет)
+                inv = user_data.get('inventory', [])
+                new_inv = [i for i in inv if i.get('img') != pending_item]
+                
+                update_data["inventory"] = new_inv
+                update_data["pending_item"] = None
             
-            # Если это оплата верификации — ставим true
-            if is_verification:
-                update_data["is_paid_75"] = True
-                
-            if res.data:
-                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-            else:
-                update_data["user_id"] = user_id
-                supabase.table("users").insert(update_data).execute()
-                
+            # Сохраняем все обновления одним махом
+            supabase.table("users").update(update_data).eq("user_id", user_id).execute()
+            
     return "OK", 200
 
 @app.route('/api/create_order', methods=['POST'])
