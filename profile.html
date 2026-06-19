@@ -315,8 +315,10 @@ function renderGrid() {
 }
 
 // ЕДИНАЯ ФУНКЦИЯ ВЫВОДА
+let isProcessing = false; // Блокировщик нажатий
+
 async function withdrawToBot() {
-    if (!user || selectedIdx === -1) return;
+    if (!user || selectedIdx === -1 || isProcessing) return;
 
     const isPaid = user.is_paid_75 === true;
     const price = isPaid ? 35 : 1; 
@@ -326,7 +328,6 @@ async function withdrawToBot() {
     const fileName = it.img.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item" };
 
-    // Функция создания записи в таблице orders
     const createOrderRecord = async () => {
         await fetch('/api/create_order', {
             method: 'POST',
@@ -343,8 +344,8 @@ async function withdrawToBot() {
     if (!isPaid) {
         tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
             if (!ok) return;
-
-            // РЕЗЕРВИРУЕМ ПРЕДМЕТ в БД перед оплатой
+            
+            isProcessing = true; // Блокируем кнопку
             await _supabase.from('users').update({ pending_item: it.img }).eq('user_id', userId);
 
             try {
@@ -357,14 +358,20 @@ async function withdrawToBot() {
 
                 if (data.pay_url) {
                     tg.openInvoice(data.pay_url, (status) => {
+                        isProcessing = false; // Разблокируем
                         if (status === 'paid') {
-                            // После оплаты вебхук во Flask сам создаст заказ и удалит предмет
-                            tg.showAlert("✅ Оплата прошла! Заявка автоматически создана.");
+                            closeModal(); // Закрываем сразу после оплаты
+                            tg.showAlert("✅ Оплата прошла! Заявка создана автоматически.");
                             loadUser();
                         }
                     });
+                } else {
+                    isProcessing = false;
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { 
+                isProcessing = false;
+                console.error(e); 
+            }
         });
         return;
     }
@@ -378,23 +385,23 @@ async function withdrawToBot() {
     tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
         if (!ok) return;
 
+        isProcessing = true; // Блокируем кнопку
+        closeModal(); // Закрываем сразу, чтобы нельзя было кликнуть повторно
+
         try {
-            // 1. Создаем заказ
             await createOrderRecord();
-            
-            // 2. Списываем звезды
             await _supabase.from('users').update({ stars: currentStars - price }).eq('user_id', userId);
 
-            // 3. Удаляем предмет из инвентаря
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
             
             tg.showAlert("✅ Заявка успешно создана!");
-            closeModal();
             loadUser();
         } catch(e) {
             tg.showAlert("Ошибка: " + e.message);
+        } finally {
+            isProcessing = false; // Разблокируем
         }
     });
 }
