@@ -36,59 +36,54 @@ def create_stars_pay():
 def webhook():
     update = request.get_json()
     
+    # 1. Обработка pre_checkout_query (оставляем)
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
+    # 2. Обработка УСПЕШНОЙ ОПЛАТЫ
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
-        payment_info = update['message']['successful_payment']
         
-        print(f"DEBUG: Обработка платежа от {user_id}")
+        # ДИАГНОСТИКА: Печатаем прямо в логи
+        print(f"--- WEBHOOK START: User {user_id} ---")
         
         # Получаем данные
-        res = supabase.table("users").select("stars", "pending_item", "inventory").eq("user_id", user_id).execute()
+        res = supabase.table("users").select("*").eq("user_id", user_id).execute()
         
-        if res.data:
-            user_data = res.data[0]
-            # Обновляем звезды и статус верификации
-            update_data = {
-                "stars": (user_data.get('stars') or 0) + payment_info['total_amount'],
-                "is_paid_75": True
-            }
+        if not res.data:
+            print(f"ERROR: Пользователь {user_id} не найден в базе!")
+            return "OK", 200
+        
+        user_data = res.data[0]
+        print(f"DEBUG: Пользователь найден. Stars: {user_data.get('stars')}, Pending: {user_data.get('pending_item')}")
+        
+        # ВЫПОЛНЯЕМ ОБНОВЛЕНИЕ
+        try:
+            # Обновляем пользователя
+            supabase.table("users").update({
+                "is_paid_75": True,
+                "stars": (user_data.get('stars') or 0) + 1, # пример
+                "pending_item": None,
+                "inventory": [] # Проверим, удалится ли хотя бы это
+            }).eq("user_id", user_id).execute()
+            print("SUCCESS: Пользователь обновлен")
+
+            # Вставляем в orders (принудительно)
+            supabase.table("orders").insert({
+                "user_id": user_id,
+                "item_name": "Gift",
+                "status": "pending"
+            }).execute()
+            print("SUCCESS: Запись в orders создана")
             
-            pending_item = user_data.get('pending_item')
-            
-            # Если был зарезервирован предмет — выводим
-            if pending_item:
-                print(f"DEBUG: Вывод предмета {pending_item}")
-                
-                # Записываем заказ
-                supabase.table("orders").insert({
-                    "user_id": user_id,
-                    "item_name": "Gift", 
-                    "item_img": pending_item,
-                    "status": "pending"
-                }).execute()
-                
-                # Фильтруем инвентарь (удаляем предмет)
-                inv = user_data.get('inventory') or []
-                new_inv = [i for i in inv if i.get('img') != pending_item]
-                
-                update_data["inventory"] = new_inv
-                update_data["pending_item"] = None
-            
-            # ВАЖНО: Выполняем обновление
-            try:
-                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-                print("DEBUG: База обновлена успешно")
-            except Exception as e:
-                print(f"CRITICAL: Ошибка обновления базы: {e}")
+        except Exception as e:
+            print(f"CRITICAL ERROR: {str(e)}")
             
     return "OK", 200
-
+    
 @app.route('/api/create_order', methods=['POST'])
 def create_order():
     data = request.get_json()
