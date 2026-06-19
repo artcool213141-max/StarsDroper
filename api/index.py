@@ -92,17 +92,20 @@ def webhook():
 @app.route('/api/create_order', methods=['POST'])
 def create_order():
     data = request.get_json()
+    user_id = str(data.get('user_id'))
     try:
-        # Вставляем данные в новую таблицу
-        supabase.table("orders").insert({
-            "user_id": str(data.get('user_id')),
+        # Вставляем данные. Если есть ошибка, мы ее увидим в консоли
+        response = supabase.table("orders").insert({
+            "user_id": user_id,
             "item_name": data.get('item_name'),
             "item_img": data.get('item_img'),
             "status": "pending"
         }).execute()
         
+        print(f"DEBUG: Заявка создана для {user_id}")
         return jsonify({"status": "ok"}), 200
     except Exception as e:
+        print(f"CRITICAL ERROR (create_order): {str(e)}") # Вот это покажет причину
         return jsonify({"status": "error", "message": str(e)}), 400
 
 # --- TON (CRYPTOBOT) ---
