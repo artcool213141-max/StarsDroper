@@ -36,48 +36,52 @@ def create_stars_pay():
 def webhook():
     update = request.get_json()
     
-    # 1. Pre-checkout (оставляем)
+    # 1. Обработка pre_checkout_query (оставляем как было)
     if 'pre_checkout_query' in update:
-        # ... (ваш код ответа на pre-checkout)
+        query_id = update['pre_checkout_query']['id']
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
+                      json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
-    # 2. УСПЕШНАЯ ОПЛАТА
+# 2. Обработка УСПЕШНОЙ ОПЛАТЫ
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
         payment_info = update['message']['successful_payment']
-        stars_paid = payment_info['total_amount']
         
-        # Получаем данные пользователя и его "зарезервированный" предмет
+        # Получаем данные юзера
         res = supabase.table("users").select("stars", "pending_item", "inventory").eq("user_id", user_id).execute()
         
         if res.data:
             user_data = res.data[0]
-            pending_item_img = user_data.get('pending_item')
+            new_stars = user_data.get('stars', 0) + payment_info['total_amount']
             
-            # --- ЛОГИКА ---
-            # 1. Обновляем статус верификации и баланс
-            update_data = {
-                "stars": user_data.get('stars', 0) + stars_paid,
-                "is_paid_75": True, # <--- ТУТ СТАВИМ TRUE
-                "pending_item": None # Сбрасываем резерв
-            }
+            # --- ТУТ МЫ СТАВИМ TRUE ПРИ ЛЮБОЙ УСПЕШНОЙ ОПЛАТЕ ---
+            update_data = {"stars": new_stars, "is_paid_75": True}
             
-            # 2. Если был выбран предмет (pending_item), удаляем его из inventory
-            if pending_item_img:
-                current_inv = user_data.get('inventory', [])
-                # Оставляем только те предметы, которые НЕ равны тому, что выводим
-                new_inv = [item for item in current_inv if item.get('img') != pending_item_img]
-                update_data["inventory"] = new_inv
-                
-                # 3. Создаем запись в таблице orders
+            pending_item = user_data.get('pending_item')
+            if pending_item:
+                # 1. Записываем в новую таблицу orders
                 supabase.table("orders").insert({
                     "user_id": user_id,
-                    "item_name": "Gift", # или возьмите имя из pending_item
-                    "item_img": pending_item_img,
+                    "item_name": "Gift", 
+                    "item_img": pending_item,
                     "status": "pending"
                 }).execute()
+                
+                # 2. Уведомление в Телеграм
+                requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={
+                    "chat_id": ADMIN_ID,
+                    "text": f"🚀 АВТО-ЗАЯВКА: {user_id}\nПредмет: {pending_item}\nСтатус: Оплачено и создана заявка!"
+                })
+                
+                # 3. Фильтруем инвентарь (удаляем предмет)
+                inv = user_data.get('inventory', [])
+                new_inv = [i for i in inv if i.get('img') != pending_item]
+                
+                update_data["inventory"] = new_inv
+                update_data["pending_item"] = None
             
-            # Применяем все изменения в базе
+            # Сохраняем обновления в базу users
             supabase.table("users").update(update_data).eq("user_id", user_id).execute()
             
     return "OK", 200
