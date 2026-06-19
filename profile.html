@@ -325,7 +325,7 @@ async function withdrawToBot() {
 
     // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН (нужна оплата 50)
     if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 50 ⭐.\nПродолжить к оплате?`, async (ok) => {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.\nПродолжить к оплате?`, async (ok) => {
             if (!ok) return;
 
             try {
@@ -333,7 +333,7 @@ async function withdrawToBot() {
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 50 })
+                    body: JSON.stringify({ user_id: userId, amount: 1 })
                 });
                 const data = await response.json();
 
