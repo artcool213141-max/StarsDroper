@@ -110,6 +110,9 @@
                 </div>
             </div>
             <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: 00000000</div>
+            <button onclick="showHelp()" class="fixed top-4 right-4 bg-yellow-500/20 p-2 rounded-full border border-yellow-500/50">
+    <span class="text-yellow-500 font-bold">?</span>
+</button>
         </header>
 
         <section class="glass-card p-6 mb-6">
@@ -183,15 +186,15 @@
     </nav>
 
 <script>
-    const tg = window.Telegram.WebApp;
-    const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
+const tg = window.Telegram.WebApp;
+const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
 
-    const BOT_TOKEN = '8877027563:AAER5zuqzfpzHZESBvj_Qd44sUkSCQT4kjI';
-    const ADMIN_ID = '8015661230';
-    
-    const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
-    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const BOT_TOKEN = '8877027563:AAER5zuqzfpzHZESBvj_Qd44sUkSCQT4kjI';
+const ADMIN_ID = '8015661230';
+
+const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const ITEMS = {
         "1may.jpg": { name: "1 May Exclusive", price: 100 },
@@ -256,269 +259,112 @@
         "tyfli.PNG": { name: "Sky Stilettos", price: 1800 }
     };
 
-    let user = null;
-    let selectedIdx = -1;
+let user = null;
+let selectedIdx = -1;
 
-    async function loadUser() {
-        try {
-            tg.ready();
-            const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
-            const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-            document.getElementById('u-name').innerText = firstName.toUpperCase();
-            
-            const avatarImg = document.getElementById('u-avatar');
-            avatarImg.src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
+async function loadUser() {
+    try {
+        tg.ready();
+        const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
+        document.getElementById('u-name').innerText = firstName.toUpperCase();
+        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
+        document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
 
-            const { data, error } = await _supabase
-                .from('users')
-                .select('*')
-                .eq('user_id', userId)
-                .single();
-
-            if (data) {
-                user = data;
-                document.getElementById('u-stars').innerText = user.stars || 0;
-                document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
-                document.getElementById('u-tickets').innerText = user.tickets || 0;
-                document.getElementById('ref-count').innerText = user.referral_count || 0;
-                document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
-                renderGrid();
-            }
-        } catch (e) { console.error("Load error:", e); }
-    }
-
-    function renderGrid() {
-        const grid = document.getElementById('grid');
-        if (!grid || !user) return;
-        const inv = Array.isArray(user.inventory) ? user.inventory : [];
-        document.getElementById('inv-count').innerText = `${inv.length} ПРЕДМЕТОВ`;
-        grid.innerHTML = '';
-        inv.forEach((it, i) => {
-            if (!it) return;
-            const slot = document.createElement('div');
-            slot.className = 'inventory-slot active-item';
-            slot.onclick = () => openItem(i);
-            let imgName = it.img;
-            if (imgName.includes('/')) imgName = imgName.split('/').pop();
-            slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
-            grid.appendChild(slot);
-        });
-        for (let i = inv.length; i < 9; i++) {
-            const empty = document.createElement('div');
-            empty.className = 'inventory-slot';
-            grid.appendChild(empty);
+        const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).single();
+        if (data) {
+            user = data;
+            document.getElementById('u-stars').innerText = user.stars || 0;
+            document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
+            document.getElementById('u-tickets').innerText = user.tickets || 0;
+            document.getElementById('ref-count').innerText = user.referral_count || 0;
+            document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
+            renderGrid();
         }
-    }
+    } catch (e) { console.error("Load error:", e); }
+}
 
-    async function handlePromo() {
-        const input = document.getElementById('promo-input');
-        const codeText = input.value.trim().toUpperCase();
-        if (!codeText || !user) return;
-        const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
-        if (usedCodes.includes(codeText)) {
-            tg.showAlert("❌ Вы уже использовали этот промокод");
-            return;
-        }
-        const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).single();
-        if (!promo) { tg.showAlert("🛑 Промокод не найден"); return; }
-        if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
-        const upd = {
-            stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
-            balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
-            tickets: Number(user.tickets || 0) + Number(promo.reward_tickets || 0),
-            used_promos: user.used_promos ? `${user.used_promos},${codeText}` : codeText
-        };
-        const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
-        if (!updErr) {
-            await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
-            tg.showAlert("✅ Бонус успешно активирован!");
-            input.value = '';
-            loadUser();
-        }
-    }
+function renderGrid() {
+    const grid = document.getElementById('grid');
+    if (!grid || !user) return;
+    const inv = Array.isArray(user.inventory) ? user.inventory : [];
+    document.getElementById('inv-count').innerText = `${inv.length} ПРЕДМЕТОВ`;
+    grid.innerHTML = '';
+    inv.forEach((it, i) => {
+        const slot = document.createElement('div');
+        slot.className = 'inventory-slot active-item';
+        slot.onclick = () => openItem(i);
+        let imgName = it.img.split('/').pop();
+        slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
+        grid.appendChild(slot);
+    });
+}
 
-    function openItem(i) {
-        selectedIdx = i;
-        const it = user.inventory[i];
-        const fileName = it.img.split('/').pop();
-        const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
-        document.getElementById('modal-img').src = `img/${fileName}`;
-        document.getElementById('modal-name').innerText = info.name;
-        document.getElementById('sell-btn').innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
-        document.getElementById('item-modal').style.display = 'flex';
-    }
-
-    function closeModal() { document.getElementById('item-modal').style.display = 'none'; }
-
-    let isSelling = false;
-    async function sellItem() {
-        if (selectedIdx === -1 || isSelling) return;
-        isSelling = true;
-        const it = user.inventory[selectedIdx];
-        const fileName = it.img.split('/').pop();
-        const price = ITEMS[fileName]?.price || 0;
-        let newInv = [...user.inventory];
-        newInv.splice(selectedIdx, 1);
-        const { error } = await _supabase.from('users').update({ 
-            inventory: newInv, 
-            stars: (user.stars || 0) + price 
-        }).eq('user_id', userId);
-        if (!error) {
-            tg.HapticFeedback.notificationOccurred('success');
-            closeModal(); 
-            await loadUser();
-        }
-        isSelling = false;
-    }
-
+// ЕДИНАЯ ФУНКЦИЯ ВЫВОДА
 async function withdrawToBot() {
-    if (selectedIdx === -1) return;
+    if (!user || selectedIdx === -1) return;
+    
+    const price = user.is_paid_75 ? 35 : 50;
+    const currentStars = user.stars || 0;
 
-    const isVerified = user.is_paid_75 === true || user.is_paid_75 === 1;
-
-    if (!isVerified) {
-        tg.showConfirm(`Для первого вывода нужна верификация (оплата 1 Star). Продолжить?`, async (ok) => {
-            if (!ok) return;
-            
-            const res = await fetch(`https://stars-droper-main.vercel.app/api/create_stars_pay`, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ user_id: userId, amount: 1, item_index: selectedIdx }) 
-            });
-            const data = await res.json();
-            
-            if (data.pay_url) {
-                tg.openInvoice(data.pay_url, async (status) => {
-                    if (status === 'paid') {
-                        tg.showAlert("✅ Верификация пройдена! Нажмите кнопку вывода еще раз.");
-                        await loadUser(); // Обновит локальный объект user, где is_paid_75 станет true
-                    } else {
-                        tg.showAlert("❌ Оплата не была завершена.");
-                    }
-                });
-            }
-        });
-        return; // ВАЖНО: здесь мы выходим, так как остальной код выполнится только после реальной оплаты
-    }
-
-    // Этот код ниже выполнится только если isVerified === true
-    if ((user.stars || 0) < 35) {
-        tg.showAlert("🛑 Недостаточно 35 звезд на балансе для комиссии!");
+    if (currentStars < price) {
+        tg.showAlert(`🛑 Недостаточно средств!\nДля ${user.is_paid_75 ? 'вывода' : 'верификации'} нужно ${price} ⭐`);
         return;
     }
 
-    tg.showConfirm(`Вывести предмет? С баланса спишется 35 Stars.`, async (ok) => {
+    tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
         if (!ok) return;
 
         try {
-            // А) СПИСЫВАЕМ С БАЛАНСА В SUPABASE
-            const { error } = await _supabase.from('users').update({ 
-                stars: user.stars - 35 
+            const { error: updErr } = await _supabase.from('users').update({ 
+                stars: currentStars - price,
+                is_paid_75: true 
             }).eq('user_id', userId);
 
-            if (error) throw new Error("Ошибка списания");
+            if (updErr) throw updErr;
 
-            // Б) ОТПРАВЛЯЕМ ЗАЯВКУ
             const it = user.inventory[selectedIdx];
             const fileName = it.img.split('/').pop();
-            
             await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
-                    chat_id: ADMIN_ID, 
-                    text: `🚀 ЗАЯВКА НА ВЫВОД\nID: ${userId}\nПредмет: ${fileName}\n(Оплачено с баланса)` 
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ chat_id: ADMIN_ID, text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: ${user.is_paid_75 ? 'Повторный' : 'Верификация'}` })
             });
 
-            // В) УДАЛЯЕМ ИЗ ИНВЕНТАРЯ
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
-
+            
             tg.showAlert("✅ Заявка отправлена!");
             closeModal();
             loadUser();
-        } catch (err) {
-            tg.showAlert("Ошибка: " + err.message);
+        } catch(e) {
+            tg.showAlert("Ошибка: " + e.message);
         }
     });
 }
 
-    function shareInvite() {
-        const url = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
-        tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=Забирай ежедневные бонусы и открывай кейсы!`);
-    }
+function openItem(i) {
+    selectedIdx = i;
+    const it = user.inventory[i];
+    const fileName = it.img.split('/').pop();
+    const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
+    document.getElementById('modal-img').src = `img/${fileName}`;
+    document.getElementById('modal-name').innerText = info.name;
+    document.getElementById('sell-btn').innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
+    document.getElementById('item-modal').style.display = 'flex';
+}
 
-    function copyRefLink() {
-        const linkText = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
-        
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(linkText).then(() => {
-                tg.HapticFeedback.notificationOccurred('success');
-                tg.showAlert("📋 Ссылка скопирована в буфер обмена!");
-            }).catch(() => {
-                fallbackCopy(linkText);
-            });
-        } else {
-            fallbackCopy(linkText);
-        }
-    }
+function closeModal() { document.getElementById('item-modal').style.display = 'none'; }
 
-    function fallbackCopy(text) {
-        const textArea = document.createElement("textarea");
-        textArea.value = text;
-        textArea.style.position = "fixed";
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        try {
-            document.execCommand('copy');
-            tg.HapticFeedback.notificationOccurred('success');
-            tg.showAlert("📋 Ссылка скопирована!");
-        } catch (err) {
-            tg.showAlert("Не удалось скопировать автоматически. Выделите ссылку вручную.");
-        }
-        document.body.removeChild(textArea);
-    }
+// Остальные функции (handlePromo, sellItem, animation и т.д.) оставляйте без изменений
 
-    // Stars Background Animation (Золотая)
-    const canvas = document.getElementById('stars-canvas');
-    const ctx = canvas.getContext('2d');
-    let stars = [];
-    function initStars() {
-        canvas.width = window.innerWidth; 
-        canvas.height = window.innerHeight;
-        stars = Array.from({length: 40}, () => ({
-            x: Math.random() * canvas.width, 
-            y: Math.random() * canvas.height,
-            s: Math.random() * 2, 
-            v: Math.random() * 0.3, 
-            a: Math.random()
-        }));
-    }
-    function draw() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#f5b025"; 
-        stars.forEach(s => {
-            ctx.globalAlpha = s.a; 
-            ctx.beginPath(); 
-            ctx.arc(s.x, s.y, s.s, 0, Math.PI * 2); 
-            ctx.fill();
-            s.y += s.v; 
-            if(s.y > canvas.height) s.y = -5;
-        });
-        requestAnimationFrame(draw);
-    }
-
-    window.onload = () => { 
-        initStars(); 
-        draw(); 
-        loadUser(); 
-        tg.expand(); 
-        document.getElementById('ref-link-display').innerText = `https://t.me/NowearSpin_Bot/app?startapp=ref${userId}`;
-    };
-    window.onresize = initStars;
+window.onload = () => { 
+    initStars(); 
+    draw(); 
+    loadUser(); 
+    tg.expand();
+    // Элемент ref-link-display удален, так как его нет в HTML
+};
 </script>
 </body>
 </html>
