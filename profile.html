@@ -318,18 +318,33 @@ function renderGrid() {
 async function withdrawToBot() {
     if (!user || selectedIdx === -1) return;
 
-    // Определяем, верифицирован ли пользователь
     const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 35 : 1;
+    const price = isPaid ? 35 : 1; // 1 звезда для теста
     const currentStars = user.stars || 0;
+    
+    // Получаем данные о предмете для создания заказа
+    const it = user.inventory[selectedIdx];
+    const fileName = it.img.split('/').pop();
+    const info = ITEMS[fileName] || { name: "Rare Item" };
 
-    // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН (нужна оплата 50)
+    // Функция для записи заказа в БД
+    const createOrderRecord = async () => {
+        await fetch('/api/create_order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                user_id: userId, 
+                item_img: it.img, 
+                item_name: info.name 
+            })
+        });
+    };
+
+    // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН
     if (!isPaid) {
         tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.\nПродолжить к оплате?`, async (ok) => {
             if (!ok) return;
-
             try {
-                // Вызываем ваш Python-бэкенд для создания инвойса
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -338,25 +353,23 @@ async function withdrawToBot() {
                 const data = await response.json();
 
                 if (data.pay_url) {
-                    // Открываем окно оплаты Telegram
-                    tg.openInvoice(data.pay_url, (status) => {
+                    tg.openInvoice(data.pay_url, async (status) => {
                         if (status === 'paid') {
-                            tg.showAlert("✅ Оплата прошла! Теперь вы можете оформить вывод.");
+                            // Оплатили — создаем заказ в новой таблице
+                            await createOrderRecord();
+                            tg.showAlert("✅ Оплата прошла! Заявка создана.");
+                            loadUser(); // Перезагружаем профиль
                         }
                     });
-                } else {
-                    tg.showAlert("Ошибка при создании счета. Попробуйте позже.");
                 }
-            } catch (e) {
-                console.error("Ошибка сети:", e);
-            }
+            } catch (e) { console.error(e); }
         });
-        return; // Прерываем выполнение, так как оплата еще не завершена
+        return;
     }
 
-    // СЦЕНАРИЙ 2: Пользователь ВЕРИФИЦИРОВАН (список уже оплачен)
+    // СЦЕНАРИЙ 2: Пользователь ВЕРИФИЦИРОВАН
     if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно средств!\nДля вывода нужно ${price} ⭐`);
+        tg.showAlert(`🛑 Недостаточно средств!`);
         return;
     }
 
@@ -364,41 +377,21 @@ async function withdrawToBot() {
         if (!ok) return;
 
         try {
-            // 1. Списываем звезды
-            const { error: updErr } = await _supabase.from('users').update({ 
-                stars: currentStars - price
-            }).eq('user_id', userId);
+            // 1. Создаем заказ в новой таблице
+            await createOrderRecord();
 
-            if (updErr) throw updErr;
+            // 2. Списываем звезды
+            await _supabase.from('users').update({ stars: currentStars - price }).eq('user_id', userId);
 
-            // 2. Уведомляем администратора
-            const it = user.inventory[selectedIdx];
-            const fileName = it.img.split('/').pop();
-            
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    chat_id: ADMIN_ID, 
-                    text: `🚀 ЗАЯВКА: ${userId}\nПредмет: ${fileName}\nСтатус: Повторный вывод` 
-                })
-            });
-
-            // 3. Удаляем предмет из инвентаря
+            // 3. Удаляем предмет
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
             
-            tg.showAlert("✅ Заявка успешно отправлена!");
+            tg.showAlert("✅ Заявка успешно создана!");
             closeModal();
-            
-            // 4. Обновляем локальные данные
-            user.stars = currentStars - price;
-            user.inventory = newInv;
-            renderGrid();
-            
+            loadUser(); // Обновляем всё
         } catch(e) {
-            console.error("Ошибка вывода:", e);
             tg.showAlert("Ошибка: " + e.message);
         }
     });
