@@ -67,6 +67,22 @@ def webhook():
                 
     return "OK", 200
 
+@app.route('/api/create_order', methods=['POST'])
+def create_order():
+    data = request.get_json()
+    try:
+        # Вставляем данные в новую таблицу
+        supabase.table("orders").insert({
+            "user_id": str(data.get('user_id')),
+            "item_name": data.get('item_name'),
+            "item_img": data.get('item_img'),
+            "status": "pending"
+        }).execute()
+        
+        return jsonify({"status": "ok"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
 # --- TON (CRYPTOBOT) ---
 # --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
