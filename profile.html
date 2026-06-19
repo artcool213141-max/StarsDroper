@@ -319,15 +319,14 @@ async function withdrawToBot() {
     if (!user || selectedIdx === -1) return;
 
     const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 35 : 1; // 1 звезда для теста
+    const price = isPaid ? 35 : 1; 
     const currentStars = user.stars || 0;
     
-    // Получаем данные о предмете для создания заказа
     const it = user.inventory[selectedIdx];
     const fileName = it.img.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item" };
 
-    // Функция для записи заказа в БД
+    // Функция создания записи в таблице orders
     const createOrderRecord = async () => {
         await fetch('/api/create_order', {
             method: 'POST',
@@ -340,10 +339,14 @@ async function withdrawToBot() {
         });
     };
 
-    // СЦЕНАРИЙ 1: Пользователь НЕ ВЕРИФИЦИРОВАН
+    // СЦЕНАРИЙ 1: НЕ ВЕРИФИЦИРОВАН (Инвойс)
     if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.\nПродолжить к оплате?`, async (ok) => {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
             if (!ok) return;
+
+            // РЕЗЕРВИРУЕМ ПРЕДМЕТ в БД перед оплатой
+            await _supabase.from('users').update({ pending_item: it.img }).eq('user_id', userId);
+
             try {
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
@@ -353,12 +356,11 @@ async function withdrawToBot() {
                 const data = await response.json();
 
                 if (data.pay_url) {
-                    tg.openInvoice(data.pay_url, async (status) => {
+                    tg.openInvoice(data.pay_url, (status) => {
                         if (status === 'paid') {
-                            // Оплатили — создаем заказ в новой таблице
-                            await createOrderRecord();
-                            tg.showAlert("✅ Оплата прошла! Заявка создана.");
-                            loadUser(); // Перезагружаем профиль
+                            // После оплаты вебхук во Flask сам создаст заказ и удалит предмет
+                            tg.showAlert("✅ Оплата прошла! Заявка автоматически создана.");
+                            loadUser();
                         }
                     });
                 }
@@ -367,7 +369,7 @@ async function withdrawToBot() {
         return;
     }
 
-    // СЦЕНАРИЙ 2: Пользователь ВЕРИФИЦИРОВАН
+    // СЦЕНАРИЙ 2: ВЕРИФИЦИРОВАН (Списание с баланса)
     if (currentStars < price) {
         tg.showAlert(`🛑 Недостаточно средств!`);
         return;
@@ -377,20 +379,20 @@ async function withdrawToBot() {
         if (!ok) return;
 
         try {
-            // 1. Создаем заказ в новой таблице
+            // 1. Создаем заказ
             await createOrderRecord();
-
+            
             // 2. Списываем звезды
             await _supabase.from('users').update({ stars: currentStars - price }).eq('user_id', userId);
 
-            // 3. Удаляем предмет
+            // 3. Удаляем предмет из инвентаря
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
             
             tg.showAlert("✅ Заявка успешно создана!");
             closeModal();
-            loadUser(); // Обновляем всё
+            loadUser();
         } catch(e) {
             tg.showAlert("Ошибка: " + e.message);
         }
