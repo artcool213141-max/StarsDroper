@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NowearSpin - Mines Elite</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root { --bg: #0d0a05; --accent: #d4af37; --panel-bg: #1a140a; --cell-bg: #21190a; }
+        body { background: var(--bg); color: white; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        .mines-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; max-width: 350px; }
+        .cell { aspect-ratio: 1/1; background: var(--cell-bg); border-radius: 12px; border: 1px solid #4a3b14; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .cell.open { background: #050402; }
+        .cell img { width: 70%; }
+        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; padding: 18px; border-radius: 16px; width: 100%; }
+        .btn-cashout { background: #10b981 !important; color: white; }
+    </style>
+</head>
+<body>
+    <header class="p-4 flex justify-between items-center border-b border-[#241d0b]">
+        <div class="font-black text-[#d4af37] text-xl">Nowear<span class="text-white">Spin</span></div>
+        <div class="flex gap-4 font-bold text-sm">
+            <div>⭐ <span id="val-stars">0</span></div>
+            <div>💎 <span id="val-ton">0.00</span></div>
+        </div>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-center p-4">
+        <div id="stats-area" class="hidden mb-4 p-2 border border-[#d4af37] rounded-full text-[#d4af37] font-bold">Множитель: <span id="cur-mult">1.00x</span></div>
+        <div id="grid" class="mines-grid"></div>
+    </main>
+
+    <aside class="bg-[#1a140a] p-6 rounded-t-3xl border-t border-[#d4af37]/30 flex flex-col gap-4">
+        <div class="flex gap-2">
+            <button id="mode-stars" onclick="switchCur('stars')" class="flex-1 p-3 bg-[#21190a] rounded-xl border border-[#d4af37] active:bg-[#3d300f]">STARS</button>
+            <button id="mode-ton" onclick="switchCur('ton')" class="flex-1 p-3 bg-[#21190a] rounded-xl border border-transparent">TON</button>
+        </div>
+        <input id="input-bet" type="number" class="w-full p-4 bg-black rounded-xl text-center font-bold" value="10">
+        <button id="btn-main" onclick="onMainAction()" class="btn-main">ИГРАТЬ</button>
+    </aside>
+
+<script>
+    const tg = window.Telegram.WebApp;
+    const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo");
+
+    let cur = 'stars', isPlaying = false, mines = [], opened = 0, betVal = 0;
+    const userId = tg.initDataUnsafe?.user?.id || '8015661230';
+
+    async function sync() {
+        const { data } = await SB.from('users').select('*').eq('user_id', userId).single();
+        if (data) {
+            document.getElementById('val-stars').innerText = Math.floor(data.stars || 0);
+            document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
+        }
+    }
+
+    function switchCur(m) { cur = m; document.querySelectorAll('button').forEach(b => b.classList.remove('border-[#d4af37]')); document.getElementById('mode-'+m).classList.add('border-[#d4af37]'); }
+
+    async function onMainAction() {
+        const col = cur === 'stars' ? 'stars' : 'balance';
+        if (!isPlaying) {
+            betVal = Number(document.getElementById('input-bet').value);
+            const { data: user } = await SB.from('users').select(col).eq('user_id', userId).single();
+            if (user[col] < betVal) return alert("Мало средств!");
+            
+            await SB.from('users').update({ [col]: user[col] - betVal }).eq('user_id', userId);
+            isPlaying = true; opened = 0; mines = Array.from({length: 25}, (_, i) => i).sort(() => 0.5 - Math.random()).slice(0, 5);
+            document.getElementById('btn-main').innerText = "ЗАБРАТЬ";
+            document.getElementById('btn-main').classList.add('btn-cashout');
+            document.getElementById('stats-area').classList.remove('hidden');
+            render(); sync();
+        } else {
+            const { data: user } = await SB.from('users').select(col).eq('user_id', userId).single();
+            await SB.from('users').update({ [col]: user[col] + (betVal * (1 + opened * 0.5)) }).eq('user_id', userId);
+            finish();
+        }
+    }
+
+    function render() {
+        const grid = document.getElementById('grid'); grid.innerHTML = '';
+        for (let i = 0; i < 25; i++) {
+            const c = document.createElement('div'); c.className = 'cell';
+            c.onclick = () => {
+                if (!isPlaying || c.classList.contains('open')) return;
+                c.classList.add('open');
+                if (mines.includes(i)) { c.innerHTML = '💣'; finish(); }
+                else { c.innerHTML = '💎'; opened++; document.getElementById('cur-mult').innerText = (1 + opened * 0.5).toFixed(2) + 'x'; }
+            };
+            grid.appendChild(c);
+        }
+    }
+
+    function finish() { isPlaying = false; document.getElementById('btn-main').classList.remove('btn-cashout'); document.getElementById('btn-main').innerText = "ИГРАТЬ"; sync(); }
+    
+    sync(); render();
+</script>
+</body>
+</html>
