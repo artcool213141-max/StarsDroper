@@ -204,6 +204,11 @@ const headers = {
 
 const ITEMS = {
     "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
+    "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, // Для летнего кейса
+    "chassiki.png": { name: "Golden Watches", price: 4700, img: "chassiki.png" }, // Для летнего кейса
+    "sliva.png": { name: "Juicy Plum Jackpot", price: 33500, img: "sliva.png" }, // Джекпот
+    "soska.png": { name: "Super Pacifier", price: 2500, img: "soska.png" }, // Джекпот
+    "zirka.png": { name: "Shiny Starlet", price: 850, img: "zirka.png" }, // Джекпот
     "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
     "bear.png": { name: "Honey Bear", price: 3500, img: "bear.png" },
     "book.jpg": { name: "Ancient Book", price: 1000, img: "book.jpg" },
@@ -239,7 +244,7 @@ const ITEMS = {
     "lucky.jpg": { name: "Clover Lucky", price: 500, img: "lucky.jpg" },
     "mafin.jpg": { name: "Sugar Muffin", price: 700, img: "mafin.jpg" },
     "metch.png": { name: "Star Saber", price: 700, img: "metch.png" },
-    "narkotiki.png": { name: "Star Token", price: 600, img: "narkotiki.png" },
+    "narkotiki.png": { name: "Star Token", price: 700, img: "narkotiki.png" },
     "obyv.jpg": { name: "Sneakers Pro", price: 10000, img: "obyv.jpg" },
     "orel.jpg": { name: "Golden Eagle", price: 5000, img: "orel.jpg" },
     "otkritka.jpg": { name: "Peace Dove", price: 150, img: "otkritka.jpg" },
@@ -264,6 +269,7 @@ const ITEMS = {
     "sshapka.PNG": { name: "Khabib's Papakha", price: 2300, img: "sshapka.PNG" },
     "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" }
 };
+
 const CASES = [
     { 
         name: "Кейс Новичка", 
@@ -349,16 +355,20 @@ const CASES = [
         ] 
     },
     { 
-        name: "Лунная Легенда",
+        name: "Летний кейс", 
         type: 'multi', 
-        priceStars: 1488, 
-        priceTon: 19.0, 
-        img: "case9.png", 
+        priceStars: 350, 
+        priceTon: 15, 
+        img: "cacesik.png", 
         loot: [
-            ["booox.png", 45], ["zhele.png", 25], ["mafin.jpg", 15], ["zirka.PNG", 7], ["kryg.PNG", 3],
-            ["gribb.PNG", 2], ["cvetk.PNG", 1], ["sshapka.PNG", 0.5], ["tyfli.PNG", 0.4], ["rozza.png", 0.3],
-            ["heart.png", 0.2], ["colso.png", 0.2], ["ccolso2.png", 0.1], ["orel.jpg", 0.1], ["kepka.png", 0.01]
-        ] 
+            ["1may.jpg", 30], 
+            ["chassiki.png", 10], 
+            ["meczcc.png", 10], 
+            ["narkotiki.png", 10], 
+            ["sliva.png", 10], 
+            ["soska.jpg", 10], 
+            ["zirka.jpg", 25]
+        ]
     }
 ];
 
@@ -476,14 +486,31 @@ function createRow(index, winItem) {
     row.className = 'roulette-container animate-fade-in mb-4';
     row.innerHTML = `<div class="center-line"></div><div class="roulette-rail" id="rail-${index}"></div>`;
     container.appendChild(row);
+    
     const rail = document.getElementById(`rail-${index}`);
     const winIndex = 30; 
+    
+    // Получаем массив картинок, которые доступны ТОЛЬКО в текущем кейсе
+    const currentCaseLoot = activeCase.loot; 
+
     for (let i = 0; i < 45; i++) {
-        const keys = Object.keys(ITEMS);
-        const randomItem = ITEMS[keys[Math.floor(Math.random() * keys.length)]];
-        const displayItem = (i === winIndex) ? winItem : randomItem;
+        let displayItem;
+        
+        if (i === winIndex) {
+            // Центральный элемент — наш предопределенный выигрыш
+            displayItem = winItem;
+        } else {
+            // Выбираем случайную картинку из доступных в этом кейсе
+            const randomLootIndex = Math.floor(Math.random() * currentCaseLoot.length);
+            const randomImgName = currentCaseLoot[randomLootIndex][0];
+            
+            // Защита на случай, если в ITEMS нет такого ключа
+            displayItem = ITEMS[randomImgName] || winItem; 
+        }
+        
         rail.innerHTML += `<div class="roulette-item"><img src="img/${displayItem.img}"></div>`;
     }
+    
     setTimeout(() => {
         const itemWidth = 140;
         const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
