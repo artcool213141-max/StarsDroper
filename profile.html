@@ -10,14 +10,13 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
         :root { 
-            --bg-dark: #0f0a02; /* Премиальный черный с золотым отливом */
-            --accent-gold: #f5b025; /* Благородный золотой */
+            --bg-dark: #0f0a02; 
+            --accent-gold: #f5b025; 
             --panel-bg: rgba(25, 19, 6, 0.75); 
         }
         body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
         #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
         
-        /* Золотой радиальный градиент */
         .main-wrapper { 
             position: relative; z-index: 1; padding: 24px 20px 140px; 
             background: radial-gradient(circle at 50% 30%, #513e11 0%, #0f0a02 80%); 
@@ -29,17 +28,14 @@
         .inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .inventory-slot { aspect-ratio: 1/1; background: rgba(245, 176, 37, 0.04); border: 1px dashed rgba(245, 176, 37, 0.18); border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; overflow: hidden; }
         
-        /* Активные предметы в золотой рамке */
         .active-item { border: 1.5px solid var(--accent-gold); background: rgba(245, 176, 37, 0.08); cursor: pointer; }
         .active-item img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(245, 176, 37, 0.35)); }
         
-        /* Кнопка золотая */
         .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; }
         .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
         
         #item-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
         
-        /* ОБНОВЛЕННЫЙ ТУЛБАР */
         .dock-bar { 
             position: fixed; 
             bottom: 0; 
@@ -64,24 +60,10 @@
             text-decoration: none; 
             transition: all 0.2s ease;
         }
-        .dock-btn span {
-            font-size: 11px; 
-            font-weight: 700;
-            letter-spacing: 0.03em;
-        }
-        .dock-btn svg {
-            width: 26px;
-            height: 26px;
-            transition: transform 0.2s ease;
-            fill: currentColor;
-        }
-        .dock-btn:active svg {
-            transform: scale(0.9);
-        }
-        .dock-btn.active { 
-            color: var(--accent-gold); 
-            filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); 
-        }
+        .dock-btn span { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
+        .dock-btn svg { width: 26px; height: 26px; transition: transform 0.2s ease; fill: currentColor; }
+        .dock-btn:active svg { transform: scale(0.9); }
+        .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); }
     </style>
 </head>
 <body>
@@ -111,8 +93,8 @@
             </div>
             <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: 00000000</div>
             <button onclick="showHelp()" class="fixed top-4 right-4 bg-yellow-500/20 p-2 rounded-full border border-yellow-500/50">
-    <span class="text-yellow-500 font-bold">?</span>
-</button>
+                <span class="text-yellow-500 font-bold">?</span>
+            </button>
         </header>
 
         <section class="glass-card p-6 mb-6">
@@ -147,7 +129,7 @@
         </p>
     </div>
 </section>
-
+        
         <section class="glass-card p-6 min-h-[300px]">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="orbitron text-xs font-black uppercase italic">Ваш инвентарь</h3>
@@ -155,51 +137,50 @@
             </div>
             <div id="grid" class="inventory-grid"></div>
         </section>
-    </div>
 
-    <!-- ТВОЕ МОДАЛЬНОЕ ОКНО С ПРАВИЛАМИ СТАВЬ СЮДА -->
-    <div id="help-modal" style="display:none;" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-        <div class="glass-card p-8 w-full max-w-[340px] text-center border-yellow-500/30">
-            <h2 class="orbitron text-lg font-black text-white mb-4 uppercase tracking-widest">Важная информация</h2>
-            <div class="text-[11px] text-gray-300 text-left mb-6 leading-relaxed space-y-3">
-                <p>Мы искренне ценим каждого игрока и дорожим вашим временем. Чтобы наш проект становился лучше, нам важна ваша поддержка.</p>
-                <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/10">
-                    <p class="text-yellow-400 font-bold mb-1 uppercase text-[10px]">Верификация аккаунта</p>
-                    <p>Для активации первого вывода гифта необходимо внести единоразовый взнос <b>45 ⭐</b>. Средства идут на развитие экосистемы NowearSpin.</p>
+        <div id="help-modal" style="display:none;" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
+            <div class="glass-card p-8 w-full max-w-[340px] text-center border-yellow-500/30">
+                <h2 class="orbitron text-lg font-black text-white mb-4 uppercase tracking-widest">Важная информация</h2>
+                <div class="text-[11px] text-gray-300 text-left mb-6 leading-relaxed space-y-3">
+                    <p>Мы искренне ценим каждого игрока и дорожим вашим временем. Чтобы наш проект становился лучше, нам важна ваша поддержка.</p>
+                    <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/10">
+                        <p class="text-yellow-400 font-bold mb-1 uppercase text-[10px]">Верификация аккаунта</p>
+                        <p>Для активации первого вывода гифта необходимо внести единоразовый взнос <b>45 ⭐</b>. Средства идут на развитие экосистемы NowearSpin.</p>
+                    </div>
+                    <p class="text-[10px] text-gray-500 italic">После верификации, все последующие выводы доступны с вашего игрового баланса по цене 50 ⭐ за предмет.</p>
                 </div>
-                <p class="text-[10px] text-gray-500 italic">После верификации, все последующие выводы доступны с вашего игрового баланса по цене 50 ⭐ за предмет.</p>
-            </div>
-            <button onclick="closeHelp()" class="w-full btn-gold py-3 text-xs">ПОНЯТНО</button>
-        </div>
-    </div>
-
-    <div id="item-modal">
-        <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-yellow-500/30">
-            <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(245,176,37,0.4)]">
-            <h2 id="modal-name" class="orbitron text-xl font-black italic mb-1 uppercase text-white"></h2>
-            <p class="text-yellow-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Лимитированный дроп</p>
-            <div class="flex flex-col gap-3">
-                <button onclick="withdrawToBot()" class="w-full btn-gold py-4 text-xs">ВЫВЕСТИ В БОТ</button>
-                <button id="sell-btn" onclick="sellItem()" class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-white/10">ПРОДАТЬ</button>
-                <button onclick="closeModal()" class="w-full py-2 text-gray-500 text-[9px] font-black uppercase mt-2">ЗАКРЫТЬ</button>
+                <button onclick="closeHelp()" class="w-full btn-gold py-3 text-xs">ПОНЯТНО</button>
             </div>
         </div>
-    </div>
 
-    <nav class="dock-bar">
-        <a href="index.html" class="dock-btn">
-            <svg viewBox="0 0 24 24">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
-            </svg>
-            <span>Главная</span>
-        </a>
-        <div class="dock-btn active">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-            </svg>
-            <span>Профиль</span>
+        <div id="item-modal">
+            <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-yellow-500/30">
+                <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(245,176,37,0.4)]">
+                <h2 id="modal-name" class="orbitron text-xl font-black italic mb-1 uppercase text-white"></h2>
+                <p class="text-yellow-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Лимитированный дроп</p>
+                <div class="flex flex-col gap-3">
+                    <button id="withdraw-btn" onclick="withdrawToBot()" class="w-full btn-gold py-4 text-xs">ВЫВЕСТИ В БОТ</button>
+                    <button id="sell-btn" onclick="sellItem()" class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-white/10">ПРОДАТЬ</button>
+                    <button onclick="closeModal()" class="w-full py-2 text-gray-500 text-[9px] font-black uppercase mt-2">ЗАКРЫТЬ</button>
+                </div>
+            </div>
         </div>
-    </nav>
+
+        <nav class="dock-bar">
+            <a href="index.html" class="dock-btn">
+                <svg viewBox="0 0 24 24">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+                <span>Главная</span>
+            </a>
+            <div class="dock-btn active">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                </svg>
+                <span>Профиль</span>
+            </div>
+        </nav>
+    </div>
 
 <script>
 const tg = window.Telegram.WebApp;
@@ -213,76 +194,76 @@ const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const ITEMS = {
-    "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
-    "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, // Для летнего кейса
-    "chassiki.png": { name: "Golden Watches", price: 4700, img: "chassiki.png" }, // Для летнего кейса
-    "sliva.png": { name: "Juicy Plum Jackpot", price: 33500, img: "sliva.png" }, // Джекпот
-    "soska.png": { name: "Super Pacifier", price: 2500, img: "soska.png" }, // Джекпот
-    "zirka.png": { name: "Shiny Starlet", price: 850, img: "zirka.png" }, // Джекпот
-    "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
-    "bear.png": { name: "Honey Bear", price: 3500, img: "bear.png" },
-    "book.jpg": { name: "Ancient Book", price: 1000, img: "book.jpg" },
-    "booox.png": { name: "Berry Box", price: 700, img: "booox.png" },
-    "botinok.png": { name: "Old Boot", price: 400, img: "botinok.png" },
-    "box.png": { name: "Jack in Box", price: 600, img: "box.png" },
-    "car.png": { name: "Sports Car", price: 5000, img: "car.png" },
-    "raketa.png": { name: "Space Rocket", price: 50, img: "raketa.png" },
-    "ccolso2.png": { name: "Star Ring", price: 3000, img: "ccolso2.png" },
-    "cerrrdce.jpg": { name: "Gingerbread", price: 500, img: "cerrrdce.jpg" },
-    "chemodan.jpg": { name: "Traveler Case", price: 5000, img: "chemodan.jpg" },
-    "ciga.png": { name: "Luxury Cigar", price: 3000, img: "ciga.png" },
-    "colso.png": { name: "Blue Diamond", price: 2500, img: "colso.png" },
-    "costum.jpg": { name: "Royal Costume", price: 10000, img: "costum.jpg" },
-    "cvetok.png": { name: "Wild Flower", price: 1000, img: "cvetok.png" },
-    "dog.png": { name: "Rich Dog", price: 500, img: "dog.png" },
-    "dyxi.png": { name: "Gold Perfume", price: 10000, img: "dyxi.png" },
-    "fonarik.jpg": { name: "Night Lantern", price: 100, img: "fonarik.jpg" },
-    "grob.jpg": { name: "Ancient Coffin", price: 5000, img: "grob.jpg" },
-    "gyba.png": { name: "Lava Lips", price: 5000, img: "gyba.png" },
-    "happybirthday.jpg": { name: "Birthday Cake", price: 200, img: "happybirthday.jpg" },
-    "heart.png": { name: "Heart Lock", price: 2000, img: "heart.png" },
-    "helmet.png": { name: "Spartan Helmet", price: 25000, img: "helmet.png" },
-    "kalendar.png": { name: "Event Calendar", price: 400, img: "kalendar.png" },
-    "kepka.png": { name: "Legendary Cap", price: 100000, img: "kepka.png" },
-    "kirpitch.jpg": { name: "Golden Brick", price: 10000, img: "kirpitch.jpg" },
-    "koks.jpg": { name: "Party Cocktail", price: 150, img: "koks.jpg" },
-    "koktel.png": { name: "Toxic Mix", price: 500, img: "koktel.png" },
-    "kot.png": { name: "Atomic Cat", price: 10000, img: "kot.png" },
-    "kotel.png": { name: "Witch Cauldron", price: 500, img: "kotel.png" },
-    "krovatka.jpg": { name: "Baby Bow", price: 600, img: "krovatka.jpg" },
-    "lolipop.png": { name: "Sweet Lollipop", price: 500, img: "lolipop.png" },
-    "lucky.jpg": { name: "Clover Lucky", price: 500, img: "lucky.jpg" },
-    "mafin.jpg": { name: "Sugar Muffin", price: 700, img: "mafin.jpg" },
-    "metch.png": { name: "Star Saber", price: 700, img: "metch.png" },
-    "narkotiki.png": { name: "Star Token", price: 700, img: "narkotiki.png" },
-    "obyv.jpg": { name: "Sneakers Pro", price: 10000, img: "obyv.jpg" },
-    "orel.jpg": { name: "Golden Eagle", price: 5000, img: "orel.jpg" },
-    "otkritka.jpg": { name: "Peace Dove", price: 150, img: "otkritka.jpg" },
-    "paska.jpg": { name: "Easter Cake", price: 75, img: "paska.jpg" },
-    "rozza.png": { name: "Velvet Rose", price: 2000, img: "rozza.png" },
-    "rykzak.jpg": { name: "Adventurer Bag", price: 500, img: "rykzak.jpg" },
-    "shapka.png": { name: "Santa Hat", price: 500, img: "shapka.png" },
-    "shar.jpg": { name: "Magic Ball", price: 1000, img: "shar.jpg" },
-    "shlem.png": { name: "Biker Helmet", price: 3500, img: "shlem.png" },
-    "soska.jpg": { name: "Diamond Pacifier", price: 3000, img: "soska.jpg" },
-    "star.png": { name: "Pure Star", price: 5, img: "star.png" },
-    "statyya.jpg": { name: "Hero Statue", price: 41000, img: "statyya.jpg" },
-    "venok.png": { name: "Wreath Flower", price: 500, img: "venok.jpg" },
-    "yayko.png": { name: "Dragon Egg", price: 600, img: "yayko.png" },
-    "zhele.png": { name: "Slime Jelly", price: 700, img: "zhele.png" },
-    "zmei.png": { name: "Snake Friend", price: 500, img: "zmei.png" },
-    "meczcc.png": { name: "Faith Amulet", price: 600, img: "meczcc.png" },
-    "kryg.PNG": { name: "Snow Globe", price: 600, img: "kryg.PNG" },
-    "gribb.PNG": { name: "Spy Agaric", price: 600, img: "gribb.PNG" },
-    "zirka.PNG": { name: "Hanging Star", price: 800, img: "zirka.PNG" },
-    "cvetk.PNG": { name: "Sakura Flower", price: 900, img: "cvetk.PNG" },
-    "sshapka.PNG": { name: "Khabib's Papakha", price: 2300, img: "sshapka.PNG" },
-    "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" },
-    "kolechko.png": { name: "Rare item", price: 100, img: "kolechko.png" }
+    "1may.jpg": { name: "1 May Exclusive", price: 100 },
+    "1may.png": { name: "1 May Classic", price: 100 }, 
+    "chassiki.png": { name: "Golden Watches", price: 4700 }, 
+    "sliva.png": { name: "Juicy Plum Jackpot", price: 33500 }, 
+    "soska.png": { name: "Super Pacifier", price: 2500 }, 
+    "zirka.png": { name: "Shiny Starlet", price: 850 }, 
+    "2025.jpg": { name: "Happy 2025", price: 500 },
+    "bear.png": { name: "Honey Bear", price: 3500 },
+    "book.jpg": { name: "Ancient Book", price: 1000 },
+    "booox.png": { name: "Berry Box", price: 700 },
+    "botinok.png": { name: "Old Boot", price: 400 },
+    "box.png": { name: "Jack in Box", price: 600 },
+    "car.png": { name: "Sports Car", price: 5000 },
+    "raketa.png": { name: "Space Rocket", price: 50 },
+    "ccolso2.png": { name: "Star Ring", price: 3000 },
+    "cerrrdce.jpg": { name: "Gingerbread", price: 500 },
+    "chemodan.jpg": { name: "Traveler Case", price: 5000 },
+    "ciga.png": { name: "Luxury Cigar", price: 3000 },
+    "colso.png": { name: "Blue Diamond", price: 2500 },
+    "costum.jpg": { name: "Royal Costume", price: 10000 },
+    "cvetok.png": { name: "Wild Flower", price: 1000 },
+    "dog.png": { name: "Rich Dog", price: 500 },
+    "dyxi.png": { name: "Gold Perfume", price: 10000 },
+    "fonarik.jpg": { name: "Night Lantern", price: 100 },
+    "grob.jpg": { name: "Ancient Coffin", price: 5000 },
+    "gyba.png": { name: "Lava Lips", price: 5000 },
+    "happybirthday.jpg": { name: "Birthday Cake", price: 200 },
+    "heart.png": { name: "Heart Lock", price: 2000 },
+    "helmet.png": { name: "Spartan Helmet", price: 25000 },
+    "kalendar.png": { name: "Event Calendar", price: 400 },
+    "kepka.png": { name: "Legendary Cap", price: 100000 },
+    "kirpitch.jpg": { name: "Golden Brick", price: 10000 },
+    "koks.jpg": { name: "Party Cocktail", price: 150 },
+    "koktel.png": { name: "Toxic Mix", price: 500 },
+    "kot.png": { name: "Atomic Cat", price: 10000 },
+    "kotel.png": { name: "Witch Cauldron", price: 500 },
+    "krovatka.jpg": { name: "Baby Bow", price: 600 },
+    "lolipop.png": { name: "Sweet Lollipop", price: 500 },
+    "lucky.jpg": { name: "Clover Lucky", price: 500 },
+    "mafin.jpg": { name: "Sugar Muffin", price: 700 },
+    "metch.png": { name: "Star Saber", price: 700 },
+    "narkotiki.png": { name: "Star Token", price: 700 },
+    "obyv.jpg": { name: "Sneakers Pro", price: 10000 },
+    "orel.jpg": { name: "Golden Eagle", price: 5000 },
+    "otkritka.jpg": { name: "Peace Dove", price: 150 },
+    "paska.jpg": { name: "Easter Cake", price: 75 },
+    "rozza.png": { name: "Velvet Rose", price: 2000 },
+    "rykzak.jpg": { name: "Adventurer Bag", price: 500 },
+    "shapka.png": { name: "Santa Hat", price: 500 },
+    "shar.jpg": { name: "Magic Ball", price: 1000 },
+    "shlem.png": { name: "Biker Helmet", price: 3500 },
+    "soska.jpg": { name: "Diamond Pacifier", price: 3000 },
+    "star.png": { name: "Pure Star", price: 5 }, // Лишний дубликат удален
+    "statyya.jpg": { name: "Hero Statue", price: 41000 },
+    "venok.jpg": { name: "Wreath Flower", price: 500 },
+    "yayko.png": { name: "Dragon Egg", price: 600 },
+    "zhele.png": { name: "Slime Jelly", price: 700 },
+    "zmei.png": { name: "Snake Friend", price: 500 },
+    "meczcc.png": { name: "Faith Amulet", price: 600 },
+    "kryg.PNG": { name: "Snow Globe", price: 600 },
+    "gribb.PNG": { name: "Spy Agaric", price: 600 },
+    "zirka.PNG": { name: "Hanging Star", price: 800 },
+    "cvetk.PNG": { name: "Sakura Flower", price: 900 },
+    "sshapka.PNG": { name: "Khabib's Papakha", price: 2300 },
+    "tyfli.PNG": { name: "Sky Stilettos", price: 1800 }
 };
 
 let user = null;
 let selectedIdx = -1;
+let isProcessing = false; 
 
 async function loadUser() {
     try {
@@ -295,7 +276,6 @@ async function loadUser() {
             document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
         }
 
-        // Используем maybeSingle() вместо single()
         const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
         
         if (error) {
@@ -311,6 +291,7 @@ async function loadUser() {
             document.getElementById('ref-count').innerText = user.referral_count || 0;
             document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
             renderGrid();
+            renderGifts(); 
         } else {
             console.warn("Пользователь не найден в базе данных");
             document.getElementById('u-name').innerText = "ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН";
@@ -330,41 +311,95 @@ function renderGrid() {
         const slot = document.createElement('div');
         slot.className = 'inventory-slot active-item';
         slot.onclick = () => openItem(i);
-        let imgName = it.img.split('/').pop();
+        // Безопасное извлечение имени файла
+        let imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+        let imgName = imgPath.split('/').pop();
         slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
         grid.appendChild(slot);
     });
 }
 
-    async function handlePromo() {
-        const input = document.getElementById('promo-input');
-        const codeText = input.value.trim().toUpperCase();
-        if (!codeText || !user) return;
-        const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
-        if (usedCodes.includes(codeText)) {
-            tg.showAlert("❌ Вы уже использовали этот промокод");
-            return;
-        }
-        const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).single();
-        if (!promo) { tg.showAlert("🛑 Промокод не найден"); return; }
-        if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
-        const upd = {
-            stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
-            balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
-            tickets: Number(user.tickets || 0) + Number(promo.reward_tickets || 0),
-            used_promos: user.used_promos ? `${user.used_promos},${codeText}` : codeText
-        };
-        const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
-        if (!updErr) {
-            await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
-            tg.showAlert("✅ Бонус успешно активирован!");
-            input.value = '';
-            loadUser();
+function renderGifts() {
+    const giftsGrid = document.getElementById('gifts-grid');
+    if (!giftsGrid || !user) return;
+
+    let gifts = [];
+    if (Array.isArray(user.gifts)) {
+        gifts = user.gifts;
+    } else if (typeof user.gifts === 'string' && user.gifts.trim() !== "") {
+        try {
+            gifts = JSON.parse(user.gifts);
+        } catch(e) {
+            gifts = user.gifts.split(',').map(g => g.trim());
         }
     }
 
-// ЕДИНАЯ ФУНКЦИЯ ВЫВОДА
-let isProcessing = false; // Блокировщик нажатий
+    document.getElementById('gifts-count').innerText = `${gifts.length} ПОДАРКОВ`;
+    giftsGrid.innerHTML = '';
+
+    if (gifts.length === 0) {
+        giftsGrid.innerHTML = `<div class="col-span-3 text-center text-[10px] text-gray-500 uppercase tracking-widest py-4">У вас нет подарков</div>`;
+        return;
+    }
+
+    gifts.forEach((gift) => {
+        let giftFile = typeof gift === 'object' && gift.img ? gift.img : String(gift);
+        giftFile = giftFile.split('/').pop();
+
+        const slot = document.createElement('div');
+        slot.className = 'inventory-slot active-item';
+        
+        slot.onclick = () => {
+            const info = ITEMS[giftFile] || { name: giftFile.split('.')[0] || "Подарок", price: 0 };
+            document.getElementById('modal-img').src = `img/${giftFile}`;
+            document.getElementById('modal-name').innerText = info.name;
+            document.getElementById('sell-btn').innerText = `ПОДАРОЧНЫЙ ПРЕДМЕТ`;
+            document.getElementById('sell-btn').style.opacity = "0.5";
+            document.getElementById('sell-btn').style.pointerEvents = "none";
+            
+            const withdrawBtn = document.getElementById('withdraw-btn');
+            withdrawBtn.innerText = "ПОДАРОК (НЕ ДЛЯ ВЫВОДА)";
+            withdrawBtn.style.opacity = "0.5";
+            withdrawBtn.style.pointerEvents = "none";
+            
+            document.getElementById('item-modal').style.display = 'flex';
+        };
+
+        slot.innerHTML = `<img src="img/${giftFile}" onerror="this.src='img/star.png'">`;
+        giftsGrid.appendChild(slot);
+    });
+}
+
+async function handlePromo() {
+    const input = document.getElementById('promo-input');
+    const codeText = input.value.trim().toUpperCase();
+    if (!codeText || !user) return;
+    
+    const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
+    if (usedCodes.includes(codeText)) {
+        tg.showAlert("❌ Вы уже использовали этот промокод");
+        return;
+    }
+    
+    const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).single();
+    if (!promo) { tg.showAlert("🛑 Промокод не найден"); return; }
+    if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
+    
+    const upd = {
+        stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
+        balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
+        tickets: Number(user.tickets || 0) + Number(promo.reward_tickets || 0),
+        used_promos: user.used_promos ? `${user.used_promos},${codeText}` : codeText
+    };
+    
+    const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
+    if (!updErr) {
+        await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
+        tg.showAlert("✅ Бонус успешно активирован!");
+        input.value = '';
+        loadUser();
+    }
+}
 
 async function withdrawToBot() {
     if (!user || selectedIdx === -1 || isProcessing) return;
@@ -374,30 +409,30 @@ async function withdrawToBot() {
     const currentStars = user.stars || 0;
     
     const it = user.inventory[selectedIdx];
-    const fileName = it.img.split('/').pop();
+    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+    const fileName = imgPath.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item" };
 
     const createOrderRecord = async () => {
-        await fetch('/api/create_order', {
+        return await fetch('/api/create_order', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 user_id: userId, 
-                item_img: it.img, 
+                item_img: imgPath, 
                 item_name: info.name 
             })
         });
     };
 
-    // СЦЕНАРИЙ 1: НЕ ВЕРИФИЦИРОВАН (Инвойс)
-if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость:  45⭐.`, async (ok) => {
+    if (!isPaid) {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 45 ⭐.`, async (ok) => {
             if (!ok) return;
             
-            isProcessing = true; // Блокируем кнопку
-            closeModal();        // ЗАКРЫВАЕМ СРАЗУ, чтобы нельзя было кликнуть повторно
+            isProcessing = true;
+            closeModal();
             
-            await _supabase.from('users').update({ pending_item: it.img }).eq('user_id', userId);
+            await _supabase.from('users').update({ pending_item: imgPath }).eq('user_id', userId);
 
             try {
                 const response = await fetch('/api/create_stars_pay', {
@@ -427,9 +462,8 @@ if (!isPaid) {
         return;
     }
 
-// СЦЕНАРИЙ 2: ВЕРИФИЦИРОВАН (Списание с баланса)
     if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно средств!`);
+        tg.showAlert(`🛑 Недостаточно средств! Нужно ${price} ⭐.`);
         return;
     }
 
@@ -440,10 +474,8 @@ if (!isPaid) {
         closeModal();
 
         try {
-            // 1. Сначала Flask (заявка)
-            const orderResp = await createOrderRecord();
+            await createOrderRecord();
             
-            // 2. ОДНИМ ЗАПРОСОМ обновляем инвентарь и баланс
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             
@@ -455,67 +487,113 @@ if (!isPaid) {
                 })
                 .eq('user_id', userId);
 
-            if (error) throw error; // Если здесь ошибка, она вылетит в catch
+            if (error) throw error;
             
             tg.showAlert("✅ Заявка успешно создана!");
             loadUser();
         } catch(e) {
-            console.error("DEBUG ERROR:", e); // СМОТРИ ЭТО В F12 -> CONSOLE
+            console.error("DEBUG ERROR:", e);
             tg.showAlert("Ошибка: " + e.message);
         } finally {
             isProcessing = false;
         }
-     });
+    });
+}
 
-    };
+async function sellItem() {
+    if (!user || selectedIdx === -1 || isProcessing) return;
+
+    const it = user.inventory[selectedIdx];
+    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+    const fileName = imgPath.split('/').pop();
+    const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
+
+    tg.showConfirm(`Продать предмет "${info.name}" за ${info.price} ⭐?`, async (ok) => {
+        if (!ok) return;
+
+        isProcessing = true;
+        closeModal();
+
+        try {
+            let newInv = [...user.inventory];
+            newInv.splice(selectedIdx, 1);
+
+            const currentStars = user.stars || 0;
+
+            const { error } = await _supabase
+                .from('users')
+                .update({
+                    stars: currentStars + info.price,
+                    inventory: newInv
+                })
+                .eq('user_id', userId);
+
+            if (error) throw error;
+
+            tg.showAlert(`✅ Предмет успешно продан за ${info.price} ⭐!`);
+            loadUser();
+        } catch (e) {
+            console.error(e);
+            tg.showAlert("Ошибка при продаже предмета.");
+        } finally {
+            isProcessing = false;
+        }
+    });
+}
 
 function openItem(i) {
     selectedIdx = i;
     const it = user.inventory[i];
-    const fileName = it.img.split('/').pop();
+    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+    const fileName = imgPath.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
     
     document.getElementById('modal-img').src = `img/${fileName}`;
     document.getElementById('modal-name').innerText = info.name;
-    document.getElementById('sell-btn').innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
     
-    // ДОБАВЛЯЕМ ПРОВЕРКУ
-    const withdrawBtn = document.querySelector('[onclick="withdrawToBot()"]');
+    const sellBtn = document.getElementById('sell-btn');
+    sellBtn.innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
+    sellBtn.style.opacity = "1";
+    sellBtn.style.pointerEvents = "auto";
+    
+    const withdrawBtn = document.getElementById('withdraw-btn');
+    withdrawBtn.style.opacity = "1";
+    withdrawBtn.style.pointerEvents = "auto";
+
     const userStars = user.stars || 0;
-    
-    // Если звезд меньше 45 - прячем кнопку или делаем её неактивной
-    if (userStars < 45) {
-        withdrawBtn.style.opacity = "0.3";
+    const isPaid = user.is_paid_75 === true;
+
+    if (isPaid && userStars < 50) {
+        withdrawBtn.style.opacity = "0.4";
         withdrawBtn.style.pointerEvents = "none";
-        withdrawBtn.innerText = "НУЖНО 45 ⭐ ДЛЯ ВЫВОДА";
+        withdrawBtn.innerText = "НУЖНО 50 ⭐ ДЛЯ ВЫВОДА";
     } else {
-        withdrawBtn.style.opacity = "1";
-        withdrawBtn.style.pointerEvents = "auto";
-        withdrawBtn.innerText = "ВЫВЕСТИ В БОТ";
+        withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (50 ⭐)" : "ВЫВЕСТИ В БОТ";
     }
     
     document.getElementById('item-modal').style.display = 'flex';
 }
 
-function closeModal() { document.getElementById('item-modal').style.display = 'none'; }
+function closeModal() { 
+    document.getElementById('item-modal').style.display = 'none'; 
+}
 
-// Остальные функции (handlePromo, sellItem, animation и т.д.) оставляйте без изменений
+function copyRefLink() {
+    const refLink = `https://t.me/your_bot_username?start=ref_${userId}`;
+    navigator.clipboard.writeText(refLink).then(() => {
+        tg.showAlert("📋 Реферальная ссылка скопирована!");
+    }).catch(() => {
+        tg.showAlert("Не удалось скопировать ссылку.");
+    });
+}
 
 window.onload = () => { 
-    // Убираем отсутствующие функции, чтобы они не вызывали ошибку
-    // initStars(); 
-    // draw(); 
-    
-    // Запускаем загрузку профиля
     loadUser(); 
-    
-    // Расширяем окно Telegram
     if (window.Telegram && window.Telegram.WebApp) {
         tg.expand();
     }
 };
 
-    // Открытие и закрытие окна правил
 function showHelp() {
     document.getElementById('help-modal').style.display = 'flex';
 }
@@ -523,7 +601,6 @@ function showHelp() {
 function closeHelp() {
     document.getElementById('help-modal').style.display = 'none';
 }
-
 </script>
 </body>
 </html>
