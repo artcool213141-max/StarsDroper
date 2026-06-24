@@ -8,11 +8,11 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --neon: #4ade80;
+            --neon: #facc15; /* Изменено на золотой */
             --bg-start: #050505;
-            --bg-end: #0a0a0a;
-            --card-bg: rgba(255, 255, 255, 0.03);
-            --border: rgba(255, 255, 255, 0.1);
+            --bg-end: #1a1605; /* Золотистый оттенок фона */
+            --card-bg: rgba(250, 204, 21, 0.03);
+            --border: rgba(250, 204, 21, 0.2);
             --trans: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
@@ -40,18 +40,18 @@
         .header-ui { padding: 40px 20px 10px; text-align: center; z-index: 10; }
         
         .balance-card {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(250, 204, 21, 0.05);
             backdrop-filter: blur(20px);
             border-radius: 25px; padding: 20px;
             border: 1px solid var(--border);
             display: flex; align-items: center; justify-content: center; gap: 15px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            box-shadow: 0 15px 35px rgba(250, 204, 21, 0.1);
             position: relative; overflow: hidden;
         }
 
         #balance-num {
             font-size: 38px; font-weight: 900; margin: 0;
-            background: linear-gradient(to bottom, #fff, #999);
+            background: linear-gradient(to bottom, #fff, #facc15);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             transition: transform 0.1s;
         }
@@ -61,7 +61,7 @@
         .energy-container { margin-top: 25px; padding: 0 30px; }
         .energy-bar-bg {
             width: 100%; height: 14px; background: rgba(255,255,255,0.1);
-            border-radius: 20px; overflow: hidden; border: 1.5px solid rgba(255,255,255,0.05);
+            border-radius: 20px; overflow: hidden; border: 1.5px solid rgba(250, 204, 21, 0.1);
         }
         #energy-fill {
             height: 100%; width: 100%; background: linear-gradient(90deg, var(--neon), #fff);
@@ -70,19 +70,19 @@
         .energy-text { 
             font-size: 13px; font-weight: 800; margin-top: 10px; 
             display: flex; justify-content: center; align-items: center; gap: 6px; 
-            letter-spacing: 1px;
+            letter-spacing: 1px; color: var(--neon);
         }
 
         .game-core { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
         .hero-platform {
             width: 280px; height: 80px; background: var(--neon);
-            border-radius: 50%; filter: blur(60px); opacity: 0.15;
+            border-radius: 50%; filter: blur(60px); opacity: 0.2;
             position: absolute; bottom: 22%; transition: var(--trans);
         }
 
         #hero-img {
             width: 280px; z-index: 5; cursor: pointer;
-            filter: drop-shadow(0 0 30px rgba(0,0,0,0.8));
+            filter: drop-shadow(0 0 30px rgba(250, 204, 21, 0.3));
             transition: transform 0.05s ease-out;
             will-change: transform;
             -webkit-user-drag: none;
@@ -91,7 +91,7 @@
 
         .drawer-wardrobe {
             position: absolute; bottom: 90px; left: 0; width: 100%; height: 75%;
-            background: rgba(5, 5, 5, 0.98); backdrop-filter: blur(40px);
+            background: rgba(10, 10, 5, 0.98); backdrop-filter: blur(40px);
             border-radius: 40px 40px 0 0; z-index: 100;
             transition: transform 0.5s cubic-bezier(0.32, 0.72, 0, 1);
             padding: 25px; box-sizing: border-box;
@@ -105,10 +105,10 @@
             display: flex; justify-content: space-between; align-items: center;
             margin-bottom: 25px;
         }
-        .drawer-header h3 { margin: 0; font-weight: 900; letter-spacing: 1px; font-size: 20px; }
+        .drawer-header h3 { margin: 0; font-weight: 900; letter-spacing: 1px; font-size: 20px; color: var(--neon); }
         .close-btn { 
             cursor: pointer; color: var(--neon); font-weight: 900; 
-            padding: 5px 15px; border-radius: 10px; background: rgba(255,255,255,0.05);
+            padding: 5px 15px; border-radius: 10px; background: rgba(250, 204, 21, 0.1);
         }
 
         .scroll-area {
@@ -119,12 +119,12 @@
         .scroll-area::-webkit-scrollbar { display: none; }
 
         .card-item {
-            background: rgba(255,255,255,0.03); border-radius: 24px;
-            padding: 20px 15px; text-align: center; border: 1px solid rgba(255,255,255,0.05);
+            background: rgba(250, 204, 21, 0.03); border-radius: 24px;
+            padding: 20px 15px; text-align: center; border: 1px solid var(--border);
             position: relative; transition: var(--trans); display: flex; flex-direction: column;
             justify-content: space-between; min-height: 180px;
         }
-        .card-item.active-item { border-color: var(--neon); background: rgba(74,222,128,0.05); }
+        .card-item.active-item { border-color: var(--neon); background: rgba(250, 204, 21, 0.05); }
 
         .lvl-badge {
             position: absolute; top: 12px; right: 12px;
@@ -142,7 +142,7 @@
             font-weight: 900; font-size: 11px; cursor: pointer; text-transform: uppercase;
             transition: var(--trans);
         }
-        .btn-buy { background: var(--neon); color: black; box-shadow: 0 4px 15px rgba(74,222,128,0.3); }
+        .btn-buy { background: var(--neon); color: black; box-shadow: 0 4px 15px rgba(250, 204, 21, 0.3); }
         .btn-buy:disabled { background: #222; color: #555; box-shadow: none; cursor: not-allowed; }
         .btn-owned { background: #1a1a1a; color: white; border: 1px solid var(--border); }
 
@@ -159,10 +159,9 @@
 
         .click-pop {
             position: absolute; pointer-events: none; z-index: 9999;
-            font-weight: 900; font-size: 32px; color: #fff;
-            text-shadow: 0 0 10px rgba(0,0,0,0.5);
+            font-weight: 900; font-size: 32px; color: var(--neon);
+            text-shadow: 0 0 10px rgba(250, 204, 21, 0.5);
             animation: float-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            will-change: transform, opacity;
         }
 
         @keyframes float-up {
@@ -191,29 +190,57 @@
         .info-highlight { color: var(--neon); font-weight: 700; }
         
         .btn-telegram {
-            background: #0088cc; color: white; padding: 18px; border-radius: 18px;
+            background: var(--neon); color: black; padding: 18px; border-radius: 18px;
             width: 90%; max-width: 300px; font-weight: 900; border: none; cursor: pointer;
             text-transform: uppercase; display: block; text-decoration: none;
             margin: 20px auto 0;
-            box-shadow: 0 10px 20px rgba(0, 136, 204, 0.3);
+            box-shadow: 0 10px 20px rgba(250, 204, 21, 0.3);
         }
 
-        /* Leaderboard Specific Styles */
         .lb-promo {
             text-align: center; padding: 15px; 
-            background: linear-gradient(135deg, rgba(74,222,128,0.1) 0%, rgba(250,204,21,0.1) 100%); 
-            border-radius: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05);
+            background: linear-gradient(135deg, rgba(250,204,21,0.1) 0%, rgba(250,204,21,0.1) 100%); 
+            border-radius: 20px; margin-bottom: 20px; border: 1px solid rgba(250, 204, 21, 0.1);
         }
         .lb-row {
             display: flex; align-items: center; gap: 15px; padding: 12px 18px;
             background: rgba(255,255,255,0.03); border-radius: 18px; margin-bottom: 8px;
             border: 1px solid transparent; transition: var(--trans);
         }
-        .lb-row.me { border-color: var(--neon); background: rgba(74,222,128,0.05); }
+        .lb-row.me { border-color: var(--neon); background: rgba(250,204,21,0.05); }
         .lb-rank { font-weight: 900; color: var(--neon); width: 25px; font-size: 16px; }
         .lb-name { flex: 1; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .lb-points { font-weight: 800; font-size: 12px; color: #fff; opacity: 0.7; }
 
+        .card-item.locked {
+            filter: grayscale(1) brightness(0.4);
+            pointer-events: none;
+            opacity: 0.6;
+        }
+        .card-item.locked .btn-action {
+            background: #444 !important;
+            color: #888 !important;
+        }
+
+        .card-item.locked .card-icon {
+    filter: brightness(0) !important;
+    opacity: 0.3;
+}
+        /* Эффект красного мигания экрана */
+.overheat-flash {
+    animation: flash-red 0.5s ease infinite;
+}
+@keyframes flash-red {
+    0%, 100% { background-color: var(--bg-start); }
+    50% { background-color: #500; }
+}
+
+/* Контейнер для текста предупреждения */
+#overheat-msg {
+    position: absolute; top: 30%; color: #ff3333; font-weight: 900;
+    font-size: 20px; text-shadow: 0 0 10px #f00; opacity: 0;
+    transition: opacity 0.3s; z-index: 20;
+}
     </style>
 </head>
 <body>
@@ -222,16 +249,16 @@
 
 <div class="app-shell">
     <div class="top-nav">
-        <div onclick="safeGoBack()" class="btn-back">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-            НАЗАД
-        </div>
+ <div onclick="goBackWithSave()" class="btn-back">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+    НАЗАД
+</div>
         <button class="btn-info-star" onclick="openPanel('info-panel', this)">
             КАК ПОЛУЧИТЬ STAR?
         </button>
     </div>
 
-    <div class="header-ui">
+   <div class="header-ui">
         <div class="balance-card">
             <img src="img/Nova Token.png" class="main-coin" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1205/1205194.png'">
             <h1 id="balance-num">0</h1>
@@ -241,10 +268,11 @@
             <div class="energy-text">⚡ <span id="energy-val">1000</span> / <span id="max-energy-val">1000</span></div>
         </div>
     </div>
-
     <div class="game-core" id="tap-zone">
+
+        <div id="overheat-msg">⚠️ БАТАРЕЯ ПЕРЕГРЕТА! ⚠️</div>
         <div class="hero-platform"></div>
-        <img src="hero.png" id="hero-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+        <img src="pepe1.png" id="hero-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
     </div>
 
     <div class="drawer-wardrobe" id="info-panel">
@@ -253,11 +281,11 @@
             <img src="img/star.png" class="info-star-img" alt="Star">
             <div class="info-title">Как получить Stars?</div>
             <p class="info-text">
-                В конце каждого месяца происходит глобальный обмен! <br><br>
-                Если ваш баланс превышает <span class="info-highlight">100 млрд Nova Token</span>, они автоматически конвертируются в <span class="info-highlight">Stars / Ton</span>. <br><br>
+                В конце каждого сезона происходит глобальный обмен! <br><br>
+                Если ваш баланс превышает <span class="info-highlight">100 млрд Nova Token</span>, они автоматически конвертируются in <span class="info-highlight">Stars / Ton</span>. <br><br>
                 Актуальный курс обмена всегда доступен в нашем официальном канале.
             </p>
-            <a href="https://t.me/StarDrop_channel" target="_blank" class="btn-telegram">ПЕРЕЙТИ В КАНАЛ</a>
+            <a href="https://t.me/nowear_FREE" target="_blank" class="btn-telegram">ПЕРЕЙТИ В КАНАЛ</a>
         </div>
     </div>
 
@@ -274,12 +302,11 @@
                 Каждый месяц <span class="info-highlight">ТОП-5</span> игрокам мы разыгрываем реальные <span style="color:#facc15;">Stars & Ton</span>! Стань легендой Nova.
             </div>
         </div>
-        <div class="scroll-area" id="leaderboard-list" style="display: flex; flex-direction: column; gap: 0;">
-            </div>
+        <div class="scroll-area" id="leaderboard-list" style="display: flex; flex-direction: column; gap: 0;"></div>
     </div>
 
     <div class="drawer-wardrobe" id="wardrobe-panel">
-        <div class="drawer-header"><h3>ГЕРОИ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <div class="drawer-header"><h3>СКИНЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
         <div class="scroll-area" id="skin-list"></div>
     </div>
 
@@ -305,26 +332,42 @@
 
 <script>
     const tg = window.Telegram.WebApp;
-    const BACKEND_URL = 'https://stars-drop.vercel.app/api';
+    const BACKEND_URL = 'https://sycchak.vercel.app/api'; 
     tg.expand();
 
     const heroes = [
-        { id: 0, name: "Новичок", x: 1, price: 0, img: "hero.png", color: "#4ade80", bg: "#0f2a1a" },
-        { id: 1, name: "Путешественник", x: 5, price: 500000, img: "img/hero1.jpg", color: "#facc15", bg: "#2a250f" },
-        { id: 2, name: "Шаман", x: 10, price: 1000000, img: "img/hero2.jpg", color: "#a855f7", bg: "#251635" },
-        { id: 3, name: "Ниндзя", x: 20, price: 5000000, img: "img/hero3.jpg", color: "#3b82f6", bg: "#162235" },
-        { id: 4, name: "Король", x: 30, price: 15000000, img: "img/hero5.jpg", color: "#eab308", bg: "#352e16" },
-        { id: 5, name: "Пират", x: 45, price: 100000000, img: "img/hero6.jpg", color: "#ef4444", bg: "#351616" },
-        { id: 6, name: "Космонавт", x: 55, price: 10000000000, img: "img/hero7.jpg", color: "#60a5fa", bg: "#162235" }
+        { id: 0, x: 1, price: 0, img: "img/Новая папка (3)/pepe1.png", color: "#facc15", bg: "#1a1605" },
+        { id: 1, x: 3, price: 750000, img: "img/Новая папка (3)/pepe2.png", color: "#facc15", bg: "#2a250f" },
+        { id: 2, x: 8, price: 2500000, img: "img/Новая папка (3)/pepe3.png", color: "#a855f7", bg: "#251635" },
+        { id: 3, x: 15, price: 8000000, img: "img/Новая папка (3)/pepe4.png", color: "#3b82f6", bg: "#162235" },
+        { id: 4, x: 30, price: 30000000, img: "img/Новая папка (3)/pepe5.png", color: "#eab308", bg: "#352e16" },
+        { id: 5, x: 60, price: 150000000, img: "img/Новая папка (3)/pepe6.png", color: "#ef4444", bg: "#351616" },
+        { id: 6, x: 120, price: 800000000, img: "img/hero.png", color: "#60a5fa", bg: "#162235" }
     ];
 
     const marketData = [
-        { id: 0, name: "Энергетик", baseAdd: 5, basePrice: 150, icon: "⚡️", type: "click" },
-        { id: 1, name: "Перчатки", baseAdd: 15, basePrice: 1000, icon: "🧤", type: "click" },
-        { id: 2, name: "Золотой палец", baseAdd: 60, basePrice: 5000, icon: "☝️", type: "click" },
-        { id: 3, name: "Кликер-бот", baseAdd: 250, basePrice: 20000, icon: "🤖", type: "click" },
-        { id: 4, name: "Тяжелая гиря", baseAdd: 1000, basePrice: 100000, icon: "🏋️", type: "click" },
-        { id: 5, name: "Мега-Батарея", baseAdd: 500, basePrice: 50000, icon: "🔋", type: "energy" }
+        { id: 0, name: "Курсор", baseAdd: 1, basePrice: 50, icon: "🖱️", type: "click" },
+        { id: 1, name: "Клик-бот", baseAdd: 2, basePrice: 80, icon: "🤖", type: "click" },
+        { id: 2, name: "Прокси-сервер", baseAdd: 5, basePrice: 120, icon: "📡", type: "click" },
+        { id: 3, name: "SSD-накопитель", baseAdd: 10, basePrice: 200, icon: "💾", type: "click" },
+        { id: 4, name: "Блокчейн-узел", baseAdd: 20, basePrice: 350, icon: "⛓️", type: "click" },
+        { id: 5, name: "Смарт-контракт", baseAdd: 40, basePrice: 600, icon: "📜", type: "click" },
+        { id: 6, name: "Батарейка", baseAdd: 500, basePrice: 1000, icon: "🔋", type: "energy" },
+        { id: 7, name: "Видеокарта RTX", baseAdd: 150, basePrice: 1800, icon: "🎮", type: "click" },
+        { id: 8, name: "Серверная стойка", baseAdd: 300, basePrice: 3000, icon: "🗄️", type: "click" },
+        { id: 9, name: "Холодный кошелек", baseAdd: 600, basePrice: 5000, icon: "🔐", type: "click" },
+        { id: 10, name: "Ликвидный пул", baseAdd: 1200, basePrice: 8500, icon: "💧", type: "click" },
+        { id: 11, name: "DAO-голосование", baseAdd: 2500, basePrice: 14000, icon: "🗳️", type: "click" },
+        { id: 12, name: "Трейдинг-бот", baseAdd: 5000, basePrice: 25000, icon: "📈", type: "click" },
+        { id: 13, name: "Виртуальный офис", baseAdd: 10000, basePrice: 45000, icon: "🏢", type: "click" },
+        { id: 14, name: "Биржевой терминал", baseAdd: 20000, basePrice: 80000, icon: "🖥️", type: "click" },
+        { id: 15, name: "Кибер-защита", baseAdd: 40000, basePrice: 150000, icon: "🛡️", type: "click" },
+        { id: 16, name: "Облачный кластер", baseAdd: 80000, basePrice: 300000, icon: "☁️", type: "click" },
+        { id: 17, name: "NFT-Маркетплейс", baseAdd: 160000, basePrice: 600000, icon: "🖼️", type: "click" },
+        { id: 18, name: "Квантовый процессор", baseAdd: 350000, basePrice: 1200000, icon: "⚛️", type: "click" },
+        { id: 19, name: "Мастер-нода Nova", baseAdd: 800000, basePrice: 2500000, icon: "👑", type: "click" },
+        { id: 20, name: "Турбо-зарядка", baseAdd: 1, basePrice: 5000, icon: "⚡", type: "regen" }, 
+        { id: 21, name: "Полный бак", baseAdd: 0, basePrice: 10000000, icon: "🔋", type: "full_charge" }
     ];
 
     let state = {
@@ -335,52 +378,89 @@
         activeHeroId: 0,
         clickPower: 1,
         marketLevels: {},
-        lastUnix: Date.now()
+        lastUnix: Date.now(),
+        lastChargeUnix: 0
     };
 
+    function updateUI() {
+        document.getElementById('balance-num').innerText = Math.floor(state.points).toLocaleString();
+        document.getElementById('energy-val').innerText = Math.floor(state.energy);
+        document.getElementById('max-energy-val').innerText = state.maxEnergy;
+        const perc = (state.energy / state.maxEnergy) * 100;
+        document.getElementById('energy-fill').style.width = perc + '%';
+    }
+
+    function applyHeroVisuals() {
+        const h = heroes.find(x => x.id === state.activeHeroId) || heroes[0];
+        document.getElementById('hero-img').src = h.img;
+        document.getElementById('main-bg').style.background = `radial-gradient(circle at 50% 50%, ${h.bg} 0%, #050505 100%)`;
+    }
+
+    function triggerSaveProcess() {
+        state.lastUnix = Date.now();
+        localStorage.setItem('nova_engine_save', JSON.stringify(state));
+        saveToDB(); 
+    }
+
     async function loadFromDB() {
-        const userId = tg.initDataUnsafe?.user?.id;
-        if (!userId) return;
+        const userId = tg.initDataUnsafe?.user?.id || 12345; 
         try {
             const res = await fetch(`${BACKEND_URL}/get_balance/${userId}?t=${Date.now()}`);
             const data = await res.json();
-            if (data) {
+            if (data && !data.error) {
                 state.points = parseInt(data.points || 0);
                 state.energy = parseInt(data.energy || 1000);
+                state.maxEnergy = parseInt(data.max_energy || 1000);
+                state.clickPower = parseInt(data.click_power || 1);
                 state.activeHeroId = parseInt(data.active_hero_id || 0);
+                state.ownedHeroes = Array.isArray(data.owned_heroes) ? data.owned_heroes : [0];
+                state.marketLevels = data.market_levels || {};
+                state.lastChargeUnix = parseInt(data.last_charge_unix || 0);
+                
                 updateUI();
                 applyHeroVisuals();
             }
-        } catch (e) { console.error("Sync Error"); }
+        } catch (e) { 
+            console.error("Ошибка синхронизации с бэкендом при загрузке:", e); 
+        }
     }
 
     async function saveToDB() {
-        const userId = tg.initDataUnsafe?.user?.id;
-        if (!userId) return;
+        const user = tg.initDataUnsafe?.user;
+        const userId = user?.id || 12345;
+        const username = user?.username || 'Anonymous';
         try {
             await fetch(`${BACKEND_URL}/update_balance`, {
                 method: 'POST',
+                keepalive: true,
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                     user_id: userId,
+                    username: username,
                     points: Math.floor(state.points),
                     energy: Math.floor(state.energy),
-                    active_hero_id: state.activeHeroId
+                    max_energy: state.maxEnergy,
+                    click_power: state.clickPower,
+                    active_hero_id: state.activeHeroId,
+                    owned_heroes: state.ownedHeroes,  
+                    market_levels: state.marketLevels,
+                    last_charge_unix: state.lastChargeUnix
                 })
             });
-        } catch (e) { console.error("Save Error"); }
+        } catch (e) { 
+            console.error("Ошибка сохранения на бэкенд:", e); 
+        }
     }
 
     async function fetchLeaderboard() {
         const list = document.getElementById('leaderboard-list');
         list.innerHTML = '<div style="text-align:center; padding:30px; opacity:0.5;">Ищем легенд...</div>';
         try {
-            // Исправлен путь к лидерборду
             const res = await fetch(`${BACKEND_URL}/get_leaders`);
             const topUsers = await res.json();
             list.innerHTML = '';
             topUsers.forEach((user, index) => {
-                const isMe = user.user_id == tg.initDataUnsafe?.user?.id;
+                const isMe = user.user_id == (tg.initDataUnsafe?.user?.id || 12345);
                 list.innerHTML += `
                     <div class="lb-row ${isMe ? 'me' : ''}">
                         <div class="lb-rank">${index + 1}</div>
@@ -389,63 +469,46 @@
                     </div>
                 `;
             });
-        } catch (e) { list.innerHTML = '<div style="text-align:center; padding:30px; color:red;">Ошибка загрузки топа</div>'; }
-    }
-
-    async function init() {
-        const saved = localStorage.getItem('nova_engine_save');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            state = { ...state, ...parsed };
-            const elapsed = Math.floor((Date.now() - state.lastUnix) / 1000);
-            state.energy = Math.min(state.maxEnergy, state.energy + elapsed);
+        } catch (e) { 
+            list.innerHTML = '<div style="text-align:center; padding:30px; color:red;">Ошибка загрузки топа</div>'; 
         }
-        await loadFromDB();
-        updateUI();
-        startLoops();
     }
 
     function startLoops() {
         setInterval(() => {
             if (state.energy < state.maxEnergy) {
-                state.energy = Math.min(state.maxEnergy, state.energy + 1);
+                const regenLvl = state.marketLevels[20] || 0; 
+                const energyToRegen = 1 + regenLvl; 
+                state.energy = Math.min(state.maxEnergy, state.energy + energyToRegen);
                 updateUI();
             }
         }, 1000);
-        // ПРИНУДИТЕЛЬНОЕ сохранение в базу каждые 15 сек
-        setInterval(save, 15000); 
+        setInterval(triggerSaveProcess, 15000); 
     }
 
     const tapZone = document.getElementById('tap-zone');
     const heroImg = document.getElementById('hero-img');
+    let isOverheated = false;
 
     function handleTapLogic(x, y) {
-        if (state.energy < 1) return;
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        const currentHero = heroes.find(h => h.id === state.activeHeroId) || heroes[0];
+        const tapCost = 1; // Расход энергии за 1 тап
 
-        heroImg.classList.add('tap-anim');
-        setTimeout(() => heroImg.classList.remove('tap-anim'), 50);
-        
-        const hero = heroes.find(h => h.id === state.activeHeroId);
-        const profit = state.clickPower * (hero ? hero.x : 1);
-        
-        state.points += profit;
-        state.energy -= 1;
-        state.lastUnix = Date.now();
-        
-        showPop(x, y, profit);
-        updateUI();
-        
-        // Маленький шанс на моментальное сохранение при клике
-        if(state.points % 100 === 0) save();
-    }
+        if (state.energy >= tapCost) {
+            state.energy -= tapCost;
+            const earned = state.clickPower * currentHero.x;
+            state.points += earned;
 
-    tapZone.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            handleTapLogic(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+            const img = document.getElementById('hero-img');
+            img.classList.add('tap-anim');
+            setTimeout(() => img.classList.remove('tap-anim'), 50);
+
+            showPop(x, y, earned);
+            updateUI();
+        } else {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
         }
-    });
+    }
 
     function showPop(x, y, val) {
         const p = document.createElement('div');
@@ -459,22 +522,52 @@
     function renderMarket() {
         const container = document.getElementById('market-list');
         container.innerHTML = '';
-        marketData.forEach(item => {
+        
+        marketData.forEach((item, index) => {
             const lvl = state.marketLevels[item.id] || 0;
-            const price = Math.floor(item.basePrice * Math.pow(1.6, lvl));
-            const bonus = item.baseAdd * (lvl + 1);
-            const isMax = lvl >= 15;
+            
+            let maxLvl = 15;
+            if (item.type === 'energy') maxLvl = 5;
+            if (item.type === 'regen') maxLvl = 10; 
+            if (item.type === 'full_charge') maxLvl = 999999; 
+            
+            const isMax = lvl >= maxLvl;
+            const price = (item.type === 'full_charge') ? item.basePrice : (isMax ? 0 : Math.floor(item.basePrice * Math.pow(1.6, lvl)));
+            
+            let bonusText = '';
+            let isDisabled = state.points < price || isMax;
+
+            if (item.type === 'click') {
+                bonusText = '+' + (item.baseAdd * (lvl + 1)) + ' к клику';
+            } else if (item.type === 'energy') {
+                bonusText = '+' + item.baseAdd + ' к макс. энергии';
+            } else if (item.type === 'regen') {
+                bonusText = `+${1 + lvl + 1} ед/сек (Сейчас: +${1 + lvl})`;
+            } else if (item.type === 'full_charge') {
+                const now = Date.now();
+                const msPassed = now - state.lastChargeUnix;
+                const hourInMs = 60 * 60 * 1000;
+
+                if (msPassed < hourInMs) {
+                    const timeLeft = Math.ceil((hourInMs - msPassed) / 1000 / 60);
+                    bonusText = `Доступно через ${timeLeft} мин.`;
+                    isDisabled = true; 
+                } else {
+                    bonusText = 'Мгновенно восстановит 100% энергии';
+                }
+            }
+
+            const isLocked = index > 0 && index < 20 && (state.marketLevels[marketData[index - 1].id] || 0) === 0;
             
             container.innerHTML += `
-                <div class="card-item">
-                    <span class="lvl-badge" style="${isMax ? 'background:#555;' : ''}">${isMax ? 'MAX' : 'LVL ' + lvl}</span>
+                <div class="card-item ${isLocked ? 'locked' : ''}">
                     <span class="card-icon">${item.icon}</span>
-                    <div class="card-title">${item.name}</div>
-                    <div class="card-desc">${item.type === 'click' ? '+' + bonus + ' к клику' : '+' + item.baseAdd + ' к лимиту'}</div>
+                    <div class="card-title">${isLocked ? '???' : item.name}</div>
+                    <div class="card-desc">${isLocked ? '????' : (isMax ? 'УРОВЕНЬ МАКСИМАЛЕН' : bonusText)}</div>
                     <button class="btn-action btn-buy" 
-                        ${(state.points < price || isMax) ? 'disabled' : ''} 
+                        ${(isLocked || isDisabled) ? 'disabled' : ''} 
                         onclick="buyMarketItem(${item.id})">
-                        ${isMax ? 'МАКСИМУМ' : price.toLocaleString()}
+                        ${isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : price.toLocaleString())}
                     </button>
                 </div>`;
         });
@@ -483,15 +576,39 @@
     window.buyMarketItem = function(id) {
         const item = marketData.find(i => i.id === id);
         const lvl = state.marketLevels[item.id] || 0;
-        if (lvl >= 15) return;
         
-        const price = Math.floor(item.basePrice * Math.pow(1.6, lvl));
+        let maxLvl = 15;
+        if (item.type === 'energy') maxLvl = 5;
+        if (item.type === 'regen') maxLvl = 10;
+        if (item.type === 'full_charge') maxLvl = 999999;
+        
+        if (lvl >= maxLvl) return;
+        const price = (item.type === 'full_charge') ? item.basePrice : Math.floor(item.basePrice * Math.pow(1.6, lvl));
+        
         if (state.points >= price) {
-            state.points -= price;
-            state.marketLevels[id] = lvl + 1;
-            if (item.type === 'click') state.clickPower += item.baseAdd;
-            else { state.maxEnergy += item.baseAdd; state.energy += item.baseAdd; }
-            renderMarket(); updateUI(); save();
+            if (item.type === 'full_charge') {
+                const now = Date.now();
+                if (now - state.lastChargeUnix < 60 * 60 * 1000) {
+                    alert("Эту карточку можно покупать только раз в час!");
+                    return; 
+                }
+                state.points -= price;
+                state.energy = state.maxEnergy;
+                state.lastChargeUnix = now;
+            } else {
+                state.points -= price;
+                state.marketLevels[id] = lvl + 1;
+                
+                if (item.type === 'click') {
+                    state.clickPower += item.baseAdd;
+                } else if (item.type === 'energy') {
+                    state.maxEnergy += item.baseAdd;
+                    state.energy += item.baseAdd; 
+                }
+            }
+            renderMarket(); 
+            updateUI(); 
+            triggerSaveProcess(); 
         }
     }
 
@@ -504,8 +621,7 @@
             container.innerHTML += `
                 <div class="card-item ${isActive ? 'active-item' : ''}">
                     <img src="${h.img}" class="card-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                    <div class="card-title">${h.name}</div>
-                    <div class="card-desc">МНОЖИТЕЛЬ x${h.x}</div>
+                    <div class="card-desc" style="margin-top: 10px;">МНОЖИТЕЛЬ x${h.x}</div>
                     <button class="btn-action ${isOwned ? 'btn-owned' : 'btn-buy'}" 
                             ${(!isOwned && state.points < h.price) ? 'disabled' : ''} 
                             onclick="handleHero(${h.id})">
@@ -515,60 +631,95 @@
         });
     }
 
-    window.handleHero = function(id) {
+window.handleHero = function(id) {
         const h = heroes.find(x => x.id === id);
-        if (state.ownedHeroes.includes(id)) state.activeHeroId = id;
-        else if (state.points >= h.price) {
-            state.points -= h.price;
-            state.ownedHeroes.push(id);
+        
+        if (state.ownedHeroes.includes(id)) {
             state.activeHeroId = id;
+            applyHeroVisuals(); 
+            renderSkins(); 
+            updateUI(); 
+            triggerSaveProcess();
+            return;
         }
-        applyHeroVisuals(); renderSkins(); updateUI(); save();
+
+        if (state.points >= h.price) {
+            tg.showPopup({
+                title: 'Покупка скина (РЕБЁРТХ)',
+                message: `Вы уверены? При покупке этого скина ваш баланс и улучшения сбросятся до нуля, но вы получите множитель x${h.x} навсегда!`,
+                buttons: [
+                    {id: 'buy', type: 'destructive', text: 'Купить и сбросить'},
+                    {type: 'cancel', text: 'Отмена'}
+                ]
+            }, (buttonId) => {
+                if (buttonId === 'buy') {
+                    state.points = 0;
+                    state.marketLevels = {}; 
+                    state.clickPower = 1;    
+                    state.maxEnergy = 1000;  // Сбрасываем бак до базы
+                    state.energy = 1000;     // Заливаем фулл
+                    
+                    state.ownedHeroes.push(id);
+                    state.activeHeroId = id;
+                    
+                    applyHeroVisuals();
+                    renderSkins();
+                    updateUI();
+                    triggerSaveProcess();
+                }
+            });
+        }
     }
 
-    function openPanel(id, navEl) {
-        document.querySelectorAll('.drawer-wardrobe').forEach(d => d.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    async function goBackWithSave() {
+        localStorage.setItem('nova_engine_save', JSON.stringify(state));
+        const backBtn = document.querySelector('.btn-back');
+        if (backBtn) backBtn.innerHTML = 'СОХРАНЕНИЕ...';
+        try {
+            await saveToDB();
+        } catch (e) {
+            console.error("Не удалось сохранить:", e);
+        }
+        window.location.href = 'index.html';
+    }
+
+    window.openPanel = function(id, navEl) {
+        closeAllPanels();
         document.getElementById(id).classList.add('active');
-        if (navEl && navEl.classList.contains('nav-item')) navEl.classList.add('active');
-        
+        if(navEl && navEl.classList) {
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            navEl.classList.add('active');
+        }
         if (id === 'market-panel') renderMarket();
         if (id === 'wardrobe-panel') renderSkins();
         if (id === 'leaderboard-panel') fetchLeaderboard();
     }
 
-    function closeAllPanels() {
-        document.querySelectorAll('.drawer-wardrobe').forEach(d => d.classList.remove('active'));
-        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    window.closeAllPanels = function() {
+        document.querySelectorAll('.drawer-wardrobe').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
         document.getElementById('nav-main').classList.add('active');
     }
 
-    function updateUI() {
-        document.getElementById('balance-num').innerText = Math.floor(state.points).toLocaleString();
-        document.getElementById('energy-val').innerText = Math.floor(state.energy);
-        document.getElementById('max-energy-val').innerText = state.maxEnergy;
-        document.getElementById('energy-fill').style.width = (state.energy / state.maxEnergy * 100) + '%';
-    }
-
-    function applyHeroVisuals() {
-        const h = heroes.find(x => x.id === state.activeHeroId);
-        if (h) {
-            document.getElementById('hero-img').src = h.img;
-            document.documentElement.style.setProperty('--neon', h.color);
-            document.getElementById('main-bg').style.background = `radial-gradient(circle at 50% 50%, ${h.bg} 0%, #050505 100%)`;
+    async function init() {
+        const saved = localStorage.getItem('nova_engine_save');
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            state = { ...state, ...parsed };
+            const elapsed = Math.floor((Date.now() - state.lastUnix) / 1000);
+            state.energy = Math.min(state.maxEnergy, state.energy + elapsed);
         }
-    }
+        
+        const heroImgEl = document.getElementById('hero-img');
+        heroImgEl.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handleTapLogic(e.clientX, e.clientY);
+        });
 
-    function save() {
-        state.lastUnix = Date.now();
-        localStorage.setItem('nova_engine_save', JSON.stringify(state));
-        saveToDB(); // ОБЯЗАТЕЛЬНО вызываем функцию отправки в базу
-    }
-
-    async function safeGoBack() {
-        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-        await saveToDB(); // Ждем завершения записи
-        window.location.href = 'index.html';
+        await loadFromDB();
+        updateUI();
+        applyHeroVisuals();
+        startLoops();
     }
 
     window.onload = init;
