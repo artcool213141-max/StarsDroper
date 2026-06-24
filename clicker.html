@@ -405,7 +405,7 @@
     async function loadFromDB() {
         const userId = tg.initDataUnsafe?.user?.id || 12345; 
         try {
-            const res = await fetch(`${BACKEND_URL}/get_balance/${userId}?t=${Date.now()}`);
+            const res = await fetch(`${BACKEND_URL}/get_balance?user_id=${userId}&t=${Date.now()}`);
             const data = await res.json();
             if (data && !data.error) {
                 state.points = parseInt(data.points || 0);
