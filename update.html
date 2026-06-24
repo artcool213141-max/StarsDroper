@@ -315,26 +315,45 @@
         }
     }
 
-    async function startUpgrade() {
-        if(!s1 || !s2) return;
-        const btn = document.getElementById('upg-btn');
-        const pointer = document.getElementById('pointer-wrapper');
-        const resMsg = document.getElementById('res-msg');
-        btn.disabled = true;
+async function startUpgrade() {
+    if(!s1 || !s2) return;
 
-        let visualChance = (s1.price / s2.price) * 100 * 0.8;
-        visualChance = Math.min(Math.max(visualChance, 10), 85);
-        const winDeg = visualChance * 3.6; 
+    // --- ОГРАНИЧЕНИЕ ---
+    // Если цена цели больше цены предмета более чем в 7.5 раз (напр. 100 -> 750)
+if (s2.price > s1.price * 7.5) {
+        const info = document.getElementById('info-chance');
+        info.innerText = "❌ СЛИШКОМ ДОРОГО";
+        info.style.color = "#ef4444"; // Красный цвет для ошибки
+        
+        // Через 2 секунды возвращаем всё как было
+        setTimeout(() => {
+            info.style.color = "#f59e0b"; // Возвращаем золотой цвет
+            updateUI(); 
+        }, 2000);
+        return;
+    }
 
-        const luckRoll = Math.random() * 100;
-        const isWin = luckRoll <= 80; 
+    // --- ДАЛЬШЕ ИДЕТ ОСТАЛЬНАЯ ЛОГИКА ---
+    const btn = document.getElementById('upg-btn');
+    const pointer = document.getElementById('pointer-wrapper');
+    const resMsg = document.getElementById('res-msg');
+    btn.disabled = true;
 
-        const spins = 360 * 5;
-        let finalDeg = isWin 
-            ? (spins + Math.random() * (winDeg - 2)) 
-            : (spins + winDeg + Math.random() * (358 - winDeg)); 
+    // --- ШАНСЫ ---
+    // Было 80, ставим, например, 30, чтобы чаще проигрывали
+    const winChance = 30; 
+    const luckRoll = Math.random() * 100;
+    const isWin = luckRoll <= winChance; 
 
-        pointer.style.transform = `rotate(${finalDeg}deg)`;
+    // Расчет угла теперь зависит от реального шанса
+    const winDeg = winChance * 3.6; 
+
+    const spins = 360 * 5;
+    let finalDeg = isWin 
+        ? (spins + Math.random() * (winDeg - 2)) 
+        : (spins + winDeg + Math.random() * (358 - winDeg)); 
+
+    pointer.style.transform = `rotate(${finalDeg}deg)`;
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
 
         setTimeout(async () => {
