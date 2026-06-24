@@ -475,25 +475,25 @@
     }
 
 function startLoops() {
-        // Обновление энергии (каждую секунду)
-        setInterval(() => {
-            if (state.energy < state.maxEnergy) {
-                const regenLvl = state.marketLevels[20] || 0; 
-                const energyToRegen = 1 + regenLvl; 
-                state.energy = Math.min(state.maxEnergy, state.energy + energyToRegen);
-                updateUI();
-            }
-        }, 1000);
+    // Обновление энергии (каждую секунду)
+    setInterval(() => {
+        if (state.energy < state.maxEnergy) {
+            const regenLvl = state.marketLevels[20] || 0; 
+            const energyToRegen = 1 + regenLvl; 
+            state.energy = Math.min(state.maxEnergy, state.energy + energyToRegen);
+            updateUI();
+        }
+    }, 1000);
 
-        // АВТОМАТИЧЕСКАЯ СИНХРОНИЗАЦИЯ С БАЗОЙ (каждые 5 секунд)
-        setInterval(async () => {
-            await loadFromDB(); // Запрашиваем актуальные данные с сервера
-            console.log("Данные обновлены из базы");
-        }, 5000); 
+    // ❌ УДАЛИ ИЛИ ЗАКОММЕНТИРУЙ ЭТОТ КУСОК:
+    // setInterval(async () => {
+    //     await loadFromDB(); 
+    //     console.log("Данные обновлены из базы");
+    // }, 5000); 
 
-        // Сохранение текущего прогресса на сервер (каждые 15 секунд)
-        setInterval(triggerSaveProcess, 15000); 
-    }
+    // Сохранение текущего прогресса на сервер (каждые 15 секунд)
+    setInterval(triggerSaveProcess, 15000); 
+}
 
     const tapZone = document.getElementById('tap-zone');
     const heroImg = document.getElementById('hero-img');
