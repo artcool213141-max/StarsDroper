@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>NowearSpin Hub</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -126,20 +127,46 @@
             <button onclick="launch('plinko.html')" class="btn-play">Играть</button>
         </section>
 
+<section class="game-card">
+    <div class="image-container">
+        <img src="catcher.jpeg" class="game-img" alt="Игра">
+    </div>
+    <button onclick="launchWithPayment('Lovlyagift.html')" class="btn-play">Играть</button>
+</section>
+
     </div>
 
-    <script>
-        let tg = window.Telegram.WebApp;
-        
-        function launch(file) {
-            if (tg.HapticFeedback) {
-                tg.HapticFeedback.impactOccurred('heavy');
+<script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx");
+        const userId = tg.initDataUnsafe?.user?.id;
+
+        async function launchWithPayment(file) {
+            if (!userId) { alert("Ошибка авторизации"); return; }
+            try {
+                const { data } = await SB.from('users').select('stars').eq('user_id', userId).single();
+                if ((data?.stars || 0) < 100) {
+                    alert("Недостаточно звезд! Нужно 100.");
+                    return;
+                }
+                if (confirm("Вход в игру стоит 100 звезд. Продолжить?")) {
+                    await SB.from('users').update({ stars: data.stars - 100 }).eq('user_id', userId);
+                    window.location.replace("./" + file);
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Ошибка сервера");
             }
-            console.log("Запуск:", file);
-            window.location.replace("./" + file);
         }
 
-        tg.expand();
+    function launch(url) {
+        window.location.href = url;
+    }
+
+        function launchDirect(file) {
+            window.location.replace("./" + file);
+        }
     </script>
 </body>
 </html>
