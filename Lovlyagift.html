@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>StarDrop - Catch Master</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --primary: #ffe600; /* Сочный желтый вместо зеленого */
@@ -117,9 +118,10 @@
 
 <div id="game-screen">
     <div class="ui-panel">
-        <button id="pause-btn" onclick="togglePause()">|| ПАУЗА</button>
-        <div id="score-cont">🎁 <span id="gift-count">0</span>/50 | ⭐ <span id="star-count">0</span></div>
+        <button id="finish-btn" class="m-btn btn-exit" onclick="endGame('manual')">ЗАВЕРШИТЬ</button>
+        <div id="score-cont">⭐ <span id="star-count">0</span></div>
     </div>
+    
     <div id="danger-zone"></div>
 </div>
 
@@ -140,185 +142,150 @@
 <script>
     const tg = window.Telegram.WebApp;
     tg.expand();
+    const SB = supabase.createClient("https://ypvvoqbvzfmirprevazq.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlwdnZvcWJ2emZtaXJwcmV2YXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE4NzM3NTgsImV4cCI6MjA5NzQ0OTc1OH0.bt4iVMEX0JtYzJxW7gtRxWEOz0eXPIOautw7_FALhkc");
+
+    const userId = tg.initDataUnsafe?.user?.id;
     const screen = document.getElementById('game-screen');
-    const giftLabel = document.getElementById('gift-count');
     const starLabel = document.getElementById('star-count');
-
-    const BACKEND_URL = window.location.origin + '/api'; 
-    const user = tg.initDataUnsafe?.user;
-
-    let giftsCollected = 0;
+    
     let starsEarned = 0;
-    let isPaused = false;
     let gameActive = true;
-    let isSaving = false;
-
-    let baseSpeed = 2.5;
+    let gameStartTime = Date.now();
+    
+    // УВЕЛИЧИЛИ СКОРОСТЬ (было 2.0)
+    let baseSpeed = 6.0; 
     let spawnRate = 800;
     let bombChance = 0.12;
 
-    const ASSETS = [
-        '1may.jpg', '2025.jpg', 'bear.png', 'book.jpg', 'boooox.png', 'botinok.png', 'box.png', 'car.png',
-        'ccolso2.png', 'cerrrdce.jpg', 'chassiki.png', 'chemodan.jpg', 'ciga.png', 'colso.png', 'costum.jpg',
-        'cvetok.png', 'dog.png', 'dyxi.png', 'fonarik.jpg', 'grob.jpg', 'gyba.png', 'happybirthday.jpg',
-        'heart.png', 'helmet.png', 'kalendar.png', 'kepka.png', 'kirpitch.jpg', 'koks.jpg', 'koktel.png',
-        'kolechko.png', 'kot.png', 'kotel.png', 'krovatka.jpg', 'lolipop.png', 'lucky.jpg', 'mafin.jpg',
-        'metch.png', 'narkotiki.png', 'obyv.jpg', 'otchki.jpg', 'orel.jpg', 'otkritka.jpg', 'paska.jpg',
-        'pepe.png', 'raketa.png', 'rozza.png', 'rykazak.jpg', 'shapka.png', 'shar.jpg', 'shlem.png',
-        'sliva.png', 'soska.jpg', 'statyya.jpg', 'statyyetka.png', 'venok.jpg', 'yayko.png', 'zhele.png', 'zmei.png',
-        'star.png', 'bomb.png', 'case.png'
-    ];
+    const ASSETS = ["1may.jpg", "1may.png", "chassiki.png", "sliva.png", "soska.png", "zirka.png", "2025.jpg", "bear.png", "book.jpg", "booox.png", "botinok.png", "box.png", "car.png", "raketa.png", "ccolso2.png", "cerrrdce.jpg", "chemodan.jpg", "ciga.png", "colso.png", "costum.jpg", "cvetok.png", "dog.png", "dyxi.png", "fonarik.jpg", "grob.jpg", "gyba.png", "happybirthday.jpg", "heart.png", "helmet.png", "kalendar.png", "kepka.png", "kirpitch.jpg", "koks.jpg", "koktel.png", "kot.png", "kotel.png", "krovatka.jpg", "lolipop.png", "lucky.jpg", "mafin.jpg", "metch.png", "narkotiki.png", "obyv.jpg", "orel.jpg", "otkritka.jpg", "paska.jpg", "rozza.png", "rykzak.jpg", "shapka.png", "shar.jpg", "shlem.png", "soska.jpg", "star.png", "statyya.jpg", "venok.png", "yayko.png", "zhele.png", "zmei.png", "meczcc.png", "kryg.PNG", "gribb.PNG", "zirka.PNG", "cvetk.PNG", "sshapka.PNG", "tyfli.PNG"];
 
-    function getAssetUrl(fileName) {
-        return window.location.origin + '/' + fileName;
-    }
+    function getAssetUrl(fileName) { return window.location.origin + '/' + fileName; }
 
-    function initStars() {
-        const savedStars = localStorage.getItem('user_stars') || "0";
-        starLabel.innerText = savedStars;
-    }
-
-    function spawnItem() {
-        if (!gameActive || isPaused) return;
-
-        const item = document.createElement('div');
-        item.className = 'falling-item';
-        
-        let type = 'gift';
-        let imgName = ASSETS[Math.floor(Math.random() * ASSETS.length)];
-        let isCaught = false; 
-
-        if (Math.random() < bombChance) {
-            type = 'bomb';
-            imgName = 'bomb.png';
-        } else if (giftsCollected >= 50) {
-            type = 'star';
-            imgName = 'star.png';
-            item.classList.add('item-star');
-            giftsCollected = 0;
-            giftLabel.innerText = giftsCollected;
-        }
-
-        item.setAttribute('data-type', type);
-        item.innerHTML = `<img src="${getAssetUrl(imgName)}" onerror="this.src='star.png'">`;
-        
-        item.style.left = Math.random() * (window.innerWidth - 75) + 'px';
-        item.style.top = '-100px';
-        screen.appendChild(item);
-
-        const handleHit = (e) => {
-            if (e.cancelable) e.preventDefault();
-            if (!gameActive || isPaused || isCaught) return;
-
-            isCaught = true; 
-            const currentType = item.getAttribute('data-type');
-            
-            if (currentType === 'bomb') {
-                endGame('bomb');
-            } else if (currentType === 'star') {
-                starsEarned++;
-                const currentTotal = parseInt(localStorage.getItem('user_stars')) || 0;
-                localStorage.setItem('user_stars', (currentTotal + 1).toString());
-                starLabel.innerText = localStorage.getItem('user_stars');
-                tg.HapticFeedback.notificationOccurred('success');
-                item.remove();
-            } else {
-                giftsCollected++;
-                giftLabel.innerText = giftsCollected;
-                if (giftsCollected % 10 === 0) baseSpeed += 0.3;
-                tg.HapticFeedback.impactOccurred('light');
-                item.remove();
-            }
-        };
-
-        item.onmousedown = item.ontouchstart = handleHit;
-
-        let pos = -100;
-        let speed = baseSpeed + Math.random() * 2;
-        const dangerLine = window.innerHeight - 60;
-        
-        function fall() {
-            if (!gameActive || isCaught) return; 
-            if (!isPaused) {
-                pos += speed;
-                item.style.top = pos + 'px';
-            }
-
-            if (pos + 60 > dangerLine && type !== 'bomb') {
-                endGame('miss');
-                item.remove();
-                return;
-            }
-
-            if (pos > window.innerHeight) {
-                item.remove();
-            } else {
-                requestAnimationFrame(fall);
-            }
-        }
-        requestAnimationFrame(fall);
-    }
-
-    function togglePause() {
-        isPaused = !isPaused;
-        document.getElementById('pause-modal').style.display = isPaused ? 'flex' : 'none';
-    }
-
-    function endGame(reason) {
-        gameActive = false;
-        tg.HapticFeedback.notificationOccurred('error');
-        
-        const modal = document.getElementById('fail-modal');
-        const title = document.getElementById('fail-title');
-        const msg = document.getElementById('fail-msg');
-        const icon = document.getElementById('fail-icon');
-
-        if (reason === 'bomb') {
-            title.innerText = "БАБАХ!";
-            msg.innerText = "Вы нажали на бомбу!";
-            icon.src = getAssetUrl("bomb.png");
-        } else {
-            title.innerText = "ПРОПУСК!";
-            msg.innerText = "Предмет упал в красную зону!";
-            icon.src = getAssetUrl("star.png");
-        }
-
-        document.getElementById('final-res').innerText = `ДОБЫТО ЗА РАУНД: ${starsEarned} ⭐`;
-        modal.style.display = 'flex';
-        localStorage.setItem('last_gift_time', Date.now().toString());
+    async function initStars() {
+        if (!userId) return;
+        const { data } = await SB.from('users').select('stars').eq('user_id', userId).single();
+        starLabel.innerText = Math.floor(data?.stars || 0);
     }
 
     async function saveAndExit() {
-        if (isSaving) return;
-        isSaving = true;
-        const exitBtn = document.getElementById('exit-btn');
-        if (exitBtn) exitBtn.innerText = "СОХРАНЕНИЕ...";
-
-        if (user?.id && starsEarned > 0) {
+        if (userId && starsEarned > 0) {
             try {
-                await fetch(`${BACKEND_URL}/sync`, { 
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        id: user.id,
-                        name: user.first_name,
-                        coins: parseInt(localStorage.getItem('user_stars')) || 0 
-                    })
-                });
-            } catch (e) { console.error("Server error"); }
+                const { data } = await SB.from('users').select('stars').eq('user_id', userId).single();
+                await SB.from('users').update({ stars: (data?.stars || 0) + starsEarned }).eq('user_id', userId);
+            } catch (e) { console.error(e); }
         }
         window.location.href = 'index.html';
     }
 
-    function gameLoop() {
-        if (gameActive && !isPaused) {
-            spawnItem();
-        }
-        setTimeout(gameLoop, spawnRate);
+let itemsPerWave = 1; 
+
+function spawnItem() {
+    if (!gameActive) return;
+
+    // Определение количества предметов в этой волне
+    let count = (starsEarned >= 10 && Math.random() < 0.3) ? 2 : 1;
+
+    // Увеличение скорости после 20 подарков
+    if (starsEarned >= 20) {
+        baseSpeed = 8.5;
     }
 
+    // Создаем предметы
+    for (let i = 0; i < count; i++) {
+        createFallingItem();
+    }
+
+    // Регулируем частоту следующей волны
+    let dynamicSpawnRate = Math.max(400, spawnRate - (starsEarned * 15));
+    
+    // setTimeout теперь вызывается один раз на всю "волну"
+    setTimeout(spawnItem, dynamicSpawnRate);
+}
+
+function createFallingItem() {
+    if (!gameActive) return;
+
+    const item = document.createElement('div');
+    item.className = 'falling-item';
+    let isCaught = false;
+    
+    let type = Math.random() < bombChance ? 'bomb' : 'gift';
+    let imgName = type === 'bomb' ? 'bomb.png' : ASSETS[Math.floor(Math.random() * ASSETS.length)];
+
+    item.innerHTML = `<img src="${getAssetUrl(imgName)}" onerror="this.src='star.png'">`;
+    item.style.left = Math.random() * (window.innerWidth - 75) + 'px';
+    item.style.top = '-100px';
+    screen.appendChild(item);
+
+    item.onmousedown = item.ontouchstart = (e) => {
+        e.preventDefault();
+        if (isCaught || !gameActive) return;
+        isCaught = true;
+        item.remove();
+        
+        if (type === 'bomb') {
+            starsEarned = 0; 
+            endGame('bomb');
+        } else {
+            starsEarned++;
+            starLabel.innerText = starsEarned;
+            tg.HapticFeedback.impactOccurred('light');
+        }
+    };
+
+    let pos = -100;
+    function fall() {
+        if (!gameActive || isCaught) return;
+        pos += baseSpeed;
+        item.style.top = pos + 'px';
+
+        if (pos > window.innerHeight - 60) {
+            if (type === 'gift') {
+                starsEarned = 0; 
+                endGame('miss');
+            }
+            item.remove();
+            return;
+        }
+        requestAnimationFrame(fall);
+    }
+    requestAnimationFrame(fall);
+}
+
+function endGame(reason) {
+    if (!gameActive) return;
+    gameActive = false;
+    
+    const modal = document.getElementById('fail-modal');
+    const title = document.getElementById('fail-title');
+    const msg = document.getElementById('fail-msg');
+    const resText = document.getElementById('final-res');
+    const icon = document.getElementById('fail-icon');
+    
+    // Настраиваем модалку в зависимости от причины
+    if (reason === 'bomb') {
+        icon.src = "bomb.png";
+        title.innerText = "БАБАХ!";
+        msg.innerText = "Вы подорвались на мине!";
+        resText.innerText = "ВЫ НИЧЕГО НЕ ЗАРАБОТАЛИ";
+    } else if (reason === 'miss') {
+        icon.src = "star.png"; // Можно сменить на иконку подарка
+        title.innerText = "УВЫ...";
+        msg.innerText = "Вы пропустили подарок!";
+        resText.innerText = "ВЫ НИЧЕГО НЕ ЗАРАБОТАЛИ";
+    } else {
+        // Случай, когда нажали "ЗАВЕРШИТЬ"
+        icon.src = "star.png"; 
+        title.innerText = "ИГРА ЗАВЕРШЕНА";
+        msg.innerText = "Хороший результат!";
+        resText.innerText = `ВЫ ЗАРАБОТАЛИ: ${starsEarned} ⭐`;
+    }
+    
+    modal.style.display = 'flex';
+}
+
     initStars();
-    gameLoop();
+    spawnItem();
 </script>
 </body>
 </html>
