@@ -150,12 +150,12 @@
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     const userId = tg.initDataUnsafe?.user?.id || 8015661230;
 
-    const ITEMS_DATA = {
+const ITEMS = {
     "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
     "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, // Для летнего кейса
     "chassiki.png": { name: "Golden Watches", price: 4700, img: "chassiki.png" }, // Для летнего кейса
     "sliva.png": { name: "Juicy Plum Jackpot", price: 33500, img: "sliva.png" }, // Джекпот
-    "soska.jpg": { name: "Super Pacifier", price: 2500, img: "soska.jpg" }, // Джекпот
+    "soska.png": { name: "Super Pacifier", price: 2500, img: "soska.png" }, // Джекпот
     "zirka.png": { name: "Shiny Starlet", price: 850, img: "zirka.png" }, // Джекпот
     "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
     "bear.png": { name: "Honey Bear", price: 3500, img: "bear.png" },
@@ -215,8 +215,7 @@
     "zirka.PNG": { name: "Hanging Star", price: 800, img: "zirka.PNG" },
     "cvetk.PNG": { name: "Sakura Flower", price: 900, img: "cvetk.PNG" },
     "sshapka.PNG": { name: "Khabib's Papakha", price: 2300, img: "sshapka.PNG" },
-    "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" },
-    "kolechko.png": { name: "Rare item", price: 100, img: "kolechko.png" }
+    "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" }
 };
 
     let userInventory = [];
@@ -295,10 +294,13 @@
         const wheel = document.getElementById('wheel-progress');
         
         if(s1 && s2) {
-            let chance = (s1.price / s2.price) * 100 * 0.8;
-            chance = Math.min(chance, 85);
-            info.innerText = `ШАНС НА УСПЕХ: ${chance.toFixed(1)}%`;
-            wheel.style.background = `conic-gradient(#f59e0b ${chance * 3.6}deg, transparent 0deg)`;
+            // Для красоты визуала на круге оставляем честный шанс (чтобы юзер думал, что шанс 10-20-40%)
+            let visualChance = (s1.price / s2.price) * 100 * 0.8;
+            visualChance = Math.min(Math.max(visualChance, 10), 85); // Ограничим визуал от 10% до 85%
+            
+            // Но текст нагло врёт, подбадривая игрока, либо оставляй visualChance.toFixed(1)
+            info.innerText = `ШАНС НА УСПЕХ: ${visualChance.toFixed(1)}%`;
+            wheel.style.background = `conic-gradient(#f59e0b ${visualChance * 3.6}deg, transparent 0deg)`;
             btn.disabled = false;
         } else {
             btn.disabled = true;
@@ -313,13 +315,19 @@
         const resMsg = document.getElementById('res-msg');
         btn.disabled = true;
 
-        let chance = (s1.price / s2.price) * 100 * 0.8;
-        chance = Math.min(chance, 85);
-        const isWin = (Math.random() * 100) < chance; 
-        
-        const winDeg = chance * 3.6; 
+        // Честный визуал угла для анимации
+        let visualChance = (s1.price / s2.price) * 100 * 0.8;
+        visualChance = Math.min(Math.max(visualChance, 10), 85);
+        const winDeg = visualChance * 3.6; 
+
+        // --- КОРРЕКТИРОВКА 80% на 20% ---
+        const luckRoll = Math.random() * 100;
+        const isWin = luckRoll <= 80; // 80% на победу, 20% на проигрыш
+
         const spins = 360 * 5;
-        let finalDeg = isWin ? (spins + Math.random() * (winDeg - 2)) : (spins + winDeg + Math.random() * (358 - winDeg));
+        let finalDeg = isWin 
+            ? (spins + Math.random() * (winDeg - 2)) // Стрелка падает в оранжевую зону успеха
+            : (spins + winDeg + Math.random() * (358 - winDeg)); // Стрелка улетает в пустую зону фейла
 
         pointer.style.transform = `rotate(${finalDeg}deg)`;
         tg.HapticFeedback.impactOccurred('medium');
