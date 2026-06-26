@@ -383,7 +383,7 @@ const heroes = [
     };
 
     function updateUI() {
-        document.getElementById('balance-num').innerText = Math.floor(state.points).toLocaleString();
+        document.getElementById('balance-num').innerText = formatNumber(state.points);
         document.getElementById('energy-val').innerText = Math.floor(state.energy);
         document.getElementById('max-energy-val').innerText = state.maxEnergy;
         const perc = (state.energy / state.maxEnergy) * 100;
@@ -465,7 +465,7 @@ const heroes = [
                     <div class="lb-row ${isMe ? 'me' : ''}">
                         <div class="lb-rank">${index + 1}</div>
                         <div class="lb-name">${user.username || 'Anonymous'}</div>
-                        <div class="lb-points">${Math.floor(user.points).toLocaleString()}</div>
+                        <div class="lb-points">${formatNumber(user.points)}</div>
                     </div>
                 `;
             });
@@ -473,6 +473,14 @@ const heroes = [
             list.innerHTML = '<div style="text-align:center; padding:30px; color:red;">Ошибка загрузки топа</div>'; 
         }
     }
+    
+function formatNumber(num) {
+    if (num >= 1e12) return (num / 1e12).toFixed(1).replace(/\.0$/, '') + 'T';
+    if (num >= 1e9) return (num / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+    if (num >= 1e6) return (num / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+    if (num >= 1e3) return (num / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+    return Math.floor(num).toString();
+}
 
 function startLoops() {
     // Обновление энергии (каждую секунду)
@@ -519,10 +527,11 @@ function startLoops() {
         }
     }
 
-    function showPop(x, y, val) {
+function showPop(x, y, val) {
         const p = document.createElement('div');
         p.className = 'click-pop';
-        p.innerHTML = `+${Math.floor(val).toLocaleString()}`;
+        // Используем функцию форматирования для красивого вывода при клике
+        p.innerHTML = `+${formatNumber(val)}`;
         p.style.left = x + 'px'; p.style.top = y + 'px';
         document.body.appendChild(p);
         setTimeout(() => p.remove(), 800);
@@ -566,6 +575,7 @@ function startLoops() {
                 }
             }
 
+// ... (оставляем логику как есть до самого конца функции
             const isLocked = index > 0 && index < 20 && (state.marketLevels[marketData[index - 1].id] || 0) === 0;
             
             container.innerHTML += `
@@ -576,7 +586,7 @@ function startLoops() {
                     <button class="btn-action btn-buy" 
                         ${(isLocked || isDisabled) ? 'disabled' : ''} 
                         onclick="buyMarketItem(${item.id})">
-                        ${isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : price.toLocaleString())}
+                        ${isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : formatNumber(price))}
                     </button>
                 </div>`;
         });
@@ -621,7 +631,7 @@ function startLoops() {
         }
     }
 
-    function renderSkins() {
+function renderSkins() {
         const container = document.getElementById('skin-list');
         container.innerHTML = '';
         heroes.forEach(h => {
@@ -634,7 +644,7 @@ function startLoops() {
                     <button class="btn-action ${isOwned ? 'btn-owned' : 'btn-buy'}" 
                             ${(!isOwned && state.points < h.price) ? 'disabled' : ''} 
                             onclick="handleHero(${h.id})">
-                        ${isOwned ? (isActive ? 'АКТИВЕН' : 'ВЫБРАТЬ') : h.price.toLocaleString()}
+                        ${isOwned ? (isActive ? 'АКТИВЕН' : 'ВЫБРАТЬ') : formatNumber(h.price)}
                     </button>
                 </div>`;
         });
