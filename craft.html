@@ -199,7 +199,7 @@
 </div>
 
 <script>
-    const tg = window.Telegram.WebApp;
+const tg = window.Telegram.WebApp;
     const BACKEND_URL = 'https://stars-droper-main.vercel.app/api'; 
     const IMAGE_FOLDER = 'img/'; 
     tg.expand();
@@ -207,8 +207,9 @@
     const TOTAL_SLOTS = 5; 
     let selectedGifts = []; 
     let activeSlotIndex = null;
-    let userInventory = [];
+    let userInventory = []; // Сюда загрузим реальные вещи юзера из БД
 
+    // Твоя база данных подарков
     const giftDatabase = {
     "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
     "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
@@ -280,12 +281,20 @@
 
     const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
 
+    // 1. Загрузка инвентаря пользователя при старте страницы
+// Изменяем старый урл на правильный файл craft_gift
     async function loadUserInventory() {
         try {
             const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
+// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
             const data = await response.json();
-            userInventory = Array.isArray(data.inventory) ? data.inventory : [];
+            if (data.success && Array.isArray(data.inventory)) {
+                userInventory = data.inventory;
+            } else {
+                userInventory = [];
+            }
         } catch (e) {
+            console.error("Ошибка загрузки инвентаря:", e);
             userInventory = [];
         }
     }
@@ -293,6 +302,7 @@
     function initCraftSlots() {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
+        container.style.opacity = '1';
         const radius = 110; 
 
         for (let i = 0; i < TOTAL_SLOTS; i++) {
@@ -304,57 +314,69 @@
             slot.className = 'craft-slot';
             slot.style.left = `${x}px`;
             slot.style.top = `${y}px`;
+            slot.id = `slot-${i}`;
             
             if (selectedGifts[i]) {
                 const item = giftDatabase[selectedGifts[i]];
                 slot.classList.add('filled');
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}">`;
-                slot.onclick = () => removeGiftFromSlot(i);
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
             } else {
-                slot.innerHTML = '<span style="color: #facc15; font-weight:900;">＋</span>';
-                // Прямой вызов функции
-                slot.onclick = () => openInventoryForSlot(i);
+                slot.classList.remove('filled');
+                slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
+                slot.onclick = () => openInventoryForSlot(i); 
             }
             container.appendChild(slot);
         }
         checkButtonState();
     }
 
+    // Показываем ТОЛЬКО то, что есть в инвентаре игрока
     function openInventoryForSlot(slotIndex) {
         activeSlotIndex = slotIndex;
         const drawer = document.getElementById('inventory-drawer');
         const listContainer = document.getElementById('inventory-list');
         listContainer.innerHTML = '';
 
-        const inventoryMap = {};
-        userInventory.forEach(key => {
-            const cleanKey = key.trim();
-            inventoryMap[cleanKey] = (inventoryMap[cleanKey] || 0) + 1;
+        // Считаем, какие предметы уже задействованы в слотах, чтобы вычесть их из списка доступных
+        let tempSelected = [...selectedGifts].filter(Boolean);
+        let availableInventory = [...userInventory];
+
+        tempSelected.forEach(giftKey => {
+            const idx = availableInventory.indexOf(giftKey);
+            if (idx !== -1) availableInventory.splice(idx, 1);
         });
 
-        Object.keys(inventoryMap).forEach(key => {
+        if (availableInventory.length === 0) {
+            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
+            drawer.classList.add('active');
+            return;
+        }
+
+        // Рендерим только уникальные доступные предметы
+        const uniqueItems = [...new Set(availableInventory)];
+
+        uniqueItems.forEach(key => {
             const item = giftDatabase[key];
             if (!item) return;
 
-            const usedCount = selectedGifts.filter(s => s === key).length;
-            const available = inventoryMap[key] - usedCount;
+            // Считаем сколько штук осталось
+            const count = availableInventory.filter(k => k === key).length;
 
-            if (available > 0) {
-                const itemNode = document.createElement('div');
-                itemNode.className = 'inv-item';
-                itemNode.innerHTML = `
-                    <img src="${IMAGE_FOLDER}${item.img}" class="inv-img">
-                    <div class="inv-name">${item.name}</div>
-                    <div class="inv-price">${available} шт.</div>
-                `;
-                itemNode.onclick = () => {
-                    selectedGifts[activeSlotIndex] = key;
-                    drawer.classList.remove('active');
-                    initCraftSlots();
-                };
-                listContainer.appendChild(itemNode);
-            }
+            const itemNode = document.createElement('div');
+            itemNode.className = 'inv-item';
+            itemNode.innerHTML = `
+                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+                <div class="inv-name">${item.name} (${count} шт.)</div>
+                <div class="inv-price" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+    <img src="${IMAGE_FOLDER}star.png" style="width: 12px; height: 12px; object-fit: contain;">
+    ${item.price}
+</div>
+            `;
+            itemNode.onclick = () => selectGiftForActiveSlot(key);
+            listContainer.appendChild(itemNode);
         });
+
         drawer.classList.add('active');
     }
 
@@ -468,12 +490,11 @@
         initCraftSlots();
     }
     
-// Обязательно убедись, что вызываешь только один раз при загрузке:
-    document.addEventListener("DOMContentLoaded", async () => {
-        await loadUserInventory();
-        initCraftSlots();
-        console.log("Приложение успешно инициализировано");
+    // Ждем, пока браузер построит DOM-дерево
+    document.addEventListener("DOMContentLoaded", () => {
+        startApp();
     });
+</script>
 </script>
 </body>
 </html>
