@@ -191,7 +191,7 @@
 
     <div class="drawer-inventory" id="inventory-drawer">
         <div class="drawer-header">
-            <h3>ВЫБЕРИ ПОДАРОК</h3>
+            <div id="drawer-title-text" style="font-weight: 900; font-size: 16px; color: var(--neon);">ВЫБЕРИ ПОДАРОК</div>
             <div class="close-btn" onclick="closeInventory()">ЗАКРЫТЬ</div>
         </div>
         <div class="inv-scroll" id="inventory-list"></div>
@@ -205,11 +205,10 @@
     tg.expand();
 
     const TOTAL_SLOTS = 5; 
-    let selectedGifts = []; 
+    let selectedGifts = new Array(TOTAL_SLOTS).fill(null); 
     let activeSlotIndex = null;
     let userInventory = [];
 
-    // Твоя база данных подарков
     const giftDatabase = {
         "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
         "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, 
@@ -278,7 +277,7 @@
         "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" }
     };
 
-const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
+    const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
 
     async function loadUserInventory() {
         try {
@@ -309,7 +308,7 @@ const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
             
             if (selectedGifts[i]) {
                 const item = giftDatabase[selectedGifts[i]];
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img.toLowerCase()}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
                 slot.onclick = () => removeGiftFromSlot(i);
             } else {
                 slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
@@ -318,6 +317,74 @@ const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
             container.appendChild(slot);
         }
         checkButtonState();
+    }
+
+    function openInventoryForSlot(index) {
+        activeSlotIndex = index;
+        const drawer = document.getElementById('inventory-drawer');
+        const listContainer = document.getElementById('inventory-list');
+        listContainer.innerHTML = '';
+
+        // Считаем, какие предметы уже добавлены в другие слоты, чтобы вычесть их количества
+        const usedCounts = {};
+        selectedGifts.forEach(g => {
+            if (g) usedCounts[g] = (usedCounts[g] || 0) + 1;
+        });
+
+        // Считаем общее количество каждого предмета у пользователя
+        const availableCounts = {};
+        userInventory.forEach(g => {
+            availableCounts[g] = (availableCounts[g] || 0) + 1;
+        });
+
+        let hasItems = false;
+        Object.keys(availableCounts).forEach(key => {
+            const left = availableCounts[key] - (usedCounts[key] || 0);
+            if (left > 0 && giftDatabase[key]) {
+                hasItems = true;
+                const item = giftDatabase[key];
+                
+                const div = document.createElement('div');
+                div.className = 'inv-item';
+                div.innerHTML = `
+                    <img class="inv-img" src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+                    <div class="inv-name">${item.name}</div>
+                    <div class="inv-price">${item.price} ⭐️ (x${left})</div>
+                `;
+                div.onclick = () => selectGiftForActiveSlot(key);
+                listContainer.appendChild(div);
+            }
+        });
+
+        if (!hasItems) {
+            listContainer.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:20px; opacity:0.5; font-size:12px;">Нет доступных предметов</div>';
+        }
+
+        drawer.classList.add('active');
+    }
+
+    function closeInventory() {
+        document.getElementById('inventory-drawer').classList.remove('active');
+        activeSlotIndex = null;
+    }
+
+    function selectGiftForActiveSlot(key) {
+        if (activeSlotIndex !== null) {
+            selectedGifts[activeSlotIndex] = key;
+            closeInventory();
+            initCraftSlots();
+        }
+    }
+
+    function removeGiftFromSlot(index) {
+        selectedGifts[index] = null;
+        initCraftSlots();
+    }
+
+    function checkButtonState() {
+        const craftBtn = document.getElementById('start-craft-btn');
+        const filledCount = selectedGifts.filter(Boolean).length;
+        craftBtn.disabled = (filledCount < TOTAL_SLOTS);
     }
 
     async function runCraft() {
@@ -346,10 +413,9 @@ const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
                     const winKey = result.new_gift_key;
                     const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
                     
-                    mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img.toLowerCase()}" style="filter: drop-shadow(0 0 15px var(--neon));">`;
+                    mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));">`;
                     tg.showAlert(`🎉 Успех! Вы получили: ${createdItem.name}`);
                     
-                    // Обновляем инвентарь и перерисовываем слоты
                     await loadUserInventory();
                     resetCraftMachine(); 
                 } else {
@@ -370,7 +436,7 @@ const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
         container.style.opacity = '1';
         mainBall.classList.remove('main-ball-absorb');
         mainBall.innerHTML = `<span id="craft-status-text">КРАФТ</span>`;
-        selectedGifts = [];
+        selectedGifts = new Array(TOTAL_SLOTS).fill(null);
         activeSlotIndex = null;
         initCraftSlots();
     }
@@ -379,15 +445,7 @@ const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
         window.location.href = "index.html";
     }
 
-    // Инициализация при загрузке страницы
-// Инициализация при загрузке страницы после того, как весь HTML готов
-    async function startApp() {
-        await loadUserInventory();
-        initCraftSlots();
-    }
-    
-    // Ждем, пока браузер построит DOM-дерево
-document.addEventListener("DOMContentLoaded", async () => {
+    document.addEventListener("DOMContentLoaded", async () => {
         await loadUserInventory();
         initCraftSlots();
     });
