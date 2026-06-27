@@ -200,7 +200,7 @@
 
 <script>
 const tg = window.Telegram.WebApp;
-    const BACKEND_URL = 'https://sycchak.vercel.app/api'; 
+    const BACKEND_URL = 'https://stars-droper-main.vercel.app/api'; 
     const IMAGE_FOLDER = 'img/'; 
     tg.expand();
 
@@ -331,17 +331,24 @@ const tg = window.Telegram.WebApp;
     }
 
     // Показываем ТОЛЬКО то, что есть в инвентаре игрока
-function openInventoryForSlot(slotIndex) {
-    activeSlotIndex = slotIndex;
-    const drawer = document.getElementById('inventory-drawer');
-    const listContainer = document.getElementById('inventory-list');
-    listContainer.innerHTML = '';
+    function openInventoryForSlot(slotIndex) {
+        activeSlotIndex = slotIndex;
+        const drawer = document.getElementById('inventory-drawer');
+        const listContainer = document.getElementById('inventory-list');
+        listContainer.innerHTML = '';
 
-    // Отображаем всё, что есть в userInventory
-    userInventory.forEach(key => {
-        const item = giftDatabase[key];
-        if (!item) {
-            console.warn("Предмет не найден в базе:", key);
+        // Считаем, какие предметы уже задействованы в слотах, чтобы вычесть их из списка доступных
+        let tempSelected = [...selectedGifts].filter(Boolean);
+        let availableInventory = [...userInventory];
+
+        tempSelected.forEach(giftKey => {
+            const idx = availableInventory.indexOf(giftKey);
+            if (idx !== -1) availableInventory.splice(idx, 1);
+        });
+
+        if (availableInventory.length === 0) {
+            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
+            drawer.classList.add('active');
             return;
         }
 
