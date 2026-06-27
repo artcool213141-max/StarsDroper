@@ -165,14 +165,6 @@ def craft_gift():
 
     except Exception as e:
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
-
-# Настройка CORS глобально для всех ответов Flask
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
-    response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
-    return response
     
 # --- 1. STARS PAYMENT ---
 @app.route('/api/create_stars_pay', methods=['POST'])
