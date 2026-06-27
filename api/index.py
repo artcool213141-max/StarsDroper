@@ -11,6 +11,7 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN") # Добавили токен крипты!
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
+# База данных подарков для крафта
 giftDatabase = {
     "1may.jpg": {"price": 100}, "1may.png": {"price": 100}, "chassiki.png": {"price": 4700}, 
     "sliva.png": {"price": 33500}, "soska.png": {"price": 2500}, "zirka.png": {"price": 850}, 
@@ -158,7 +159,6 @@ def craft_gift():
 
     except Exception as e:
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
-
 
 # --- 1. STARS PAYMENT ---
 @app.route('/api/create_stars_pay', methods=['POST'])
