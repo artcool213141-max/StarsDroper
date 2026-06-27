@@ -358,22 +358,23 @@ async function loadUserInventory() {
         const uniqueItems = [...new Set(availableInventory)];
 
         uniqueItems.forEach(key => {
-            const item = giftDatabase[key];
-            if (!item) return;
+// Внутри цикла перебора уникальных предметов:
+const item = giftDatabase[key];
+if (!item) {
+    console.warn("Предмет не найден в базе:", key); // Проверка на опечатки
+    return;
+}
 
-            // Считаем сколько штук осталось
-            const count = availableInventory.filter(k => k === key).length;
+const itemNode = document.createElement('div');
+itemNode.className = 'inv-item';
+// Добавим проверку пути
+const fullImgPath = `${IMAGE_FOLDER}${item.img}`;
 
-            const itemNode = document.createElement('div');
-            itemNode.className = 'inv-item';
-            itemNode.innerHTML = `
-                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                <div class="inv-name">${item.name} (${count} шт.)</div>
-                <div class="inv-price" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-    <img src="${IMAGE_FOLDER}star.png" style="width: 12px; height: 12px; object-fit: contain;">
-    ${item.price}
-</div>
-            `;
+itemNode.innerHTML = `
+    <img src="${fullImgPath}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+    <div class="inv-name">${item.name} (${count} шт.)</div>
+    <div class="inv-price">${item.price} ⭐</div>
+`;
             itemNode.onclick = () => selectGiftForActiveSlot(key);
             listContainer.appendChild(itemNode);
         });
