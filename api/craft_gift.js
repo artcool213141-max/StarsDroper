@@ -5,7 +5,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const giftDatabase = {
-    "1may.jpg": { price: 100 }, "1may.png": { price: 100 }, "chassiki.png": { price: 4700 }, 
+    "1may.jpg": { price: 100 }, "chassiki.png": { price: 4700 }, 
     "sliva.png": { price: 33500 }, "soska.png": { price: 2500 }, "zirka.png": { price: 850 }, 
     "2025.jpg": { price: 500 }, "bear.png": { price: 3500 }, "book.jpg": { price: 1000 }, 
     "booox.png": { price: 700 }, "botinok.png": { price: 400 }, "box.png": { price: 600 }, 
