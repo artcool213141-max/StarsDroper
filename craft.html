@@ -283,21 +283,22 @@ const tg = window.Telegram.WebApp;
 
     // 1. Загрузка инвентаря пользователя при старте страницы
 // Изменяем старый урл на правильный файл craft_gift
-    async function loadUserInventory() {
-        try {
-            const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
-// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
-            const data = await response.json();
-            if (data.success && Array.isArray(data.inventory)) {
-                userInventory = data.inventory;
-            } else {
-                userInventory = [];
-            }
-        } catch (e) {
-            console.error("Ошибка загрузки инвентаря:", e);
+async function loadUserInventory() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
+        const data = await response.json();
+        console.log("Данные инвентаря:", data); // ДОБАВЬ ЭТО
+        
+        if (data.inventory && Array.isArray(data.inventory)) {
+            userInventory = data.inventory;
+        } else {
             userInventory = [];
         }
+    } catch (e) {
+        console.error("Ошибка сети:", e);
+        userInventory = [];
     }
+}
 
     function initCraftSlots() {
         const container = document.getElementById('slots-container');
