@@ -326,7 +326,8 @@ async function loadUserInventory() {
             if (selectedGifts[i]) {
                 const item = giftDatabase[selectedGifts[i]];
                 slot.classList.add('filled');
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" 
+                onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">`;
                 slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
             } else {
                 slot.classList.remove('filled');
@@ -367,11 +368,12 @@ function openInventoryForSlot(slotIndex) {
                 const div = document.createElement('div');
                 div.className = 'inv-item';
                 div.onclick = () => selectGiftForActiveSlot(key);
-                div.innerHTML = `
-                    <img src="${IMAGE_FOLDER}${item.img.toLowerCase()}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                    <div class="inv-name">${item.name}</div>
-                    <div class="inv-price">★ ${item.price}</div>
-                `;
+div.innerHTML = `
+    <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" 
+         onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">
+    <div class="inv-name">${item.name}</div>
+    <div class="inv-price">★ ${item.price}</div>
+`;
                 listContainer.appendChild(div);
             });
         }
@@ -443,7 +445,9 @@ function openInventoryForSlot(slotIndex) {
                 const winKey = result.new_gift_key || "sliva.png"; 
                 const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
 
-                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" 
+    style="filter: drop-shadow(0 0 15px var(--neon));" 
+    onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">`;
                 
                 if (tg.showAlert) {
                     tg.showAlert(`🎉 Контракт выполнен!\nВы получили: ${createdItem.name}`);
