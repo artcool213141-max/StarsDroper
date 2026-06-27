@@ -189,14 +189,6 @@
         <button class="btn-telegram" id="start-craft-btn" onclick="runCraft()">Запустить обмен</button>
     </div>
 
-    <div id="custom-modal" class="modal-hidden">
-    <div class="modal-content">
-        <h3 id="modal-title">Ошибка</h3>
-        <p id="modal-text">Этот предмет нельзя использовать.</p>
-        <button onclick="document.getElementById('custom-modal').classList.add('modal-hidden')">ОК</button>
-    </div>
-</div>
-
     <div class="drawer-inventory" id="inventory-drawer">
         <div class="drawer-header">
             <h3>ВЫБЕРИ ПОДАРОК</h3>
@@ -218,7 +210,7 @@ const tg = window.Telegram.WebApp;
     let userInventory = []; // Сюда загрузим реальные вещи юзера из БД
 
     // Твоя база данных подарков
-const giftDatabase = {
+    const giftDatabase = {
     "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
     "chassiki.png": { name: "Golden Watches", price: 4700, img: "chassiki.png" }, 
     "sliva.png": { name: "Juicy Plum Jackpot", price: 33500, img: "sliva.png" }, 
@@ -287,33 +279,25 @@ const giftDatabase = {
 
     const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
 
-async function loadUserInventory() {
-    try {
-        const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
-        const data = await response.json();
-        
-        if (data.success && Array.isArray(data.inventory)) {
-            // Приводим ВСЕ имена к нижнему регистру, чтобы избежать ошибок с .PNG
-            userInventory = data.inventory.map(item => {
-                let name = item.replace('img/', '');
-                return name.toLowerCase(); 
-            });
-        } else {
+    // 1. Загрузка инвентаря пользователя при старте страницы
+// Изменяем старый урл на правильный файл craft_gift
+    async function loadUserInventory() {
+        try {
+            const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
+// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
+            const data = await response.json();
+            if (data.success && Array.isArray(data.inventory)) {
+                userInventory = data.inventory;
+            } else {
+                userInventory = [];
+            }
+        } catch (e) {
+            console.error("Ошибка загрузки инвентаря:", e);
             userInventory = [];
         }
-    } catch (e) {
-        console.error("Ошибка загрузки инвентаря:", e);
-        userInventory = [];
     }
-}
-    
-    // Функция, которая приводит любое имя файла к нижнему регистру
-function normalizeFileName(filename) {
-    if (!filename) return "";
-    return filename.toLowerCase();
-}
 
-function initCraftSlots() {
+    function initCraftSlots() {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
         container.style.opacity = '1';
@@ -333,12 +317,8 @@ function initCraftSlots() {
             if (selectedGifts[i]) {
                 const item = giftDatabase[selectedGifts[i]];
                 slot.classList.add('filled');
-                
-                // Ключевое изменение: принудительно делаем имя файла в нижнем регистре
-                const cleanImgName = item.img.toLowerCase();
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${cleanImgName}">`;
-                
-                slot.onclick = () => removeGiftFromSlot(i);
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
             } else {
                 slot.classList.remove('filled');
                 slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
@@ -348,19 +328,17 @@ function initCraftSlots() {
         }
         checkButtonState();
     }
-    
-function openInventoryForSlot(slotIndex) {
+
+    // Показываем ТОЛЬКО то, что есть в инвентаре игрока
+    function openInventoryForSlot(slotIndex) {
         activeSlotIndex = slotIndex;
         const drawer = document.getElementById('inventory-drawer');
         const listContainer = document.getElementById('inventory-list');
         listContainer.innerHTML = '';
 
-        // Список предметов, которые ЗАПРЕЩЕНО крафтить
-        const forbiddenItems = ['star.png', 'star.jpg']; 
-
-        // Считаем доступные предметы
+        // Считаем, какие предметы уже задействованы в слотах, чтобы вычесть их из списка доступных
         let tempSelected = [...selectedGifts].filter(Boolean);
-        let availableInventory = [...userInventory].filter(item => !forbiddenItems.includes(item));
+        let availableInventory = [...userInventory];
 
         tempSelected.forEach(giftKey => {
             const idx = availableInventory.indexOf(giftKey);
@@ -368,26 +346,35 @@ function openInventoryForSlot(slotIndex) {
         });
 
         if (availableInventory.length === 0) {
-            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Нет доступных предметов</div>';
-        } else {
-            // Отрисовываем только разрешенные предметы
-            availableInventory.forEach(key => {
-                const item = giftDatabase[key];
-                if (!item) return;
-
-                const div = document.createElement('div');
-                div.className = 'inv-item';
-                div.onclick = () => selectGiftForActiveSlot(key);
-div.innerHTML = `
-    <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" 
-         onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">
-    <div class="inv-name">${item.name}</div>
-    <div class="inv-price">★ ${item.price}</div>
-`;
-                listContainer.appendChild(div);
-            });
+            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
+            drawer.classList.add('active');
+            return;
         }
-        
+
+        // Рендерим только уникальные доступные предметы
+        const uniqueItems = [...new Set(availableInventory)];
+
+        uniqueItems.forEach(key => {
+            const item = giftDatabase[key];
+            if (!item) return;
+
+            // Считаем сколько штук осталось
+            const count = availableInventory.filter(k => k === key).length;
+
+            const itemNode = document.createElement('div');
+            itemNode.className = 'inv-item';
+            itemNode.innerHTML = `
+                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+                <div class="inv-name">${item.name} (${count} шт.)</div>
+                <div class="inv-price" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+    <img src="${IMAGE_FOLDER}star.png" style="width: 12px; height: 12px; object-fit: contain;">
+    ${item.price}
+</div>
+            `;
+            itemNode.onclick = () => selectGiftForActiveSlot(key);
+            listContainer.appendChild(itemNode);
+        });
+
         drawer.classList.add('active');
     }
 
@@ -455,9 +442,7 @@ div.innerHTML = `
                 const winKey = result.new_gift_key || "sliva.png"; 
                 const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
 
-                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" 
-    style="filter: drop-shadow(0 0 15px var(--neon));" 
-    onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">`;
+                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
                 
                 if (tg.showAlert) {
                     tg.showAlert(`🎉 Контракт выполнен!\nВы получили: ${createdItem.name}`);
@@ -507,6 +492,7 @@ div.innerHTML = `
     document.addEventListener("DOMContentLoaded", () => {
         startApp();
     });
+</script>
 </script>
 </body>
 </html>
