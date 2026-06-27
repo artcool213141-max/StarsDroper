@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>StarDrop Nova - Контракты</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --neon: #facc15; 
+            --bg-start: #050505;
+            --bg-end: #1a1605;
+            --border: rgba(250, 204, 21, 0.2);
+            --trans: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            --glow-shadow: 0 0 25px var(--neon), inset 0 0 15px rgba(250,204,21,0.3);
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg-start);
+            color: white; overflow: hidden;
+            user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+
+        #main-bg {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, var(--bg-end) 0%, var(--bg-start) 100%);
+        }
+
+        .app-shell {
+            display: flex; flex-direction: column;
+            height: 100vh; max-width: 430px; margin: 0 auto;
+            position: relative;
+        }
+
+        .top-nav { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 200; position: relative; }
+        .btn-back {
+            display: flex; align-items: center; gap: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            padding: 10px 16px; border-radius: 15px;
+            color: white; text-decoration: none;
+            font-size: 11px; font-weight: 800; transition: var(--trans);
+            backdrop-filter: blur(10px); cursor: pointer;
+        }
+
+        .craft-zone {
+            flex: 1; display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            position: relative; padding-bottom: 60px;
+        }
+
+        .craft-title {
+            font-size: 22px; font-weight: 900; color: var(--neon);
+            letter-spacing: 1px; margin-bottom: 40px; text-shadow: 0 0 10px rgba(250,204,21,0.3);
+        }
+
+        .craft-circle-wrapper {
+            position: relative; width: 280px; height: 280px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .main-craft-ball {
+            width: 120px; height: 120px; border-radius: 50%;
+            background: radial-gradient(circle, #ffffff 0%, #1a1605 40%, #000000 100%);
+            border: 2px solid var(--neon);
+            box-shadow: var(--glow-shadow);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            z-index: 10; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+
+        .main-craft-ball img {
+            width: 80%; height: 80%; object-fit: contain;
+        }
+
+        #craft-status-text {
+            font-weight: 900; font-size: 13px; color: #fff; letter-spacing: 1px;
+            text-shadow: 0 0 5px var(--neon);
+        }
+
+        .slots-container {
+            position: absolute; width: 100%; height: 100%;
+            top: 0; left: 0; transition: opacity 0.3s;
+        }
+
+        .craft-slot {
+            position: absolute; width: 55px; height: 55px;
+            background: rgba(250, 204, 21, 0.02);
+            border: 2px dashed rgba(250, 204, 21, 0.3);
+            border-radius: 50%; transform: translate(-50%, -50%);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: var(--trans);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        .craft-slot img {
+            width: 85%; height: 85%; object-fit: cover; border-radius: 50%;
+        }
+
+        .craft-slot.filled {
+            border-style: solid; border-color: var(--neon);
+            background: rgba(250, 204, 21, 0.12);
+            box-shadow: 0 0 15px rgba(250, 204, 21, 0.4);
+        }
+
+        .btn-telegram {
+            background: var(--neon); color: black; padding: 18px; border-radius: 18px;
+            width: 85%; max-width: 320px; font-weight: 900; border: none; cursor: pointer;
+            text-transform: uppercase; letter-spacing: 1px; font-size: 14px;
+            box-shadow: 0 8px 25px rgba(250, 204, 21, 0.25);
+            transition: var(--trans); margin-top: 40px;
+        }
+        .btn-telegram:disabled {
+            background: #222; color: #555; box-shadow: none; cursor: not-allowed; border: 1px solid #333;
+        }
+
+        /* Выезжающая панель инвентаря */
+        .drawer-inventory {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 55%;
+            background: rgba(10, 10, 5, 0.98); backdrop-filter: blur(40px);
+            border-radius: 30px 30px 0 0; z-index: 300;
+            transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+            padding: 25px; box-sizing: border-box;
+            border-top: 2px solid var(--neon);
+            transform: translateY(120%);
+            display: flex; flex-direction: column;
+        }
+        .drawer-inventory.active { transform: translateY(0); }
+        .drawer-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .drawer-header h3 { margin: 0; font-weight: 900; font-size: 18px; color: var(--neon); }
+        .close-btn { cursor: pointer; color: var(--neon); font-weight: 900; padding: 5px 15px; border-radius: 10px; background: rgba(250, 204, 21, 0.1); font-size: 12px;}
+
+        .inv-scroll {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+            flex: 1; overflow-y: auto; padding-bottom: 20px;
+        }
+        .inv-item {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(250,204,21,0.1);
+            border-radius: 15px; padding: 10px; text-align: center; cursor: pointer; transition: var(--trans);
+        }
+        .inv-item:hover { border-color: var(--neon); background: rgba(250,204,21,0.05); }
+        .inv-img { width: 50px; height: 50px; object-fit: contain; margin-bottom: 5px; }
+        .inv-name { font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.9; }
+        .inv-price { font-size: 9px; color: var(--neon); font-weight: 800; margin-top: 2px; }
+
+        /* Классы анимаций */
+        .super-spin { animation: spin-furious 2.6s cubic-bezier(0.4, 0, 0.6, 1) forwards; }
+        .main-ball-absorb { animation: ball-pulse-absorb 2.6s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+        @keyframes spin-furious {
+            0% { transform: rotate(0deg) scale(1); opacity: 1; }
+            100% { transform: rotate(4320deg) scale(0); opacity: 0; filter: blur(4px); }
+        }
+        @keyframes ball-pulse-absorb {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.35); box-shadow: 0 0 60px var(--neon); }
+            85% { transform: scale(0); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; filter: brightness(1); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="main-bg"></div>
+
+<div class="app-shell">
+    <div class="top-nav">
+        <div onclick="goBackToMain()" class="btn-back">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            НАЗАД
+        </div>
+    </div>
+
+    <div class="craft-zone">
+        <div class="craft-title">КОНТРАКТ ОБМЕНА</div>
+
+        <div class="craft-circle-wrapper">
+            <div class="main-craft-ball" id="main-ball">
+                <span id="craft-status-text">КРАФТ</span>
+            </div>
+            <div class="slots-container" id="slots-container"></div>
+        </div>
+
+        <button class="btn-telegram" id="start-craft-btn" onclick="runCraft()">Запустить обмен</button>
+    </div>
+
+    <div class="drawer-inventory" id="inventory-drawer">
+        <div class="drawer-header">
+            <h3>ВЫБЕРИ ПОДАРОК</h3>
+            <div class="close-btn" onclick="closeInventory()">ЗАКРЫТЬ</div>
+        </div>
+        <div class="inv-scroll" id="inventory-list"></div>
+    </div>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+    const BACKEND_URL = 'https://sycchak.vercel.app/api'; 
+    const IMAGE_FOLDER = 'img/'; 
+    tg.expand();
+
+    const TOTAL_SLOTS = 5; 
+    let selectedGifts = []; 
+    let activeSlotIndex = null;
+    let userInventory = []; // Сюда загрузим реальные вещи юзера из БД
+
+    // Твоя база данных подарков
+    const giftDatabase = {
+        "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
+        "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, 
+        "chassiki.png": { name: "Golden Watches", price: 4700, img: "chassiki.png" }, 
+        "sliva.png": { name: "Juicy Plum Jackpot", price: 33500, img: "sliva.png" }, 
+        "soska.png": { name: "Super Pacifier", price: 2500, img: "soska.png" }, 
+        "zirka.png": { name: "Shiny Starlet", price: 850, img: "zirka.png" }, 
+        "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
+        "bear.png": { name: "Honey Bear", price: 3500, img: "bear.png" },
+        "book.jpg": { name: "Ancient Book", price: 1000, img: "book.jpg" },
+        "booox.png": { name: "Berry Box", price: 700, img: "booox.png" },
+        "botinok.png": { name: "Old Boot", price: 400, img: "botinok.png" },
+        "box.png": { name: "Jack in Box", price: 600, img: "box.png" },
+        "car.png": { name: "Sports Car", price: 5000, img: "car.png" },
+        "raketa.png": { name: "Space Rocket", price: 50, img: "raketa.png" },
+        "ccolso2.png": { name: "Star Ring", price: 3000, img: "ccolso2.png" },
+        "cerrrdce.jpg": { name: "Gingerbread", price: 500, img: "cerrrdce.jpg" },
+        "chemodan.jpg": { name: "Traveler Case", price: 5000, img: "chemodan.jpg" },
+        "ciga.png": { name: "Luxury Cigar", price: 3000, img: "ciga.png" },
+        "colso.png": { name: "Blue Diamond", price: 2500, img: "colso.png" },
+        "costum.jpg": { name: "Royal Costume", price: 10000, img: "costum.jpg" },
+        "cvetok.png": { name: "Wild Flower", price: 1000, img: "cvetok.png" },
+        "dog.png": { name: "Rich Dog", price: 500, img: "dog.png" },
+        "dyxi.png": { name: "Gold Perfume", price: 10000, img: "dyxi.png" },
+        "fonarik.jpg": { name: "Night Lantern", price: 100, img: "fonarik.jpg" },
+        "grob.jpg": { name: "Ancient Coffin", price: 5000, img: "grob.jpg" },
+        "gyba.png": { name: "Lava Lips", price: 5000, img: "gyba.png" },
+        "happybirthday.jpg": { name: "Birthday Cake", price: 200, img: "happybirthday.jpg" },
+        "heart.png": { name: "Heart Lock", price: 2000, img: "heart.png" },
+        "helmet.png": { name: "Spartan Helmet", price: 25000, img: "helmet.png" },
+        "kalendar.png": { name: "Event Calendar", price: 400, img: "kalendar.png" },
+        "kepka.png": { name: "Legendary Cap", price: 100000, img: "kepka.png" },
+        "kirpitch.jpg": { name: "Golden Brick", price: 10000, img: "kirpitch.jpg" },
+        "koks.jpg": { name: "Party Cocktail", price: 150, img: "koks.jpg" },
+        "koktel.png": { name: "Toxic Mix", price: 500, img: "koktel.png" },
+        "kot.png": { name: "Atomic Cat", price: 10000, img: "kot.png" },
+        "kotel.png": { name: "Witch Cauldron", price: 500, img: "kotel.png" },
+        "krovatka.jpg": { name: "Baby Bow", price: 600, img: "krovatka.jpg" },
+        "lolipop.png": { name: "Sweet Lollipop", price: 500, img: "lolipop.png" },
+        "lucky.jpg": { name: "Clover Lucky", price: 500, img: "lucky.jpg" },
+        "mafin.jpg": { name: "Sugar Muffin", price: 700, img: "mafin.jpg" },
+        "metch.png": { name: "Star Saber", price: 700, img: "metch.png" },
+        "narkotiki.png": { name: "Star Token", price: 700, img: "narkotiki.png" },
+        "obyv.jpg": { name: "Sneakers Pro", price: 10000, img: "obyv.jpg" },
+        "orel.jpg": { name: "Golden Eagle", price: 5000, img: "orel.jpg" },
+        "otkritka.jpg": { name: "Peace Dove", price: 150, img: "otkritka.jpg" },
+        "paska.jpg": { name: "Easter Cake", price: 75, img: "paska.jpg" },
+        "rozza.png": { name: "Velvet Rose", price: 2000, img: "rozza.png" },
+        "rykzak.jpg": { name: "Adventurer Bag", price: 500, img: "rykzak.jpg" },
+        "shapka.png": { name: "Santa Hat", price: 500, img: "shapka.png" },
+        "shar.jpg": { name: "Magic Ball", price: 1000, img: "shar.jpg" },
+        "shlem.png": { name: "Biker Helmet", price: 3500, img: "shlem.png" },
+        "soska.jpg": { name: "Diamond Pacifier", price: 3000, img: "soska.jpg" },
+        "star.png": { name: "Pure Star", price: 5, img: "star.png" },
+        "statyya.jpg": { name: "Hero Statue", price: 41000, img: "statyya.jpg" },
+        "venok.png": { name: "Wreath Flower", price: 500, img: "venok.png" },
+        "yayko.png": { name: "Dragon Egg", price: 600, img: "yayko.png" },
+        "zhele.png": { name: "Slime Jelly", price: 700, img: "zhele.png" },
+        "zmei.png": { name: "Snake Friend", price: 500, img: "zmei.png" },
+        "meczcc.png": { name: "Faith Amulet", price: 600, img: "meczcc.png" },
+        "kryg.PNG": { name: "Snow Globe", price: 600, img: "kryg.PNG" },
+        "gribb.PNG": { name: "Spy Agaric", price: 600, img: "gribb.PNG" },
+        "zirka.PNG": { name: "Hanging Star", price: 800, img: "zirka.PNG" },
+        "cvetk.PNG": { name: "Sakura Flower", price: 900, img: "cvetk.PNG" },
+        "sshapka.PNG": { name: "Khabib's Papakha", price: 2300, img: "sshapka.PNG" },
+        "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" }
+    };
+
+    const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
+
+    // 1. Загрузка инвентаря пользователя при старте страницы
+// Изменяем старый урл на правильный файл craft_gift
+    async function loadUserInventory() {
+        try {
+            const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
+// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
+            const data = await response.json();
+            if (data.success && Array.isArray(data.inventory)) {
+                userInventory = data.inventory;
+            } else {
+                userInventory = [];
+            }
+        } catch (e) {
+            console.error("Ошибка загрузки инвентаря:", e);
+            userInventory = [];
+        }
+    }
+
+    function initCraftSlots() {
+        const container = document.getElementById('slots-container');
+        container.innerHTML = '';
+        container.style.opacity = '1';
+        const radius = 110; 
+
+        for (let i = 0; i < TOTAL_SLOTS; i++) {
+            const angle = (i * 2 * Math.PI) / TOTAL_SLOTS - Math.PI / 2;
+            const x = 140 + radius * Math.cos(angle); 
+            const y = 140 + radius * Math.sin(angle); 
+
+            const slot = document.createElement('div');
+            slot.className = 'craft-slot';
+            slot.style.left = `${x}px`;
+            slot.style.top = `${y}px`;
+            slot.id = `slot-${i}`;
+            
+            if (selectedGifts[i]) {
+                const item = giftDatabase[selectedGifts[i]];
+                slot.classList.add('filled');
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
+            } else {
+                slot.classList.remove('filled');
+                slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
+                slot.onclick = () => openInventoryForSlot(i); 
+            }
+            container.appendChild(slot);
+        }
+        checkButtonState();
+    }
+
+    // Показываем ТОЛЬКО то, что есть в инвентаре игрока
+    function openInventoryForSlot(slotIndex) {
+        activeSlotIndex = slotIndex;
+        const drawer = document.getElementById('inventory-drawer');
+        const listContainer = document.getElementById('inventory-list');
+        listContainer.innerHTML = '';
+
+        // Считаем, какие предметы уже задействованы в слотах, чтобы вычесть их из списка доступных
+        let tempSelected = [...selectedGifts].filter(Boolean);
+        let availableInventory = [...userInventory];
+
+        tempSelected.forEach(giftKey => {
+            const idx = availableInventory.indexOf(giftKey);
+            if (idx !== -1) availableInventory.splice(idx, 1);
+        });
+
+        if (availableInventory.length === 0) {
+            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
+            drawer.classList.add('active');
+            return;
+        }
+
+        // Рендерим только уникальные доступные предметы
+        const uniqueItems = [...new Set(availableInventory)];
+
+        uniqueItems.forEach(key => {
+            const item = giftDatabase[key];
+            if (!item) return;
+
+            // Считаем сколько штук осталось
+            const count = availableInventory.filter(k => k === key).length;
+
+            const itemNode = document.createElement('div');
+            itemNode.className = 'inv-item';
+            itemNode.innerHTML = `
+                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+                <div class="inv-name">${item.name} (${count} шт.)</div>
+                <div class="inv-price" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
+    <img src="${IMAGE_FOLDER}star.png" style="width: 12px; height: 12px; object-fit: contain;">
+    ${item.price}
+</div>
+            `;
+            itemNode.onclick = () => selectGiftForActiveSlot(key);
+            listContainer.appendChild(itemNode);
+        });
+
+        drawer.classList.add('active');
+    }
+
+    function closeInventory() {
+        document.getElementById('inventory-drawer').classList.remove('active');
+    }
+
+    function selectGiftForActiveSlot(giftKey) {
+        if (activeSlotIndex === null) return;
+        selectedGifts[activeSlotIndex] = giftKey;
+        closeInventory();
+        initCraftSlots();
+    }
+
+    function removeGiftFromSlot(slotIndex) {
+        selectedGifts[slotIndex] = null;
+        initCraftSlots();
+    }
+
+    function checkButtonState() {
+        const btn = document.getElementById('start-craft-btn');
+        const filledCount = selectedGifts.filter(Boolean).length;
+        if (filledCount === TOTAL_SLOTS) {
+            btn.removeAttribute('disabled');
+        } else {
+            btn.setAttribute('disabled', 'true');
+        }
+    }
+
+    async function runCraft() {
+        if (selectedGifts.filter(Boolean).length < TOTAL_SLOTS) return;
+
+        const container = document.getElementById('slots-container');
+        const mainBall = document.getElementById('main-ball');
+        const statusText = document.getElementById('craft-status-text');
+        const craftBtn = document.getElementById('start-craft-btn');
+
+        craftBtn.setAttribute('disabled', 'true');
+        container.classList.add('super-spin');
+        mainBall.classList.add('main-ball-absorb');
+        statusText.innerText = "ОБМЕН...";
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/craft_gift`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: getUserId(),
+                    gift_keys: selectedGifts.filter(Boolean)
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.error) {
+                alert("Ошибка: " + result.error);
+                resetCraftMachine();
+                return;
+            }
+
+            setTimeout(async () => {
+                container.style.opacity = '0';
+                container.classList.remove('super-spin');
+
+                const winKey = result.new_gift_key || "sliva.png"; 
+                const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
+
+                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                
+                if (tg.showAlert) {
+                    tg.showAlert(`🎉 Контракт выполнен!\nВы получили: ${createdItem.name}`);
+                } else {
+                    alert(`🎉 Контракт выполнен! Вы получили: ${createdItem.name}`);
+                }
+
+                // Сразу обновляем локальный инвентарь, так как бэк списал вещи и дал новую
+                await loadUserInventory();
+
+                setTimeout(() => {
+                    resetCraftMachine();
+                }, 4000);
+
+            }, 2600);
+
+        } catch (e) {
+            console.error(e);
+            alert("Ошибка сети при отправке контракта!");
+            resetCraftMachine();
+        }
+    }
+
+    function resetCraftMachine() {
+        const container = document.getElementById('slots-container');
+        const mainBall = document.getElementById('main-ball');
+        container.classList.remove('super-spin');
+        mainBall.classList.remove('main-ball-absorb');
+        mainBall.innerHTML = `<span id="craft-status-text">КРАФТ</span>`;
+        selectedGifts = [];
+        activeSlotIndex = null;
+        initCraftSlots();
+    }
+
+    function goBackToMain() {
+        window.location.href = "index.html";
+    }
+
+    // Инициализация при загрузке страницы
+// Инициализация при загрузке страницы после того, как весь HTML готов
+    async function startApp() {
+        await loadUserInventory();
+        initCraftSlots();
+    }
+    
+    // Ждем, пока браузер построит DOM-дерево
+    document.addEventListener("DOMContentLoaded", () => {
+        startApp();
+    });
+</script>
+</script>
+</body>
+</html>
