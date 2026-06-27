@@ -97,7 +97,7 @@ def get_inventory():
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
-# --- КРАФТ ПОДАРКА ---
+# --- КРАФТ ПОДАРКА (ФИКС ОШИБКИ 500 / NONETYPE) ---
 @app.route('/api/craft_gift', methods=['POST', 'OPTIONS'])
 def craft_gift():
     if request.method == 'OPTIONS':
@@ -113,8 +113,7 @@ def craft_gift():
     try:
         total_price = 0
         for key in gift_keys:
-            # На всякий случай очищаем ключи от "img/", если фронт их пришлет с префиксом
-            clean_key = key.replace("img/", "")
+            clean_key = key.replace("img/", "") if isinstance(key, str) else str(key)
             if clean_key not in giftDatabase:
                 return jsonify({"error": f"Предмет {clean_key} не найден."}), 400
             total_price += giftDatabase[clean_key]["price"]
@@ -128,20 +127,23 @@ def craft_gift():
         if not res.data:
             return jsonify({"error": "Пользователь не найден."}), 404
 
-        current_inventory = res.data[0].get("inventory", [])
-        if not isinstance(current_inventory, list):
+        # ЖЕСТКАЯ ПРОВЕРКА: Если в базе None или пусто, делаем список
+        raw_inv = res.data[0].get("inventory")
+        if raw_inv is None or not isinstance(raw_inv, list):
             current_inventory = []
+        else:
+            current_inventory = list(raw_inv)
 
-        # Очищаем инвентарь из базы от путей "img/", чтобы было точное совпадение строк
-        current_inventory = [item.replace("img/", "") if isinstance(item, str) else item for item in current_inventory]
+        # Безопасная очистка строк
+        current_inventory = [item.replace("img/", "") if isinstance(item, str) else str(item) for item in current_inventory]
 
-        # Мягкое списание: удаляем из инвентаря только то, что там реально нашлось
+        # Мягкое списание предметов
         for key in gift_keys:
-            clean_key = key.replace("img/", "")
+            clean_key = key.replace("img/", "") if isinstance(key, str) else str(key)
             if clean_key in current_inventory:
                 current_inventory.remove(clean_key)
         
-        # Рассчитываем выигрыш
+        # Расчет пула награды
         rand = random.random() * 100
         pool = []
 
@@ -158,7 +160,7 @@ def craft_gift():
         win_key = random.choice(pool)
         current_inventory.append(win_key)
 
-        # Сохраняем обновленный инвентарь обратно в базу
+        # Сохраняем обратно в базу
         supabase.table("users").update({"inventory": current_inventory}).eq("user_id", query_id).execute()
         return jsonify({"success": True, "new_gift_key": win_key}), 200
 
