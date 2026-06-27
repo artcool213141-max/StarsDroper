@@ -287,15 +287,18 @@ async function loadUserInventory() {
     try {
         const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
         const data = await response.json();
-        console.log("Данные инвентаря:", data); // ДОБАВЬ ЭТО
         
+        // --- ДОБАВЬТЕ ЭТО ---
+        console.log("Полученный инвентарь:", data);
+        // --------------------
+
         if (data.inventory && Array.isArray(data.inventory)) {
             userInventory = data.inventory;
         } else {
             userInventory = [];
         }
     } catch (e) {
-        console.error("Ошибка сети:", e);
+        console.error("Ошибка загрузки:", e);
         userInventory = [];
     }
 }
@@ -358,30 +361,28 @@ async function loadUserInventory() {
         const uniqueItems = [...new Set(availableInventory)];
 
         uniqueItems.forEach(key => {
-// Внутри цикла перебора уникальных предметов:
-const item = giftDatabase[key];
-if (!item) {
-    console.warn("Предмет не найден в базе:", key); // Проверка на опечатки
-    return;
-}
-
-const itemNode = document.createElement('div');
-itemNode.className = 'inv-item';
-// Добавим проверку пути
-const fullImgPath = `${IMAGE_FOLDER}${item.img}`;
-
-itemNode.innerHTML = `
-    <img src="${fullImgPath}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-    <div class="inv-name">${item.name} (${count} шт.)</div>
-    <div class="inv-price">${item.price} ⭐</div>
-`;
-            itemNode.onclick = () => selectGiftForActiveSlot(key);
-            listContainer.appendChild(itemNode);
-        });
-
-        drawer.classList.add('active');
+    const item = giftDatabase[key];
+    if (!item) {
+        console.warn("Внимание: предмет отсутствует в базе данных:", key);
+        return; // Пропускаем предмет, если его нет в БД
     }
 
+        const count = availableInventory.filter(k => k === key).length;
+        const itemNode = document.createElement('div');
+        itemNode.className = 'inv-item';
+        itemNode.innerHTML = `
+            <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" 
+                 onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+            <div class="inv-name">${item.name} (${count} шт.)</div>
+            <div class="inv-price">${item.price} ⭐</div>
+        `;
+        itemNode.onclick = () => selectGiftForActiveSlot(key);
+        listContainer.appendChild(itemNode);
+    }); // <-- ЭТА СКОБКА БЫЛА ПРОПУЩЕНА В ВАШЕМ КОДЕ
+
+    drawer.classList.add('active'); // Не забудьте открыть шторку после цикла
+}
+        
     function closeInventory() {
         document.getElementById('inventory-drawer').classList.remove('active');
     }
@@ -492,11 +493,9 @@ itemNode.innerHTML = `
         initCraftSlots();
     }
     
-    // Ждем, пока браузер построит DOM-дерево
-    document.addEventListener("DOMContentLoaded", () => {
-        startApp();
-    });
-</script>
+document.addEventListener("DOMContentLoaded", () => {
+    startApp();
+});
 </script>
 </body>
 </html>
