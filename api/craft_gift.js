@@ -86,14 +86,25 @@ export default async function handler(req, res) {
                 
             if (userError || !user) return res.status(404).json({ error: 'Пользователь не найден.' });
 
-            let currentInventory = Array.isArray(user.inventory) ? user.inventory : [];
+let currentInventory = Array.isArray(user.inventory) ? user.inventory : [];
 
+            // ИСПРАВЛЕНИЕ: приводим инвентарь к виду без префикса "img/" для сравнения
             let tempInventory = [...currentInventory];
+            
             for (const key of gift_keys) {
-                const index = tempInventory.indexOf(key);
-                if (index === -1) return res.status(400).json({ error: 'Не хватает предметов в инвентаре!' });
+                // Ищем индекс, учитывая, что в базе может быть "img/"
+                const index = tempInventory.findIndex(item => 
+                    item === key || item === `img/${key}`
+                );
+
+                if (index === -1) {
+                    return res.status(400).json({ error: 'Не хватает предметов в инвентаре!' });
+                }
+                
+                // Удаляем найденный элемент из оригинального массива
                 tempInventory.splice(index, 1);
             }
+            
             currentInventory = tempInventory;
 
             const rand = Math.random() * 100;
