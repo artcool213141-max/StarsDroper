@@ -36,18 +36,6 @@
             position: relative;
         }
 
-        .modal-hidden { display: none; }
-#custom-modal {
-    position: fixed; top:0; left:0; width:100%; height:100%;
-    background: rgba(0,0,0,0.8); z-index: 1000;
-    display: flex; align-items: center; justify-content: center;
-}
-.modal-content {
-    background: #1a1605; border: 2px solid var(--neon);
-    padding: 20px; border-radius: 20px; text-align: center;
-    width: 80%;
-}
-
         .top-nav { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 200; position: relative; }
         .btn-back {
             display: flex; align-items: center; gap: 8px;
@@ -350,7 +338,6 @@ async function loadUserInventory() {
         checkButtonState();
     }
 
-    // Показываем ТОЛЬКО то, что есть в инвентаре игрока
 function openInventoryForSlot(slotIndex) {
         activeSlotIndex = slotIndex;
         const drawer = document.getElementById('inventory-drawer');
