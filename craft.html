@@ -280,23 +280,24 @@ const tg = window.Telegram.WebApp;
 
     const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
 
-    // 1. Загрузка инвентаря пользователя при старте страницы
-// Изменяем старый урл на правильный файл craft_gift
-    async function loadUserInventory() {
-        try {
-            const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
-// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
-            const data = await response.json();
-            if (data.success && Array.isArray(data.inventory)) {
-                userInventory = data.inventory;
-            } else {
-                userInventory = [];
-            }
-        } catch (e) {
-            console.error("Ошибка загрузки инвентаря:", e);
+async function loadUserInventory() {
+    try {
+        const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
+        const data = await response.json();
+        
+        if (data.success && Array.isArray(data.inventory)) {
+            // ОЧИСТКА: убираем префикс "img/" из каждой строки, если он есть
+            userInventory = data.inventory.map(item => {
+                return item.replace('img/', ''); 
+            });
+        } else {
             userInventory = [];
         }
+    } catch (e) {
+        console.error("Ошибка загрузки инвентаря:", e);
+        userInventory = [];
     }
+}
 
     function initCraftSlots() {
         const container = document.getElementById('slots-container');
