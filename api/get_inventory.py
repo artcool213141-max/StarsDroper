@@ -10,7 +10,6 @@ supabase_url = os.environ.get("SUPABASE_URL", "")
 supabase_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 supabase: Client = create_client(supabase_url, supabase_key) if supabase_url and supabase_key else None
 
-# База подарков (убедитесь, что ключи здесь БЕЗ 'img/')
 GIFT_DATABASE = {
     "1may.jpg": {"name": "1 May Exclusive", "price": 100, "img": "1may.jpg"},
     "1may.png": {"name": "1 May Classic", "price": 100, "img": "1may.png"},
@@ -80,8 +79,8 @@ GIFT_DATABASE = {
 }
 
 class handler(BaseHTTPRequestHandler):
+    
     def get_clean_key(self, item):
-        """Извлекает имя файла из строки или объекта"""
         if isinstance(item, str):
             return item.replace('img/', '')
         if isinstance(item, dict) and 'img' in item:
@@ -95,31 +94,21 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
-def do_GET(self):
+    def do_GET(self):
         query_components = parse_qs(urlparse(self.path).query)
         user_id = query_components.get("user_id", [None])[0]
         
-        # 1. Безопасный запрос к базе
         inventory = []
         try:
             if user_id:
                 response = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
-                
-                # Проверяем, что ответ не пуст и внутри есть данные
                 if response.data and isinstance(response.data, list) and len(response.data) > 0:
                     raw_inv = response.data[0].get("inventory")
-                    # Если в базе это список, используем его
                     if isinstance(raw_inv, list):
                         inventory = raw_inv
         except Exception as e:
             print(f"Ошибка при получении инвентаря: {e}")
 
-        # 2. Выводим данные для отладки в логи Vercel (чтобы понять, что видит сервер)
-        print(f"DEBUG: Юзер {user_id}, Инвентарь из базы: {inventory}")
-
-        # 3. Отправляем ответ
-        # ВАЖНО: Мы отправляем исходный inventory, как он есть. 
-        # Если фронт хочет ключи, он должен уметь работать с обоими форматами.
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -130,32 +119,31 @@ def do_GET(self):
         content_length = int(self.headers['Content-Length'])
         body = json.loads(self.rfile.read(content_length))
         user_id = body.get("user_id")
-        gift_keys = body.get("gift_keys", []) # Ожидаем массив ["paska.jpg", ...]
+        gift_keys = body.get("gift_keys", [])
 
-        # 1. Получаем инвентарь
         res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
         current_inv = res.data[0].get("inventory", []) if res.data else []
 
-        # 2. Удаляем использованные (поддерживаем оба формата при удалении)
         temp_inv = list(current_inv)
-        total_price = 0
         
         for key in gift_keys:
-            total_price += GIFT_DATABASE.get(key, {}).get("price", 0)
+            clean_request_key = key.lower().replace('img/', '')
             
-            # Находим индекс любого формата
-            idx = next((i for i, item in enumerate(temp_inv) if self.get_clean_key(item) == key), -1)
+            # Поиск индекса через нормализацию
+            idx = next((i for i, item in enumerate(temp_inv) if self.get_clean_key(item).lower() == clean_request_key), -1)
+            
             if idx == -1:
                 self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
                 self.end_headers()
+                self.wfile.write(json.dumps({"error": f"Предмет {key} не найден"}).encode('utf-8'))
                 return
+            
             temp_inv.pop(idx)
 
-        # 3. Выбор выигрыша
-        win_key = random.choice(list(GIFT_DATABASE.keys())) # Упрощенная логика пула
+        win_key = random.choice(list(GIFT_DATABASE.keys()))
         temp_inv.append(win_key)
 
-        # 4. Сохранение
         supabase.table("users").update({"inventory": temp_inv}).eq("user_id", str(user_id)).execute()
 
         self.send_response(200)
