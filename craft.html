@@ -339,25 +339,33 @@ function openInventoryForSlot(slotIndex) {
     const listContainer = document.getElementById('inventory-list');
     listContainer.innerHTML = '';
 
-    // Считаем, сколько предметов каждого типа уже занято в слотах
+    // ДОБАВЬТЕ ЭТО ДЛЯ ПРОВЕРКИ
+    console.log("Полный инвентарь юзера:", userInventory);
+    console.log("База подарков:", Object.keys(giftDatabase));
+
     const slotsCount = {};
     selectedGifts.forEach(key => {
         if (key) slotsCount[key] = (slotsCount[key] || 0) + 1;
     });
 
-    // Убираем new Set, чтобы видеть все предметы, а не только уникальные
     let hasItems = false;
-    
-    // Группируем предметы для удобства
     const inventoryMap = {};
     userInventory.forEach(key => {
-        if (!inventoryMap[key]) inventoryMap[key] = 0;
-        inventoryMap[key]++;
+        // ОЧИСТКА КЛЮЧА: убираем возможные пробелы и приводим к нижнему регистру
+        const cleanKey = key.trim().toLowerCase(); 
+        if (!inventoryMap[cleanKey]) inventoryMap[cleanKey] = 0;
+        inventoryMap[cleanKey]++;
     });
 
     Object.keys(inventoryMap).forEach(key => {
-        const item = giftDatabase[key];
-        if (!item) return;
+        // Ищем ключ в базе, приводя базу тоже к нижнему регистру для сравнения
+        const dbKey = Object.keys(giftDatabase).find(k => k.toLowerCase() === key);
+        const item = giftDatabase[dbKey];
+        
+        if (!item) {
+            console.warn("Предмет не найден в базе:", key);
+            return;
+        }
 
         const totalOwned = inventoryMap[key];
         const usedInSlots = slotsCount[key] || 0;
@@ -367,12 +375,13 @@ function openInventoryForSlot(slotIndex) {
             hasItems = true;
             const itemNode = document.createElement('div');
             itemNode.className = 'inv-item';
+            // Используем правильный ключ из базы (dbKey) для картинки
             itemNode.innerHTML = `
-                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+                <img src="${IMAGE_FOLDER}${giftDatabase[dbKey].img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
                 <div class="inv-name">${item.name}</div>
                 <div class="inv-price">${item.price} ⭐️ (${availableCount} шт.)</div>
             `;
-            itemNode.onclick = () => selectGiftForActiveSlot(key);
+            itemNode.onclick = () => selectGiftForActiveSlot(dbKey);
             listContainer.appendChild(itemNode);
         }
     });
