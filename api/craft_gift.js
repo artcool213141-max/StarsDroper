@@ -107,20 +107,27 @@ let currentInventory = Array.isArray(user.inventory) ? user.inventory : [];
             
             currentInventory = tempInventory;
 
-            const rand = Math.random() * 100;
-            let pool = [];
+const rand = Math.random() * 100;
+let pool = [];
 
-            if (rand <= 30) {
-                pool = Object.keys(giftDatabase).filter(k => giftDatabase[k].price >= totalPrice * 0.1 && giftDatabase[k].price <= totalPrice * 0.6);
-            } else if (rand <= 70) {
-                pool = Object.keys(giftDatabase).filter(k => giftDatabase[k].price >= totalPrice * 0.8 && giftDatabase[k].price <= totalPrice * 1.2);
-            } else {
-                pool = Object.keys(giftDatabase).filter(k => giftDatabase[k].price >= totalPrice * 1.3 && giftDatabase[k].price <= totalPrice * 2.5);
-            }
+if (rand <= 80) {
+    // 80% случаев: крафт от 30% до 90% от суммы (уходим в минус)
+    pool = Object.keys(giftDatabase).filter(k => 
+        giftDatabase[k].price >= totalPrice * 0.3 && 
+        giftDatabase[k].price <= totalPrice * 0.9
+    );
+} else {
+    // 20% случаев: крафт от 110% до 200% от суммы (профит)
+    pool = Object.keys(giftDatabase).filter(k => 
+        giftDatabase[k].price >= totalPrice * 1.1 && 
+        giftDatabase[k].price <= totalPrice * 2.0
+    );
+}
 
-            if (pool.length === 0) {
-                pool = Object.keys(giftDatabase);
-            }
+// Страховка, если пул пустой
+if (pool.length === 0) {
+    pool = Object.keys(giftDatabase).filter(k => giftDatabase[k].price < totalPrice);
+}
 
             const winKey = pool[Math.floor(Math.random() * pool.length)];
 
