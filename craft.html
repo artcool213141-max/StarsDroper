@@ -293,9 +293,10 @@ async function loadUserInventory() {
         const data = await response.json();
         
         if (data.success && Array.isArray(data.inventory)) {
-            // ОЧИСТКА: убираем префикс "img/" из каждой строки, если он есть
+            // Приводим ВСЕ имена к нижнему регистру, чтобы избежать ошибок с .PNG
             userInventory = data.inventory.map(item => {
-                return item.replace('img/', ''); 
+                let name = item.replace('img/', '');
+                return name.toLowerCase(); 
             });
         } else {
             userInventory = [];
@@ -305,8 +306,14 @@ async function loadUserInventory() {
         userInventory = [];
     }
 }
+    
+    // Функция, которая приводит любое имя файла к нижнему регистру
+function normalizeFileName(filename) {
+    if (!filename) return "";
+    return filename.toLowerCase();
+}
 
-    function initCraftSlots() {
+function initCraftSlots() {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
         container.style.opacity = '1';
@@ -326,9 +333,12 @@ async function loadUserInventory() {
             if (selectedGifts[i]) {
                 const item = giftDatabase[selectedGifts[i]];
                 slot.classList.add('filled');
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" 
-                onerror="this.src = this.src.includes('.PNG') ? this.src.replace('.PNG', '.png') : this.src.replace('.png', '.PNG')">`;
-                slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
+                
+                // Ключевое изменение: принудительно делаем имя файла в нижнем регистре
+                const cleanImgName = item.img.toLowerCase();
+                slot.innerHTML = `<img src="${IMAGE_FOLDER}${cleanImgName}">`;
+                
+                slot.onclick = () => removeGiftFromSlot(i);
             } else {
                 slot.classList.remove('filled');
                 slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
@@ -338,7 +348,7 @@ async function loadUserInventory() {
         }
         checkButtonState();
     }
-
+    
 function openInventoryForSlot(slotIndex) {
         activeSlotIndex = slotIndex;
         const drawer = document.getElementById('inventory-drawer');
