@@ -57,44 +57,42 @@ def get_inventory():
         return jsonify({"error": "No user_id provided"}), 400
 
     try:
-        query_id = int(user_id) if user_id.isdigit() else user_id
+        # Используем строковый ID всегда, чтобы избежать путаницы с типами в Supabase
+        query_id = str(user_id)
+        
         res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
         
-        if not res.data:
-            res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
+        # Если пусто, пробуем как число (на случай, если в базе ID лежат как integers)
+        if not res.data and query_id.isdigit():
+            res = supabase.table("users").select("inventory").eq("user_id", int(query_id)).execute()
 
         if res.data:
-            raw_inventory = res.data[0].get("inventory", [])
-            if not isinstance(raw_inventory, list):
-                raw_inventory = []
+            raw_inventory = res.data[0].get("inventory")
             
-            cleaned_string_inventory = []
-            has_bad_data = False
-
+            # Если в базе null или не список — возвращаем пустой массив
+            if not isinstance(raw_inventory, list):
+                return jsonify({"success": True, "inventory": []}), 200
+            
+            # ФИНАЛЬНАЯ ЧИСТКА: превращаем абсолютно всё в чистые имена файлов
+            cleaned_inventory = []
             for item in raw_inventory:
-                if isinstance(item, str):
-                    # Если в базе лежит полный путь типа "img/soska.jpg", убираем префикс, 
-                    # потому что твой фронтенд сам добавляет IMAGE_FOLDER ('img/')
-                    clean_name = item.replace("img/", "")
-                    cleaned_string_inventory.append(clean_name)
-                elif isinstance(item, dict):
-                    # Если в базу закрался объект, вытаскиваем из него только имя файла
-                    img_path = item.get("img", "star.png")
-                    clean_name = img_path.replace("img/", "")
-                    cleaned_string_inventory.append(clean_name)
-                    has_bad_data = True  # Заметили грязь в базе
-
-            # Если в базе был мусор из объектов, автоматически перезаписываем её чистыми строками
-            if has_bad_data:
-                try:
-                    supabase.table("users").update({"inventory": cleaned_string_inventory}).eq("user_id", query_id).execute()
-                except Exception:
-                    pass
-
-            return jsonify({"success": True, "inventory": cleaned_string_inventory}), 200
+                # Если это словарь (например, {"img": "star.png"}), берем значение
+                if isinstance(item, dict):
+                    val = item.get("img", "")
+                else:
+                    val = str(item)
+                
+                # Убираем префикс "img/" и пробелы
+                clean_name = val.replace("img/", "").strip()
+                if clean_name:
+                    cleaned_inventory.append(clean_name)
+            
+            return jsonify({"success": True, "inventory": cleaned_inventory}), 200
             
         return jsonify({"success": True, "inventory": []}), 200
+        
     except Exception as e:
+        print(f"DEBUG ERROR: {str(e)}") # Это увидишь в логах Vercel
         return jsonify({"error": "Server error", "details": str(e)}), 500
 
 # --- КРАФТ ПОДАРКА (ФИКС ОШИБКИ 500 / NONETYPE) ---
