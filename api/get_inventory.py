@@ -95,21 +95,36 @@ class handler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
-    def do_GET(self):
+def do_GET(self):
         query_components = parse_qs(urlparse(self.path).query)
         user_id = query_components.get("user_id", [None])[0]
         
-        response = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
-        raw_inv = response.data[0].get("inventory", []) if response.data else []
-        
-        # Возвращаем чистые ключи, чтобы фронт не ломался
-        clean_inv = [self.get_clean_key(item) for item in raw_inv]
-        
+        # 1. Безопасный запрос к базе
+        inventory = []
+        try:
+            if user_id:
+                response = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
+                
+                # Проверяем, что ответ не пуст и внутри есть данные
+                if response.data and isinstance(response.data, list) and len(response.data) > 0:
+                    raw_inv = response.data[0].get("inventory")
+                    # Если в базе это список, используем его
+                    if isinstance(raw_inv, list):
+                        inventory = raw_inv
+        except Exception as e:
+            print(f"Ошибка при получении инвентаря: {e}")
+
+        # 2. Выводим данные для отладки в логи Vercel (чтобы понять, что видит сервер)
+        print(f"DEBUG: Юзер {user_id}, Инвентарь из базы: {inventory}")
+
+        # 3. Отправляем ответ
+        # ВАЖНО: Мы отправляем исходный inventory, как он есть. 
+        # Если фронт хочет ключи, он должен уметь работать с обоими форматами.
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(json.dumps({"success": True, "inventory": clean_inv}).encode('utf-8'))
+        self.wfile.write(json.dumps({"success": True, "inventory": inventory}).encode('utf-8'))
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
