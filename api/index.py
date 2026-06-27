@@ -113,9 +113,11 @@ def craft_gift():
     try:
         total_price = 0
         for key in gift_keys:
-            if key not in giftDatabase:
-                return jsonify({"error": f"Предмет {key} не найден."}), 400
-            total_price += giftDatabase[key]["price"]
+            # На всякий случай очищаем ключи от "img/", если фронт их пришлет с префиксом
+            clean_key = key.replace("img/", "")
+            if clean_key not in giftDatabase:
+                return jsonify({"error": f"Предмет {clean_key} не найден."}), 400
+            total_price += giftDatabase[clean_key]["price"]
 
         query_id = int(user_id) if str(user_id).isdigit() else user_id
         res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
@@ -130,14 +132,16 @@ def craft_gift():
         if not isinstance(current_inventory, list):
             current_inventory = []
 
-        temp_inventory = list(current_inventory)
-        for key in gift_keys:
-            if key not in temp_inventory:
-                return jsonify({"error": "Не хватает предметов в инвентаре!"}), 400
-            temp_inventory.remove(key)
-        
-        current_inventory = temp_inventory
+        # Очищаем инвентарь из базы от путей "img/", чтобы было точное совпадение строк
+        current_inventory = [item.replace("img/", "") if isinstance(item, str) else item for item in current_inventory]
 
+        # Мягкое списание: удаляем из инвентаря только то, что там реально нашлось
+        for key in gift_keys:
+            clean_key = key.replace("img/", "")
+            if clean_key in current_inventory:
+                current_inventory.remove(clean_key)
+        
+        # Рассчитываем выигрыш
         rand = random.random() * 100
         pool = []
 
@@ -154,6 +158,7 @@ def craft_gift():
         win_key = random.choice(pool)
         current_inventory.append(win_key)
 
+        # Сохраняем обновленный инвентарь обратно в базу
         supabase.table("users").update({"inventory": current_inventory}).eq("user_id", query_id).execute()
         return jsonify({"success": True, "new_gift_key": win_key}), 200
 
