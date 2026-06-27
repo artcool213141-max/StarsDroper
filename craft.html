@@ -345,20 +345,22 @@ function openInventoryForSlot(slotIndex) {
         if (key) slotsCount[key] = (slotsCount[key] || 0) + 1;
     });
 
-    // Получаем уникальные предметы, которые есть у юзера, 
-    // но вычитаем те, что уже заняты в активных слотах
-    const availableItems = [...new Set(userInventory)];
-    
+    // Убираем new Set, чтобы видеть все предметы, а не только уникальные
     let hasItems = false;
-    availableItems.forEach(key => {
+    
+    // Группируем предметы для удобства
+    const inventoryMap = {};
+    userInventory.forEach(key => {
+        if (!inventoryMap[key]) inventoryMap[key] = 0;
+        inventoryMap[key]++;
+    });
+
+    Object.keys(inventoryMap).forEach(key => {
         const item = giftDatabase[key];
         if (!item) return;
 
-        // Сколько всего у юзера
-        const totalOwned = userInventory.filter(k => k === key).length;
-        // Сколько уже в слотах
+        const totalOwned = inventoryMap[key];
         const usedInSlots = slotsCount[key] || 0;
-        // Остаток для выбора
         const availableCount = totalOwned - usedInSlots;
 
         if (availableCount > 0) {
@@ -367,8 +369,8 @@ function openInventoryForSlot(slotIndex) {
             itemNode.className = 'inv-item';
             itemNode.innerHTML = `
                 <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                <div class="inv-name">${item.name} (${availableCount} шт.)</div>
-                <div class="inv-price">${item.price} ⭐️</div>
+                <div class="inv-name">${item.name}</div>
+                <div class="inv-price">${item.price} ⭐️ (${availableCount} шт.)</div>
             `;
             itemNode.onclick = () => selectGiftForActiveSlot(key);
             listContainer.appendChild(itemNode);
