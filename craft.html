@@ -301,38 +301,48 @@ async function loadUserInventory() {
     }
 }
 
-    function initCraftSlots() {
-        const container = document.getElementById('slots-container');
-        container.innerHTML = '';
-        container.style.opacity = '1';
-        const radius = 110; 
-
-        for (let i = 0; i < TOTAL_SLOTS; i++) {
-            const angle = (i * 2 * Math.PI) / TOTAL_SLOTS - Math.PI / 2;
-            const x = 140 + radius * Math.cos(angle); 
-            const y = 140 + radius * Math.sin(angle); 
-
-            const slot = document.createElement('div');
-            slot.className = 'craft-slot';
-            slot.style.left = `${x}px`;
-            slot.style.top = `${y}px`;
-            slot.id = `slot-${i}`;
-            
-            if (selectedGifts[i]) {
-                const item = giftDatabase[selectedGifts[i]];
-                slot.classList.add('filled');
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
-                slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
-            } else {
-                slot.classList.remove('filled');
-                slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
-                slot.onclick = () => openInventoryForSlot(i); 
-            }
-            container.appendChild(slot);
-        }
-        checkButtonState();
+function initCraftSlots() {
+    const container = document.getElementById('slots-container');
+    if (!container) {
+        console.error("Ошибка: контейнер slots-container не найден!");
+        return;
     }
+    
+    container.innerHTML = '';
+    container.style.opacity = '1';
+    const radius = 110; 
 
+    console.log("Отрисовываю слоты...");
+
+    for (let i = 0; i < TOTAL_SLOTS; i++) {
+        const angle = (i * 2 * Math.PI) / TOTAL_SLOTS - Math.PI / 2;
+        const x = 140 + radius * Math.cos(angle); 
+        const y = 140 + radius * Math.sin(angle); 
+
+        const slot = document.createElement('div');
+        slot.className = 'craft-slot';
+        slot.style.left = `${x}px`;
+        slot.style.top = `${y}px`;
+        slot.id = `slot-${i}`;
+        
+        if (selectedGifts[i]) {
+            const item = giftDatabase[selectedGifts[i]];
+            slot.classList.add('filled');
+            slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+            slot.onclick = () => removeGiftFromSlot(i);
+        } else {
+            slot.classList.remove('filled');
+            slot.innerHTML = '<span style="color: rgba(250,204,21,0.4); font-weight:900;">＋</span>';
+            // Добавляем событие клика явно
+            slot.addEventListener('click', () => {
+                console.log("Нажат плюс в слоте:", i);
+                openInventoryForSlot(i);
+            });
+        }
+        container.appendChild(slot);
+    }
+    checkButtonState();
+}
 function openInventoryForSlot(slotIndex) {
     activeSlotIndex = slotIndex;
     const drawer = document.getElementById('inventory-drawer');
@@ -507,7 +517,6 @@ function openInventoryForSlot(slotIndex) {
     document.addEventListener("DOMContentLoaded", () => {
         startApp();
     });
-</script>
 </script>
 </body>
 </html>
