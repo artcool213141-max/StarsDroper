@@ -468,9 +468,11 @@
         initCraftSlots();
     }
     
-document.addEventListener("DOMContentLoaded", async () => {
+// Обязательно убедись, что вызываешь только один раз при загрузке:
+    document.addEventListener("DOMContentLoaded", async () => {
         await loadUserInventory();
         initCraftSlots();
+        console.log("Приложение успешно инициализировано");
     });
 </script>
 </body>
