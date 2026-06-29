@@ -104,33 +104,78 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, inventory: inv });
     }
 
-    if (req.method === 'POST') {
+if (req.method === 'POST') {
         const { user_id, gift_keys } = req.body;
-        if (!user_id || !gift_keys || gift_keys.length !== 5) {
+        
+        if (!user_id || !gift_keys || !Array.isArray(gift_keys) || gift_keys.length !== 5) {
             return res.status(400).json({ error: 'Передайте ровно 5 предметов.' });
         }
 
-        // Вычисляем общую цену
+        // 1. Проверяем наличие всех предметов в базе и считаем цену
         let totalPrice = 0;
         for (const key of gift_keys) {
             const cleanKey = getGiftKey(key);
-            if (!giftDatabase[cleanKey]) return res.status(400).json({ error: `Предмет ${cleanKey} не найден.` });
+            if (!giftDatabase[cleanKey]) {
+                return res.status(400).json({ error: `Предмет ${cleanKey} не найден в базе.` });
+            }
             totalPrice += giftDatabase[cleanKey].price;
         }
 
-        const { data: user } = await supabase.from('users').select('inventory').eq('user_id', String(user_id)).single();
-        let currentInventory = Array.isArray(user?.inventory) ? user.inventory : [];
+        // 2. Получаем текущий инвентарь из Supabase
+        const { data: user, error: userError } = await supabase
+            .from('users')
+            .select('inventory')
+            .eq('user_id', String(user_id))
+            .single();
 
-        // Логика удаления использованных предметов
-        let tempInventory = [...currentInventory];
+        if (userError || !user) return res.status(400).json({ error: 'Пользователь не найден.' });
+
+        let tempInventory = [...(Array.isArray(user.inventory) ? user.inventory : [])];
+
+        // 3. Логика удаления использованных предметов
         for (const key of gift_keys) {
             const cleanKey = getGiftKey(key);
-            // Ищем индекс элемента, чей "ключ" совпадает с тем, что мы хотим удалить
+            // Ищем объект в инвентаре, который соответствует ключу
             const index = tempInventory.findIndex(item => getGiftKey(item) === cleanKey);
             
-            if (index === -1) return res.status(400).json({ error: 'Не хватает предметов в инвентаре!' });
+            if (index === -1) {
+                return res.status(400).json({ error: `Предмет ${cleanKey} отсутствует в инвентаре.` });
+            }
+            // Удаляем найденный объект
             tempInventory.splice(index, 1);
         }
+
+        // 4. Логика выбора нового подарка
+        const rand = Math.random() * 100;
+        let pool = Object.keys(giftDatabase).filter(k => {
+            const p = giftDatabase[k].price;
+            if (rand <= 30) return p >= totalPrice * 0.1 && p <= totalPrice * 0.6;
+            if (rand <= 70) return p >= totalPrice * 0.8 && p <= totalPrice * 1.2;
+            return p >= totalPrice * 1.3 && p <= totalPrice * 2.5;
+        });
+
+        if (pool.length === 0) pool = Object.keys(giftDatabase);
+        const winKey = pool[Math.floor(Math.random() * pool.length)];
+        const winData = giftDatabase[winKey];
+
+        // 5. Формируем структуру нового объекта (как в БД)
+        const newItem = {
+            id: Date.now() + Math.random(),
+            img: "img/" + winData.img, // Путь, который ожидает фронтенд
+            name: winData.name,
+            price: winData.price
+        };
+
+        // 6. Сохраняем обновленный инвентарь обратно в Supabase
+        const updatedInventory = [...tempInventory, newItem];
+        
+        await supabase
+            .from('users')
+            .update({ inventory: updatedInventory })
+            .eq('user_id', String(user_id));
+
+        return res.status(200).json({ success: true, new_gift_key: winKey });
+    }
 
         // Логика выбора нового подарка
         const rand = Math.random() * 100;
