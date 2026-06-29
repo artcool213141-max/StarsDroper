@@ -354,28 +354,26 @@ async function processPayment(amount) {
     if (isProcessing) return;
     isProcessing = true;
     tg.HapticFeedback.impactOccurred('medium');
+    
     try {
-        // БЫЛО: fetch(`${BACKEND_URL}/api/create_pay`, ...
-        // СТАЛО:
         const res = await fetch(`${BACKEND_URL}/api/create_crypto_pay`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: userId, 
-                amount: Number(amount)
-            })
+            body: JSON.stringify({ user_id: userId, amount: Number(amount) })
         });
         
         const data = await res.json();
-        
+        console.log("Ответ от сервера:", data); // ЭТО ВАЖНО: посмотри в консоли, что тут приходит
+
         if (res.ok && data.pay_url) { 
+            // Попробуй открыть через WebApp.openTelegramLink
             tg.openTelegramLink(data.pay_url); 
             closeVault(); 
         } else { 
-            tg.showAlert(data.error || 'Крипто-бот недоступен'); 
+            tg.showAlert('Ошибка: ' + (data.error || 'Сервер не вернул ссылку')); 
         }
     } catch (e) { 
-        tg.showAlert('Ошибка сети: проверь бэкенд'); 
+        tg.showAlert('Ошибка сети'); 
     } finally { 
         isProcessing = false; 
     }
