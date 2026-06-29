@@ -1,6 +1,7 @@
 import os
 import random
 import requests
+import bot
 import threading  # <--- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ
 import asyncio
 from flask import Flask, request, jsonify
@@ -50,14 +51,12 @@ def add_cors_headers(response):
     return response
 
 def run_bot():
-    asyncio.run(bot.main())
-
-if __name__ == "__main__":
-    # Запускаем бота в фоне
-    threading.Thread(target=run_bot, daemon=True).start()
-
-    # Запускаем Flask
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    print("--- ЗАПУСК ФУНКЦИИ BOT.MAIN ---")
+    try:
+        import bot
+        asyncio.run(bot.main())
+    except Exception as e:
+        print(f"--- ОШИБКА В ПОТОКЕ БОТА: {e} ---")
 
 # --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ ---
 # --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ (СТРОГИЙ СТРИНГ-РЕЖИМ) ---
