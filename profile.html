@@ -97,26 +97,26 @@
             </button>
         </header>
 
-        <section class="glass-card p-6 mb-6">
-            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Активация бонуса</h3>
-            <div class="flex gap-2">
-                <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-yellow-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
-                <button onclick="handlePromo()" class="btn-gold px-6 text-[10px]">ОК</button>
-            </div>
-        </section>
-
-<!-- Твой новый рабочий блок -->
-<div class="flex justify-between items-center mb-6">
-    <div>
-        <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
-        <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span></p>
+        <section class="glass-card p-6 mb-6 border-yellow-400/10">
+    <!-- Заголовок и кнопка в одной строке -->
+    <div class="flex justify-between items-center mb-4">
+        <div>
+            <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
+            <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span></p>
+        </div>
+        <button onclick="copyRefLink()" class="bg-yellow-500 text-black px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-[0_0_15px_rgba(245,176,37,0.3)] hover:scale-105 transition-transform">
+            Пригласить
+        </button>
     </div>
-    <button onclick="copyRefLink()" class="bg-yellow-500 text-black px-4 py-2 rounded-xl font-black text-[10px] uppercase">Пригласить</button>
-</div>
-<div class="w-full bg-black/40 border border-white/5 rounded-xl p-4">
-    <p class="text-[9px] text-gray-500 font-bold uppercase mb-1">Твоя ссылка:</p>
-    <div id="ref-link-display" class="text-[10px] text-yellow-400 font-mono break-all">Загрузка...</div>
-</div>
+
+    <!-- Поле со ссылкой внутри той же карты -->
+    <div class="w-full bg-black/30 border border-yellow-500/10 rounded-xl p-3">
+        <p class="text-[9px] text-gray-500 font-bold uppercase mb-1 tracking-widest">Твоя ссылка:</p>
+        <div id="ref-link-display" class="text-[10px] text-yellow-500/80 font-mono break-all bg-black/20 p-2 rounded-lg">
+            Загрузка...
+        </div>
+    </div>
+</section>
 
    
 </section>
