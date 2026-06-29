@@ -49,15 +49,13 @@ def add_cors_headers(response):
     return response
 
 def run_bot():
-    import bot # это имя твоего файла bot.py
-    import asyncio
-    asyncio.run(bot.main()) # убедись, что в bot.py функция называется main
+    asyncio.run(bot.main())
 
 if __name__ == "__main__":
-    # Запускаем бота как отдельный поток
+    # Запускаем бота в фоне
     threading.Thread(target=run_bot, daemon=True).start()
-    
-    # Запускаем Flask для Render
+
+    # Запускаем Flask
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
 # --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ ---
