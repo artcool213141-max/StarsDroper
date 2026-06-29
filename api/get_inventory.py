@@ -115,7 +115,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps({"success": True, "inventory": inventory}).encode('utf-8'))
 
-    def do_POST(self):
+def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         body = json.loads(self.rfile.read(content_length))
         user_id = body.get("user_id")
@@ -126,17 +126,39 @@ class handler(BaseHTTPRequestHandler):
 
         temp_inv = list(current_inv)
         
+        # Удаление использованных предметов
         for key in gift_keys:
             clean_request_key = key.lower().replace('img/', '')
-            
-            # Поиск индекса через нормализацию
-            idx = next((i for i, item in enumerate(temp_inv) if self.get_clean_key(item).lower() == clean_request_key), -1)
+            idx = next((i for i, item in enumerate(temp_inv) 
+                        if self.get_clean_key(item).lower() == clean_request_key), -1)
             
             if idx == -1:
                 self.send_response(400)
                 self.send_header('Content-Type', 'application/json')
                 self.end_headers()
                 self.wfile.write(json.dumps({"error": f"Предмет {key} не найден"}).encode('utf-8'))
+                return
+            temp_inv.pop(idx)
+
+        # Выбор нового подарка (создаем полноценный объект)
+        win_key = random.choice(list(GIFT_DATABASE.keys()))
+        win_data = GIFT_DATABASE[win_key]
+        
+        new_item = {
+            "name": win_data["name"],
+            "price": win_data["price"],
+            "img": "img/" + win_data["img"]
+        }
+        
+        temp_inv.append(new_item)
+
+        supabase.table("users").update({"inventory": temp_inv}).eq("user_id", str(user_id)).execute()
+
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps({"success": True, "new_gift_key": win_key}).encode('utf-8'))
                 return
             
             temp_inv.pop(idx)
