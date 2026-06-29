@@ -303,18 +303,18 @@ def crypto_webhook():
         print(f"CRITICAL ERROR: {str(e)}") 
         return "OK", 200
 
-async def run_main():
-    # 1. Запускаем Flask через waitress в отдельном потоке
-    def run_flask():
-        port = int(os.environ.get("PORT", 5000))
-        print(f"--- ЗАПУСК FLASK НА ПОРТУ {port} ---")
+async def run_everything():
+    # 1. Запускаем Flask через waitress в фоне (не блокирует поток)
+    def start_flask():
+        port = int(os.environ.get("PORT", 10000))
         serve(app, host="0.0.0.0", port=port)
+    
+    threading.Thread(target=start_flask, daemon=True).start()
+    print("--- FLASK СЕРВЕР ЗАПУЩЕН ---")
 
-    threading.Thread(target=run_flask, daemon=True).start()
-
-    # 2. Запускаем бота в ГЛАВНОМ потоке (это решит проблему с set_wakeup_fd)
-    print("--- ЗАПУСК БОТА ---")
+    # 2. Запускаем бота в ГЛАВНОМ потоке
+    print("--- ЗАПУСК БОТА В ГЛАВНОМ ПОТОКЕ ---")
     await bot.main()
 
 if __name__ == "__main__":
-    asyncio.run(run_main())
+    asyncio.run(run_everything())
