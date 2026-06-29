@@ -47,6 +47,18 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     return response
 
+def run_bot():
+    import bot # это имя твоего файла bot.py
+    import asyncio
+    asyncio.run(bot.main()) # убедись, что в bot.py функция называется main
+
+if __name__ == "__main__":
+    # Запускаем бота как отдельный поток
+    threading.Thread(target=run_bot, daemon=True).start()
+    
+    # Запускаем Flask для Render
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 # --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ ---
 # --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ (СТРОГИЙ СТРИНГ-РЕЖИМ) ---
 @app.route('/api/get_inventory', methods=['GET', 'OPTIONS'])
