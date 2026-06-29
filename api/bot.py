@@ -25,7 +25,7 @@ f'<tg-emoji emoji-id="5280769763398671636">🏆</tg-emoji> <b>NowearSpin: зде
 f'<tg-emoji emoji-id="5470177992950946662">👇</tg-emoji> <b>Нажми играть чтобы открыть приложение!</b>', parse_mode="html", reply_markup=builder.as_markup())
 
 async def main():
-   await dp.start_polling(bot)
+    await dp.start_polling(bot)
 
 if __name__ == "__main__":
    asyncio.run(main())
