@@ -386,12 +386,26 @@ function openInventoryForSlot(slotIndex) {
         document.getElementById('inventory-drawer').classList.remove('active');
     }
 
-    function selectGiftForActiveSlot(giftKey) {
-        if (activeSlotIndex === null) return;
-        selectedGifts[activeSlotIndex] = giftKey;
-        closeInventory();
-        initCraftSlots();
+function selectGiftForActiveSlot(giftKey) {
+    if (activeSlotIndex === null) return;
+
+    // 1. Ищем индекс предмета в массиве userInventory
+    const index = userInventory.findIndex(item => {
+        const itemKey = typeof item === 'string' ? item.replace('img/', '') : item.img.replace('img/', '');
+        return itemKey === giftKey;
+    });
+
+    // 2. Если нашли — удаляем из массива (чтобы количество уменьшилось)
+    if (index !== -1) {
+        userInventory.splice(index, 1);
     }
+
+    // 3. Добавляем в выбранные
+    selectedGifts[activeSlotIndex] = giftKey;
+    
+    closeInventory();
+    initCraftSlots(); // Перерисовываем слоты
+}
 
     function removeGiftFromSlot(slotIndex) {
         selectedGifts[slotIndex] = null;
