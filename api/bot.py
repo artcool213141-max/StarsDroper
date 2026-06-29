@@ -28,6 +28,10 @@ async def start(message: Message):
     await message.answer(text, parse_mode="html", reply_markup=builder.as_markup())
 
 async def main():
+    # Добавь вот эти две строчки:
+    await bot.delete_webhook(drop_pending_updates=True)
+    print("--- ВЕБХУК УДАЛЕН, ЗАПУСКАЮ POLLING ---")
+    
     await dp.start_polling(bot)
 
 # Этот блок тут нужен, чтобы файл можно было импортировать в index.py
