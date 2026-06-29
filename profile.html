@@ -268,37 +268,47 @@ let selectedIdx = -1;
 let isProcessing = false; 
 
 async function loadUser() {
-    tg.ready();
-    // Мгновенное отображение (без запроса к БД)
-    const userTG = tg.initDataUnsafe?.user;
-    if (userTG) {
-        document.getElementById('u-name').innerText = (userTG.first_name || "ИГРОК").toUpperCase();
-        if (userTG.photo_url) document.getElementById('u-avatar').src = userTG.photo_url;
-    }
+    try {
+        console.log("--- START LOAD USER ---");
+        tg.ready();
+        
+        // 1. Проверим, что вообще прилетает из Telegram
+        const userTg = tg.initDataUnsafe?.user;
+        console.log("TG User data:", userTg);
+        
+        const finalUserId = String(userTg?.id || '8015661230');
+        console.log("Using UserID:", finalUserId);
 
-    // Параллельный запрос к БД для данных, которых нет в Telegram
-    const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+        const firstName = userTg?.first_name || "ИГРОК";
+        document.getElementById('u-name').innerText = firstName.toUpperCase();
+        
+        // 2. Лог запроса к Supabase
+        console.log("Fetching from Supabase for ID:", finalUserId);
+        const { data, error } = await _supabase.from('users').select('*').eq('user_id', finalUserId).maybeSingle();
         
         if (error) {
-            console.error("Ошибка при загрузке из БД:", error);
+            console.error("SUPABASE ERROR:", error);
+            document.getElementById('u-name').innerText = "ОШИБКА БД";
             return;
         }
 
         if (data) {
+            console.log("Data received:", data);
             user = data;
             document.getElementById('u-stars').innerText = user.stars || 0;
             document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
             document.getElementById('u-tickets').innerText = user.tickets || 0;
             document.getElementById('ref-count').innerText = user.referral_count || 0;
             document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
+            
             renderGrid();
-            renderGifts(); 
+            // renderGifts(); // Пока закомментируй, чтобы не ломало, если элемента нет
         } else {
-            console.warn("Пользователь не найден в базе данных");
-            document.getElementById('u-name').innerText = "ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН";
+            console.warn("User not found in DB");
+            document.getElementById('u-name').innerText = "АККАУНТ НЕ НАЙДЕН";
         }
     } catch (e) { 
-        console.error("Критическая ошибка:", e); 
+        console.error("CRITICAL EXCEPTION:", e); 
     }
 }
 
@@ -588,10 +598,14 @@ function copyRefLink() {
     });
 }
 
-window.onload = () => { 
-    loadUser(); 
-    if (window.Telegram && window.Telegram.WebApp) {
+window.onload = () => {
+    console.log("Window loaded, starting...");
+    if (window.Telegram?.WebApp) {
         tg.expand();
+        // Даем небольшую задержку для инициализации WebApp
+        setTimeout(loadUser, 500); 
+    } else {
+        loadUser();
     }
 };
 
