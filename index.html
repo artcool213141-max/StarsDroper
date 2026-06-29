@@ -276,6 +276,32 @@
 
     let isProcessing = false;
 
+
+// --- РЕФЕРАЛЬНАЯ ЛОГИКА ---
+    const startParam = tg.initDataUnsafe?.start_param;
+
+    if (startParam && startParam !== userId) {
+        // Проверяем, не добавляли ли мы этого пользователя в таблицу рефералов ранее
+        _supabase.from('referrals')
+            .select('id')
+            .eq('referred_id', userId)
+            .maybeSingle()
+            .then(({ data: existing }) => {
+                if (!existing) {
+                    // Если записи нет, добавляем её
+                    _supabase.from('referrals')
+                        .insert([{ referrer_id: startParam, referred_id: userId, claimed: false }])
+                        .then(() => {
+                            // И сразу накидываем билетик пригласившему через RPC
+                            _supabase.rpc('increment_tickets', { target_user_id: startParam, amount: 1 });
+                            console.log("Реферал засчитан!");
+                        });
+                }
+            });
+    }
+    // --------------------------
+
+    
     // Синхронизация баланса через Supabase напрямую
 async function syncData() {
     try {
