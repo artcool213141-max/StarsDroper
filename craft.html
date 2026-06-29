@@ -407,14 +407,11 @@ function openInventoryForSlot(slotIndex) {
 async function runCraft() {
     if (selectedGifts.filter(Boolean).length < TOTAL_SLOTS) return;
 
-    // Вспомогательная функция для извлечения ключа
-    const getCleanKey = (item) => {
-        if (typeof item === 'string') return item.replace('img/', '');
-        if (typeof item === 'object' && item.img) return item.img.replace('img/', '');
-        return item;
-    };
+    // Блокируем кнопку, чтобы не нажали дважды
+    const btn = document.getElementById('start-craft-btn');
+    btn.disabled = true;
 
-    // Очищаем массив перед отправкой: превращаем всё в "paska.jpg"
+    // Очищаем массив для отправки
     const cleanedGiftKeys = selectedGifts.filter(Boolean).map(getCleanKey);
 
     try {
@@ -423,48 +420,47 @@ async function runCraft() {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 user_id: getUserId(),
-                gift_keys: cleanedGiftKeys // Отправляем чистые ключи
+                gift_keys: cleanedGiftKeys 
             })
         });
-            
-            const result = await response.json();
-            
-            if (result.error) {
-                alert("Ошибка: " + result.error);
-                resetCraftMachine();
-                return;
-            }
 
-            setTimeout(async () => {
-                container.style.opacity = '0';
-                container.classList.remove('super-spin');
-
-                const winKey = result.new_gift_key || "sliva.png"; 
-                const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
-
-                mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
-                
-                if (tg.showAlert) {
-                    tg.showAlert(`🎉 Контракт выполнен!\nВы получили: ${createdItem.name}`);
-                } else {
-                    alert(`🎉 Контракт выполнен! Вы получили: ${createdItem.name}`);
-                }
-
-                // Сразу обновляем локальный инвентарь, так как бэк списал вещи и дал новую
-                await loadUserInventory();
-
-                setTimeout(() => {
-                    resetCraftMachine();
-                }, 4000);
-
-            }, 2600);
-
-        } catch (e) {
-            console.error(e);
-            alert("Ошибка сети при отправке контракта!");
-            resetCraftMachine();
+        // ВАЖНО: проверяем, что сервер вернул JSON, а не HTML
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Сервер вернул не JSON. Проверь путь к API.");
         }
+
+        const result = await response.json();
+        
+        if (result.error) {
+            alert("Ошибка: " + result.error);
+            btn.disabled = false;
+            return;
+        }
+
+        // Анимация старта
+        document.getElementById('slots-container').classList.add('super-spin');
+        document.getElementById('main-ball').classList.add('main-ball-absorb');
+
+        setTimeout(async () => {
+            const winKey = result.new_gift_key;
+            const createdItem = giftDatabase[winKey] || { name: "Предмет", img: "sliva.png" };
+
+            // СБРОС ИНТЕРФЕЙСА
+            selectedGifts = []; // ОЧИЩАЕМ ВЫБРАННЫЕ ПРЕДМЕТЫ
+            await loadUserInventory(); // Обновляем инвентарь из БД
+            resetCraftMachine(); // Обновляем отображение слотов
+
+            alert(`🎉 Контракт выполнен! Вы получили: ${createdItem.name}`);
+            btn.disabled = false;
+        }, 2600);
+
+    } catch (e) {
+        console.error(e);
+        alert("Ошибка: " + e.message);
+        btn.disabled = false;
     }
+}
 
     function resetCraftMachine() {
         const container = document.getElementById('slots-container');
