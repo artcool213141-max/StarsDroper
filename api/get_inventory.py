@@ -77,15 +77,14 @@ GIFT_DATABASE = {
     "sshapka.png": {"name": "Khabib's Papakha", "price": 2300, "img": "sshapka.png"},
     "tyfli.png": {"name": "Sky Stilettos", "price": 1800, "img": "tyfli.png"}
 }
-
 class handler(BaseHTTPRequestHandler):
     
     def get_clean_key(self, item):
         if isinstance(item, str):
-            return item.replace('img/', '')
+            return item.lower().replace('img/', '')
         if isinstance(item, dict) and 'img' in item:
-            return item['img'].replace('img/', '')
-        return str(item)
+            return item['img'].lower().replace('img/', '')
+        return str(item).lower()
 
     def do_OPTIONS(self):
         self.send_response(200)
@@ -103,9 +102,7 @@ class handler(BaseHTTPRequestHandler):
             if user_id:
                 response = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
                 if response.data and isinstance(response.data, list) and len(response.data) > 0:
-                    raw_inv = response.data[0].get("inventory")
-                    if isinstance(raw_inv, list):
-                        inventory = raw_inv
+                    inventory = response.data[0].get("inventory", [])
         except Exception as e:
             print(f"Ошибка при получении инвентаря: {e}")
 
@@ -115,7 +112,7 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps({"success": True, "inventory": inventory}).encode('utf-8'))
 
-def do_POST(self):
+    def do_POST(self):
         content_length = int(self.headers['Content-Length'])
         body = json.loads(self.rfile.read(content_length))
         user_id = body.get("user_id")
@@ -123,14 +120,13 @@ def do_POST(self):
 
         res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
         current_inv = res.data[0].get("inventory", []) if res.data else []
-
         temp_inv = list(current_inv)
         
-        # Удаление использованных предметов
+        # 1. Удаление использованных предметов
         for key in gift_keys:
             clean_request_key = key.lower().replace('img/', '')
             idx = next((i for i, item in enumerate(temp_inv) 
-                        if self.get_clean_key(item).lower() == clean_request_key), -1)
+                        if self.get_clean_key(item) == clean_request_key), -1)
             
             if idx == -1:
                 self.send_response(400)
@@ -140,32 +136,19 @@ def do_POST(self):
                 return
             temp_inv.pop(idx)
 
-        # Выбор нового подарка (создаем полноценный объект)
+        # 2. Выбор нового подарка
         win_key = random.choice(list(GIFT_DATABASE.keys()))
         win_data = GIFT_DATABASE[win_key]
         
+        # 3. Добавление объекта в инвентарь
         new_item = {
             "name": win_data["name"],
             "price": win_data["price"],
             "img": "img/" + win_data["img"]
         }
-        
         temp_inv.append(new_item)
 
-        supabase.table("users").update({"inventory": temp_inv}).eq("user_id", str(user_id)).execute()
-
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.end_headers()
-        self.wfile.write(json.dumps({"success": True, "new_gift_key": win_key}).encode('utf-8'))
-                return
-            
-            temp_inv.pop(idx)
-
-        win_key = random.choice(list(GIFT_DATABASE.keys()))
-        temp_inv.append(win_key)
-
+        # 4. Сохранение
         supabase.table("users").update({"inventory": temp_inv}).eq("user_id", str(user_id)).execute()
 
         self.send_response(200)
