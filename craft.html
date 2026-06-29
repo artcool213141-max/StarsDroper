@@ -298,6 +298,13 @@ const tg = window.Telegram.WebApp;
         }
     }
 
+    function getCleanKey(item) {
+    if (typeof item === 'string') {
+        return item.replace('img/', '');
+    }
+    return item;
+}
+
     function initCraftSlots() {
         const container = document.getElementById('slots-container');
         container.innerHTML = '';
@@ -488,7 +495,6 @@ async function runCraft() {
     document.addEventListener("DOMContentLoaded", () => {
         startApp();
     });
-</script>
 </script>
 </body>
 </html>
