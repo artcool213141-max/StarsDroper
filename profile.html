@@ -268,17 +268,16 @@ let selectedIdx = -1;
 let isProcessing = false; 
 
 async function loadUser() {
-    try {
-        tg.ready();
-        const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
-        document.getElementById('u-name').innerText = firstName.toUpperCase();
-        
-        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-        if(document.getElementById('u-avatar')) {
-            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
-        }
+    tg.ready();
+    // Мгновенное отображение (без запроса к БД)
+    const userTG = tg.initDataUnsafe?.user;
+    if (userTG) {
+        document.getElementById('u-name').innerText = (userTG.first_name || "ИГРОК").toUpperCase();
+        if (userTG.photo_url) document.getElementById('u-avatar').src = userTG.photo_url;
+    }
 
-        const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+    // Параллельный запрос к БД для данных, которых нет в Telegram
+    const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
         
         if (error) {
             console.error("Ошибка при загрузке из БД:", error);
