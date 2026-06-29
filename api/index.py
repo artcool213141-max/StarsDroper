@@ -1,7 +1,8 @@
 import os
 import random
 import requests
-import bot
+import threading  # <--- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ
+import asyncio
 from flask import Flask, request, jsonify
 from supabase import create_client
 
