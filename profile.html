@@ -97,27 +97,38 @@
             </button>
         </header>
 
-        <section class="glass-card p-6 mb-6 border-yellow-400/10">
-    <!-- Заголовок и кнопка в одной строке -->
-    <div class="flex justify-between items-center mb-4">
+        <section class="glass-card p-6 mb-6">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Активация бонуса</h3>
+            <div class="flex gap-2">
+                <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-yellow-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
+                <button onclick="handlePromo()" class="btn-gold px-6 text-[10px]">ОК</button>
+            </div>
+        </section>
+
+<section class="glass-card p-6 mb-6 border-yellow-400/10">
+    <div class="flex justify-between items-center mb-6">
         <div>
             <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
-            <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span></p>
+            <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
         </div>
-        <button onclick="copyRefLink()" class="bg-yellow-500 text-black px-4 py-2 rounded-xl font-black text-[10px] uppercase shadow-[0_0_15px_rgba(245,176,37,0.3)] hover:scale-105 transition-transform">
-            Пригласить
-        </button>
+        
+        <!-- Индикатор разработки -->
+        <div class="flex items-center gap-2 bg-yellow-500/5 px-3 py-1.5 rounded-full border border-yellow-500/10">
+            <span class="relative flex h-2 w-2">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-500 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
+            </span>
+            <span class="text-[8px] font-black uppercase text-yellow-500/80 tracking-widest">В разработке</span>
+        </div>
     </div>
 
-    <!-- Поле со ссылкой внутри той же карты -->
-    <div class="w-full bg-black/30 border border-yellow-500/10 rounded-xl p-3">
-        <p class="text-[9px] text-gray-500 font-bold uppercase mb-1 tracking-widest">Твоя ссылка:</p>
-        <div id="ref-link-display" class="text-[10px] text-yellow-500/80 font-mono break-all bg-black/20 p-2 rounded-lg">
-            Загрузка...
-        </div>
+    <!-- Заглушка вместо активной ссылки -->
+    <div class="relative w-full bg-black/20 border border-white/5 rounded-xl p-4 text-center">
+        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+            Скоро будет доступно....
+        </p>
     </div>
 </section>
-
         
         <section class="glass-card p-6 min-h-[300px]">
             <div class="flex justify-between items-center mb-6">
@@ -257,82 +268,40 @@ let selectedIdx = -1;
 let isProcessing = false; 
 
 async function loadUser() {
-    console.log("--- START LOAD USER ---");
-    tg.ready();
-    
-    const userTg = tg.initDataUnsafe?.user;
-    // Используем ID из Telegram или fallback
-    const finalUserId = Number(userTg?.id || 8015661230);
-    const firstName = userTg?.first_name || "ИГРОК";
-    
-    console.log("Checking database for ID:", finalUserId);
-
     try {
-        // 1. Поиск пользователя
-        let { data, error } = await _supabase
-            .from('users')
-            .select('*')
-            .eq('user_id', finalUserId)
-            .maybeSingle();
-
-        if (error) throw error;
-
-        // 2. Если пользователя нет — регистрируем
-        if (!data) {
-            console.log("User not found, registering...");
-            const newUser = {
-                user_id: finalUserId,
-                username: userTg?.username || "player",
-                stars: 0,
-                balance: 0,
-                tickets: 0,
-                referral_count: 0,
-                inventory: [],
-                is_paid_75: false
-            };
-
-            const { data: createdUser, error: insertError } = await _supabase
-                .from('users')
-                .insert([newUser])
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-            data = createdUser;
-        }
-
-        user = data;
-        
-        // 3. ОБНОВЛЕНИЕ ИНТЕРФЕЙСА
+        tg.ready();
+        const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
         document.getElementById('u-name').innerText = firstName.toUpperCase();
-        document.getElementById('u-stars').innerText = user.stars || 0;
-        document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
-        document.getElementById('u-tickets').innerText = user.tickets || 0;
-        document.getElementById('ref-count').innerText = user.referral_count || 0;
-        document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
         
-        // Обновление реферальной ссылки
-        const refDisplay = document.getElementById('ref-link-display');
-        if (refDisplay) {
-            refDisplay.innerText = `https://t.me/NowearSpinOfficial_Bot?start=${user.user_id}`;
+        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
+        if(document.getElementById('u-avatar')) {
+            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
         }
-        
-        // Аватар
-        const avatarEl = document.getElementById('u-avatar');
-        if (avatarEl) {
-            if (userTg?.photo_url) {
-                avatarEl.src = userTg.photo_url;
-            } else {
-                avatarEl.src = 'https://ui-avatars.com/api/?name=' + firstName + '&background=f5b025&color=000';
-            }
-        }
-        
-        renderGrid();
 
-    } catch (e) {
-        console.error("CRITICAL ERROR:", e);
-        document.getElementById('u-name').innerText = "ОШИБКА ЗАГРУЗКИ";
+        const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+        
+        if (error) {
+            console.error("Ошибка при загрузке из БД:", error);
+            return;
+        }
+
+        if (data) {
+            user = data;
+            document.getElementById('u-stars').innerText = user.stars || 0;
+            document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
+            document.getElementById('u-tickets').innerText = user.tickets || 0;
+            document.getElementById('ref-count').innerText = user.referral_count || 0;
+            document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
+            renderGrid();
+            renderGifts(); 
+        } else {
+            console.warn("Пользователь не найден в базе данных");
+            document.getElementById('u-name').innerText = "ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН";
+        }
+    } catch (e) { 
+        console.error("Критическая ошибка:", e); 
     }
+}
 
 function renderGrid() {
     const grid = document.getElementById('grid');
@@ -612,21 +581,18 @@ function closeModal() {
 }
 
 function copyRefLink() {
-    const refLink = `https://t.me/NowearSpinOfficial_Bot?start=${userId}`;
-    navigator.clipboard.writeText(refLink);
-    tg.showAlert("✅ Ссылка скопирована: " + refLink);
+    const refLink = `https://t.me/your_bot_username?start=ref_${userId}`;
+    navigator.clipboard.writeText(refLink).then(() => {
+        tg.showAlert("📋 Реферальная ссылка скопирована!");
+    }).catch(() => {
+        tg.showAlert("Не удалось скопировать ссылку.");
+    });
 }
 
-`;
-
-window.onload = () => {
-    console.log("Window loaded, starting...");
-    if (window.Telegram?.WebApp) {
+window.onload = () => { 
+    loadUser(); 
+    if (window.Telegram && window.Telegram.WebApp) {
         tg.expand();
-        // Даем небольшую задержку для инициализации WebApp
-        setTimeout(loadUser, 500); 
-    } else {
-        loadUser();
     }
 };
 
