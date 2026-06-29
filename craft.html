@@ -331,53 +331,52 @@ const tg = window.Telegram.WebApp;
     }
 
     // Показываем ТОЛЬКО то, что есть в инвентаре игрока
-    function openInventoryForSlot(slotIndex) {
-        activeSlotIndex = slotIndex;
-        const drawer = document.getElementById('inventory-drawer');
-        const listContainer = document.getElementById('inventory-list');
-        listContainer.innerHTML = '';
+function openInventoryForSlot(slotIndex) {
+    activeSlotIndex = slotIndex;
+    const drawer = document.getElementById('inventory-drawer');
+    const listContainer = document.getElementById('inventory-list');
+    listContainer.innerHTML = '';
 
-        // Считаем, какие предметы уже задействованы в слотах, чтобы вычесть их из списка доступных
-        let tempSelected = [...selectedGifts].filter(Boolean);
-        let availableInventory = [...userInventory];
-
-        tempSelected.forEach(giftKey => {
-            const idx = availableInventory.indexOf(giftKey);
-            if (idx !== -1) availableInventory.splice(idx, 1);
-        });
-
-        if (availableInventory.length === 0) {
-            listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
-            drawer.classList.add('active');
-            return;
-        }
-
-        // Рендерим только уникальные доступные предметы
-        const uniqueItems = [...new Set(availableInventory)];
-
-        uniqueItems.forEach(key => {
-            const item = giftDatabase[key];
-            if (!item) return;
-
-            // Считаем сколько штук осталось
-            const count = availableInventory.filter(k => k === key).length;
-
-            const itemNode = document.createElement('div');
-            itemNode.className = 'inv-item';
-            itemNode.innerHTML = `
-                <img src="${IMAGE_FOLDER}${item.img}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                <div class="inv-name">${item.name} (${count} шт.)</div>
-                <div class="inv-price" style="display: flex; align-items: center; justify-content: center; gap: 4px;">
-    <img src="${IMAGE_FOLDER}star.png" style="width: 12px; height: 12px; object-fit: contain;">
-    ${item.price}
-</div>
-            `;
-            itemNode.onclick = () => selectGiftForActiveSlot(key);
-            listContainer.appendChild(itemNode);
-        });
-
+    // userInventory - это массив объектов, который ты прислал
+    if (userInventory.length === 0) {
+        listContainer.innerHTML = '<div style="grid-column: span 3; text-align:center; padding: 20px; color:#555; font-size:12px;">Инвентарь пуст</div>';
         drawer.classList.add('active');
+        return;
     }
+
+    // Группируем предметы по их имени или картинке, чтобы не дублировать
+    const groupedItems = {};
+    userInventory.forEach(invItem => {
+        // Очищаем путь от "img/" для поиска в базе
+        const cleanImgKey = invItem.img.replace('img/', '');
+        
+        if (!groupedItems[cleanImgKey]) {
+            groupedItems[cleanImgKey] = { ...invItem, count: 0 };
+        }
+        groupedItems[cleanImgKey].count += 1;
+    });
+
+    Object.values(groupedItems).forEach(item => {
+        const itemNode = document.createElement('div');
+        itemNode.className = 'inv-item';
+        
+        // Исправляем путь для отображения
+        const displayImg = item.img.includes('img/') ? item.img : 'img/' + item.img;
+        
+        itemNode.innerHTML = `
+            <img src="${displayImg}" class="inv-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+            <div class="inv-name">${item.name} (${item.count} шт.)</div>
+            <div class="inv-price">${item.price} ⭐</div>
+        `;
+        
+        // Передаем в слот именно "чистый" ключ для крафта
+        const keyForCraft = item.img.replace('img/', '');
+        itemNode.onclick = () => selectGiftForActiveSlot(keyForCraft);
+        listContainer.appendChild(itemNode);
+    });
+
+    drawer.classList.add('active');
+}
 
     function closeInventory() {
         document.getElementById('inventory-drawer').classList.remove('active');
