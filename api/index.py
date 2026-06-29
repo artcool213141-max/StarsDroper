@@ -2,8 +2,9 @@ import os
 import random
 import requests
 import bot
-import threading  # <--- ВОТ ЭТОГО У ТЕБЯ НЕ ХВАТАЕТ
 import asyncio
+import threading
+from waitress import serve
 from flask import Flask, request, jsonify
 from supabase import create_client
 
@@ -302,10 +303,18 @@ def crypto_webhook():
         print(f"CRITICAL ERROR: {str(e)}") 
         return "OK", 200
 
-if __name__ == "__main__":
-    # Запуск бота в отдельном потоке
-    threading.Thread(target=run_bot, daemon=True).start()
+async def run_main():
+    # 1. Запускаем Flask через waitress в отдельном потоке
+    def run_flask():
+        port = int(os.environ.get("PORT", 5000))
+        print(f"--- ЗАПУСК FLASK НА ПОРТУ {port} ---")
+        serve(app, host="0.0.0.0", port=port)
 
-    # Запуск Flask сервера (Render требует слушать порт из переменной PORT)
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    threading.Thread(target=run_flask, daemon=True).start()
+
+    # 2. Запускаем бота в ГЛАВНОМ потоке (это решит проблему с set_wakeup_fd)
+    print("--- ЗАПУСК БОТА ---")
+    await bot.main()
+
+if __name__ == "__main__":
+    asyncio.run(run_main())
