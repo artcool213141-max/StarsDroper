@@ -196,8 +196,8 @@ header{
 const tg = window.Telegram.WebApp;
 tg.expand();
 
-const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
-const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const SUPABASE_URL = 'https://ypvvoqbvzfmirprevazq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_nG0LGd9T2s1aOM6eTRdoJQ_DPwkMvXz';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const userId = String(tg.initDataUnsafe?.user?.id || ('guest_' + Math.floor(Math.random()*100000)));
@@ -378,6 +378,16 @@ async function loadOrCreateRound(){
   let { data } = await _supabase.from('roll_rounds')
     .select('*').order('id', {ascending:false}).limit(1).maybeSingle();
 
+  const needNew = !data || data.status === 'finished';
+
+  if(needNew){
+    const ends_at = new Date(Date.now() + 30000).toISOString();
+    const { data: newRound } = await _supabase.from('roll_rounds')
+      .insert({ status:'waiting', ends_at }).select().single();
+    currentRound = newRound;
+  } else {
+    currentRound = data;
+  }
 
   await loadBets();
   renderAll();
@@ -656,28 +666,36 @@ function startTickLoop(){
 }
 
 function tick(){
-    if(!currentRound) return;
-    const left = Math.ceil((new Date(currentRound.ends_at).getTime() - Date.now())/1000);
-    const timerEl = document.getElementById('timer-text');
+  if(!currentRound) return;
+  const left = Math.ceil((new Date(currentRound.ends_at).getTime() - Date.now())/1000);
+  const timerEl = document.getElementById('timer-text');
 
-    if(currentRound.status === 'waiting' && left > 0){
-        timerEl.textContent = left;
-    } else if (currentRound.status === 'waiting' && left <= 0) {
-        timerEl.textContent = "Обработка..."; // Ждем ответа от сервера
-    }
+  if(currentRound.status === 'waiting'){
+    if(left > 0){ timerEl.textContent = left; }
+    else { timerEl.textContent = '0'; trySettle(); }
+  } else if(currentRound.status === 'spinning'){
+    timerEl.textContent = '🎲';
+    if(spinStartedAt === null) spinStartedAt = Date.now();
+    // если спин "завис" дольше 15 секунд (например, сорвалось realtime-событие
+    // на этом устройстве) — просто перезагружаем страницу и стартуем заново
+    if(Date.now() - spinStartedAt > 15000){ location.reload(); }
+  } else if(currentRound.status === 'finished'){
+    timerEl.textContent = '✓';
+  }
 }
 
 async function trySettle(){
-    if(settling) return;
-    await loadBets(); // Убеждаемся, что ставки актуальны
+  if(settling) return;
+  settling = true;
+  try{
+    await loadBets();
     const wedges = getWedges();
     const total = wedges.reduce((s,w)=>s+w.value_stars,0);
 
     if(total === 0){
-        // Если ставок нет, просто продлеваем таймер или ничего не делаем
-        // Не нужно помечать раунд как finished
-        document.getElementById('timer-text').textContent = "Ждем...";
-        return; 
+      await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id).eq('status','waiting');
+      setTimeout(()=>{ location.reload(); }, 1000);
+      return;
     }
 
     let r = Math.random() * total;
