@@ -188,7 +188,10 @@
             </div>
         </div>
     </div>
-    
+
+<!-- Список подарков вынесен в отдельный файл (общий для всех страниц) -->
+<script src="items.js"></script>
+
 <script>
 const tg = window.Telegram.WebApp;
 const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
@@ -200,75 +203,6 @@ const headers = {
     'Authorization': `Bearer ${SB_KEY}`, 
     'Content-Type': 'application/json',
     'Prefer': 'return=minimal'
-};
-
-const ITEMS = {
-    "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
-    "2025.jpg": { name: "Happy 2025", price: 500, img: "2025.jpg" },
-    "bear.png": { name: "Honey Bear", price: 3500, img: "bear.png" },
-    "book.jpg": { name: "Ancient Book", price: 1000, img: "book.jpg" },
-    "booox.png": { name: "Berry Box", price: 700, img: "booox.png" },
-    "botinok.png": { name: "Old Boot", price: 400, img: "botinok.png" },
-    "box.png": { name: "Jack in Box", price: 600, img: "box.png" },
-    "car.png": { name: "Sports Car", price: 5000, img: "car.png" },
-    "raketa.png": { name: "Space Rocket", price: 50, img: "raketa.png" },
-    "ccolso2.png": { name: "Star Ring", price: 3000, img: "ccolso2.png" },
-    "cerrrdce.jpg": { name: "Gingerbread", price: 500, img: "cerrrdce.jpg" },
-    "chemodan.jpg": { name: "Traveler Case", price: 5000, img: "chemodan.jpg" },
-    "ciga.png": { name: "Luxury Cigar", price: 3000, img: "ciga.png" },
-    "colso.png": { name: "Blue Diamond", price: 2500, img: "colso.png" },
-    "costum.jpg": { name: "Royal Costume", price: 10000, img: "costum.jpg" },
-    "cvetok.png": { name: "Wild Flower", price: 1000, img: "cvetok.png" },
-    "dog.png": { name: "Rich Dog", price: 500, img: "dog.png" },
-    "dyxi.png": { name: "Gold Perfume", price: 10000, img: "dyxi.png" },
-    "fonarik.jpg": { name: "Night Lantern", price: 100, img: "fonarik.jpg" },
-    "grob.jpg": { name: "Ancient Coffin", price: 5000, img: "grob.jpg" },
-    "gyba.png": { name: "Lava Lips", price: 5000, img: "gyba.png" },
-    "happybirthday.jpg": { name: "Birthday Cake", price: 200, img: "happybirthday.jpg" },
-    "heart.png": { name: "Heart Lock", price: 2000, img: "heart.png" },
-    "helmet.png": { name: "Spartan Helmet", price: 25000, img: "helmet.png" },
-    "kalendar.png": { name: "Event Calendar", price: 400, img: "kalendar.png" },
-    "kepka.png": { name: "Legendary Cap", price: 100000, img: "kepka.png" },
-    "kirpitch.jpg": { name: "Golden Brick", price: 10000, img: "kirpitch.jpg" },
-    "koks.jpg": { name: "Party Cocktail", price: 150, img: "koks.jpg" },
-    "koktel.png": { name: "Toxic Mix", price: 500, img: "koktel.png" },
-    "kot.png": { name: "Atomic Cat", price: 10000, img: "kot.png" },
-    "kotel.png": { name: "Witch Cauldron", price: 500, img: "kotel.png" },
-    "krovatka.jpg": { name: "Baby Bow", price: 600, img: "krovatka.jpg" },
-    "lolipop.png": { name: "Sweet Lollipop", price: 500, img: "lolipop.png" },
-    "lucky.jpg": { name: "Clover Lucky", price: 500, img: "lucky.jpg" },
-    "mafin.jpg": { name: "Sugar Muffin", price: 700, img: "mafin.jpg" },
-    "metch.png": { name: "Star Saber", price: 700, img: "metch.png" },
-    "narkotiki.png": { name: "Star Token", price: 600, img: "narkotiki.png" },
-    "obyv.jpg": { name: "Sneakers Pro", price: 10000, img: "obyv.jpg" },
-    "orel.jpg": { name: "Golden Eagle", price: 5000, img: "orel.jpg" },
-    "otkritka.jpg": { name: "Peace Dove", price: 150, img: "otkritka.jpg" },
-    "paska.jpg": { name: "Easter Cake", price: 75, img: "paska.jpg" },
-    "rozza.png": { name: "Velvet Rose", price: 2000, img: "rozza.png" },
-    "rykzak.jpg": { name: "Adventurer Bag", price: 500, img: "rykzak.jpg" },
-    "shapka.png": { name: "Santa Hat", price: 500, img: "shapka.png" },
-    "shar.jpg": { name: "Magic Ball", price: 1000, img: "shar.jpg" },
-    "shlem.png": { name: "Biker Helmet", price: 3500, img: "shlem.png" },
-    "soska.jpg": { name: "Diamond Pacifier", price: 3000, img: "soska.jpg" },
-    "star.png": { name: "Pure Star", price: 5, img: "star.png" },
-    "statyya.jpg": { name: "Hero Statue", price: 41000, img: "statyya.jpg" },
-    "venok.png": { name: "Wreath Flower", price: 500, img: "venok.jpg" },
-    "yayko.png": { name: "Dragon Egg", price: 600, img: "yayko.png" },
-    "zhele.png": { name: "Slime Jelly", price: 700, img: "zhele.png" },
-    "zmei.png": { name: "Snake Friend", price: 500, img: "zmei.png" },
-    "meczcc.png": { name: "Faith Amulet", price: 600, img: "meczcc.png" },
-    "kryg.PNG": { name: "Snow Globe", price: 600, img: "kryg.PNG" },
-    "gribb.PNG": { name: "Spy Agaric", price: 600, img: "gribb.PNG" },
-    "zirka.PNG": { name: "Hanging Star", price: 800, img: "zirka.PNG" },
-    "cvetk.PNG": { name: "Sakura Flower", price: 900, img: "cvetk.PNG" },
-    "sshapka.PNG": { name: "Khabib's Papakha", price: 2300, img: "sshapka.PNG" },
-    "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" },
-    "soska.jpg": { name: "Pacifier", price: 2254, img: "soska.jpg" },
-    "sliva.png": { name: "Plum", price: 29544, img: "sliva.png" },
-    "kkoolsoo.png": { name: "Nail", price: 10455, img: "kkoolsoo.png" },
-    "kkolso.png": { name: "Ring", price: 3330, img: "kkolso.png" },
-    "hero.png": { name: "Pepe", price: 543843, img: "hero.png" },
-    "chassiki.png": { name: "Watch", price: 4267, img: "chassiki.png" }
 };
 
 const CASES = [
