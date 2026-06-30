@@ -685,17 +685,16 @@ function tick(){
 }
 
 async function trySettle(){
-  if(settling) return;
-  settling = true;
-  try{
-    await loadBets();
+    if(settling) return;
+    await loadBets(); // Убеждаемся, что ставки актуальны
     const wedges = getWedges();
     const total = wedges.reduce((s,w)=>s+w.value_stars,0);
 
     if(total === 0){
-      await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id).eq('status','waiting');
-      setTimeout(()=>{ location.reload(); }, 1000);
-      return;
+        // Если ставок нет, просто продлеваем таймер или ничего не делаем
+        // Не нужно помечать раунд как finished
+        document.getElementById('timer-text').textContent = "Ждем...";
+        return; 
     }
 
     let r = Math.random() * total;
