@@ -2,79 +2,283 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>NowearSpin</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NowearSpin Hub</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background: #0f0f0f; color: white; font-family: sans-serif; -webkit-tap-highlight-color: transparent; }
-        .game-card {
-            background: linear-gradient(135deg, #1c1c1c 0%, #121212 100%);
-            border: 1px solid #2a2a2a;
-            border-radius: 20px;
-            padding: 16px;
-            margin: 12px;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        :root {
+            --bg: #0d0a05;
+            --card-bg: #151210;
+            --accent: #d4af37;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #0d0a05;
+            padding: 14px 16px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .online-badge { color: #4ade80; font-size: 0.75rem; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .online-badge::before { content: '●'; font-size: 10px; }
-        .nav-bar { position: fixed; bottom: 0; width: 100%; height: 65px; background: #0f0f0f; display: flex; justify-content: space-around; align-items: center; border-top: 1px solid #222; z-index: 50; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: #888; }
-        .nav-item.active { color: #d4af37; }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #161310;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            flex-shrink: 0;
+            text-decoration: none;
+            transition: transform 0.15s;
+        }
+        .back-btn:active { transform: scale(0.9); }
+
+        .online-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin: 0 auto;
+        }
+        .online-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #2ecc71;
+            box-shadow: 0 0 8px #2ecc71;
+        }
+
+        .logo {
+            font-weight: 900;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            font-style: italic;
+            flex-shrink: 0;
+        }
+
+        .games-list {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 40px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border-radius: 22px;
+            padding: 22px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 230px;
+            justify-content: space-between;
+            border: 1px solid rgba(212, 175, 55, 0.12);
+        }
+
+        .card-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            color: #c9c9c9;
+            font-weight: 600;
+            z-index: 2;
+        }
+        .card-top .online-dot { background: #2ecc71; }
+
+        .card-info {
+            z-index: 2;
+        }
+        .card-info h2 {
+            font-size: 1.6rem;
+            font-weight: 900;
+            margin: 6px 0 2px;
+        }
+        .card-info p {
+            color: #9a9a9a;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .image-container {
+            position: absolute;
+            right: 10px;
+            top: 0;
+            bottom: 0;
+            width: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .game-img {
+            max-width: 100%;
+            max-height: 100%;
+            filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
+        }
+
+        .play-btn {
+            position: absolute;
+            right: 18px;
+            bottom: 18px;
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            cursor: pointer;
+        }
+        .play-btn:active { transform: scale(0.92); }
     </style>
 </head>
-<body class="pb-24">
+<body>
 
-    <div class="px-5 py-4 flex justify-between items-center">
-        <span class="online-badge">49 онлайн</span>
-        <button>⋮</button>
+    <header>
+        <a href="index.html" class="back-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+        </a>
+        <div class="online-pill">
+            <span class="online-dot"></span>
+            <span id="totalOnline">— онлайн</span>
+        </div>
+        <div class="logo">
+            <span style="color:var(--accent)">NOWEAR</span><span style="color:#fff">SPIN</span>
+        </div>
+    </header>
+
+    <div class="games-list" id="gamesList">
+
+        <section class="game-card" data-game="mines">
+            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="image-container"><img src="mine.png" class="game-img"></div>
+            <div class="card-info">
+                <h2>Mines</h2>
+                <p>Найди алмазы, избегай мин</p>
+            </div>
+            <button class="play-btn" onclick="launch('mines.html')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </section>
+
+        <section class="game-card" data-game="plinko">
+            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="image-container"><img src="plinko.png" class="game-img"></div>
+            <div class="card-info">
+                <h2>Plinko</h2>
+                <p>Брось шарик и лови множители</p>
+            </div>
+            <button class="play-btn" onclick="launch('plinko.html')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </section>
+
+        <section class="game-card" data-game="catcher">
+            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="image-container"><img src="catcher.jpeg" class="game-img" alt="Игра"></div>
+            <div class="card-info">
+                <h2>Ловля</h2>
+                <p>Лови гифты и выигрывай</p>
+            </div>
+            <button class="play-btn" onclick="launchWithPayment('Lovlyagift.html')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </section>
+
     </div>
 
-    <div id="games">
-        <div class="game-card" onclick="launch('mines.html')">
-            <div>
-                <div class="online-badge">12 онлайн</div>
-                <h2 class="text-lg font-bold">Mines</h2>
-                <p class="text-gray-400 text-xs">Найди свою удачу</p>
-            </div>
-            <div class="w-14 h-14 bg-gray-800 rounded-xl flex items-center justify-center">💣</div>
-        </div>
-
-        <div class="game-card" onclick="launch('plinko.html')">
-            <div>
-                <div class="online-badge">15 онлайн</div>
-                <h2 class="text-lg font-bold">Plinko</h2>
-                <p class="text-gray-400 text-xs">Приумножь свой баланс</p>
-            </div>
-            <div class="w-14 h-14 bg-gray-800 rounded-xl flex items-center justify-center">🔻</div>
-        </div>
-
-        <div class="game-card" onclick="launchWithPayment('Lovlyagift.html')">
-            <div>
-                <div class="online-badge">13 онлайн</div>
-                <h2 class="text-lg font-bold">Catcher</h2>
-                <p class="text-gray-400 text-xs">Лови свои подарки</p>
-            </div>
-            <div class="w-14 h-14 bg-yellow-600/20 rounded-xl flex items-center justify-center text-yellow-500">🎁</div>
-        </div>
-    </div>
-
-    <nav class="nav-bar">
-        <div class="nav-item">⚔️<span>ПвП</span></div>
-        <div class="nav-item active">●<span>Соло</span></div>
-        <div class="nav-item">🎁<span>Розыгрыши</span></div>
-        <div class="nav-item">🛒<span>Магазин</span></div>
-        <div class="nav-item">👤<span>Профиль</span></div>
-    </nav>
-
-    <script>
+<script>
         const tg = window.Telegram.WebApp;
         tg.expand();
         const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx");
         const userId = tg.initDataUnsafe?.user?.id;
+
+        // Реальный счетчик "онлайн": считаем активных пользователей за последние N минут
+        // Требует таблицу presence(user_id, last_seen) в Supabase.
+        async function trackPresence() {
+            if (!userId) return;
+            try {
+                await SB.from('presence').upsert({ user_id: userId, last_seen: new Date().toISOString() });
+            } catch (e) { console.error('presence error', e); }
+        }
+
+        async function loadOnlineCounts() {
+            try {
+                const cutoff = new Date(Date.now() - 60 * 1000).toISOString(); // активны последние 60 сек
+                const { count, error } = await SB
+                    .from('presence')
+                    .select('user_id', { count: 'exact', head: true })
+                    .gte('last_seen', cutoff);
+
+                if (!error && typeof count === 'number') {
+                    document.getElementById('totalOnline').textContent = `${count} онлайн`;
+                } else {
+                    document.getElementById('totalOnline').textContent = '— онлайн';
+                }
+            } catch (e) {
+                console.error(e);
+                document.getElementById('totalOnline').textContent = '— онлайн';
+            }
+        }
+
+        // Если хотите видеть онлайн по каждой игре отдельно — нужна колонка "game" в presence
+        async function loadPerGameCounts() {
+            const cards = document.querySelectorAll('.game-card');
+            for (const card of cards) {
+                const game = card.dataset.game;
+                try {
+                    const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
+                    const { count, error } = await SB
+                        .from('presence')
+                        .select('user_id', { count: 'exact', head: true })
+                        .eq('game', game)
+                        .gte('last_seen', cutoff);
+                    const el = card.querySelector('.online-count');
+                    if (!error && typeof count === 'number') {
+                        el.textContent = `${count} онлайн`;
+                    } else {
+                        el.textContent = '0 онлайн';
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        }
+
+        trackPresence();
+        loadOnlineCounts();
+        loadPerGameCounts();
+        setInterval(trackPresence, 25000);
+        setInterval(loadOnlineCounts, 15000);
+        setInterval(loadPerGameCounts, 15000);
 
         async function launchWithPayment(file) {
             if (!userId) { alert("Ошибка авторизации"); return; }
@@ -97,6 +301,10 @@
         function launch(url) {
             window.location.href = url;
         }
-    </script>
+
+        function launchDirect(file) {
+            window.location.replace("./" + file);
+        }
+</script>
 </body>
 </html>
