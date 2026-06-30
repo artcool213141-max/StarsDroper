@@ -183,10 +183,6 @@
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
         </a>
-        <div class="online-pill">
-            <span class="online-dot offline" id="totalDot"></span>
-            <span id="totalOnline">0 онлайн</span>
-        </div>
         <div class="logo">
             <span style="color:var(--accent)">NOWEAR</span><span style="color:#fff">SPIN</span>
         </div>
@@ -194,8 +190,18 @@
 
     <div class="games-list" id="gamesList">
 
+                <section class="game-card" data-game="Rolls">
+            <div class="image-container"><img src="catcher.jpeg" class="game-img" alt="Игра"></div>
+            <div class="card-info">
+                <h2>Rolls</h2>
+                <p>Устрой битву на подарки</p>
+            </div>
+            <button class="play-btn" onclick="launch('rolls.html')">
+                <svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+        </section>
+
         <section class="game-card" data-game="mines">
-            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="mine.png" class="game-img"></div>
             <div class="card-info">
                 <h2>Mines</h2>
@@ -207,7 +213,6 @@
         </section>
 
         <section class="game-card" data-game="plinko">
-            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="plinko.png" class="game-img"></div>
             <div class="card-info">
                 <h2>Plinko</h2>
@@ -219,10 +224,9 @@
         </section>
 
         <section class="game-card" data-game="catcher">
-            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="catcher.jpeg" class="game-img" alt="Игра"></div>
             <div class="card-info">
-                <h2>Ловля</h2>
+                <h2>Catchers</h2>
                 <p>Лови гифты и выигрывай</p>
             </div>
             <button class="play-btn" onclick="launchWithPayment('Lovlyagift.html')">
@@ -258,11 +262,6 @@
 
         // Безопасно ставим текст счётчика: всегда конкретное число (0, 1, 2…),
         // никогда не оставляем "—", даже если запрос не удался.
-        function setCountText(el, dotEl, n) {
-            const safeN = Number.isFinite(n) ? n : 0;
-            el.textContent = `${safeN} онлайн`;
-            if (dotEl) dotEl.classList.toggle('offline', safeN === 0);
-        }
 
         async function loadOnlineCounts() {
             const totalEl = document.getElementById('totalOnline');
@@ -279,29 +278,6 @@
             } catch (e) {
                 console.error(e);
                 setCountText(totalEl, totalDot, 0);
-            }
-        }
-
-        // Онлайн по каждой игре отдельно (нужна колонка "game" в presence)
-        async function loadPerGameCounts() {
-            const cards = document.querySelectorAll('.game-card');
-            const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
-            for (const card of cards) {
-                const game = card.dataset.game;
-                const el = card.querySelector('.online-count');
-                const dot = card.querySelector('.online-dot');
-                try {
-                    const { count, error } = await SB
-                        .from('presence')
-                        .select('user_id', { count: 'exact', head: true })
-                        .eq('game', game)
-                        .gte('last_seen', cutoff);
-                    if (error) throw error;
-                    setCountText(el, dot, count);
-                } catch (e) {
-                    console.error(e);
-                    setCountText(el, dot, 0);
-                }
             }
         }
 
