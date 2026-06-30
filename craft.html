@@ -199,7 +199,7 @@
 </div>
 
 <script>
-const tg = window.Telegram.WebApp;
+    const tg = window.Telegram.WebApp;
     const BACKEND_URL = 'https://stars-droper-main.vercel.app/api'; 
     const IMAGE_FOLDER = 'img/'; 
     tg.expand();
@@ -207,9 +207,9 @@ const tg = window.Telegram.WebApp;
     const TOTAL_SLOTS = 5; 
     let selectedGifts = []; 
     let activeSlotIndex = null;
-    let userInventory = []; // Сюда загрузим реальные вещи юзера из БД
+    let userInventory = []; // Сюда загрузим реальные вещи юзера из БД (массив "чистых" ключей giftDatabase)
 
-    // Твоя база данных подарков
+    // Твоя база данных подарков — расширения (.png / .PNG) оставлены как есть, НЕ менялись
     const giftDatabase = {
         "1may.jpg": { name: "1 May Exclusive", price: 100, img: "1may.jpg" },
         "1may.png": { name: "1 May Classic", price: 100, img: "1may.png" }, 
@@ -278,17 +278,46 @@ const tg = window.Telegram.WebApp;
         "tyfli.PNG": { name: "Sky Stilettos", price: 1800, img: "tyfli.PNG" }
     };
 
+    // === Регистронезависимый поиск ===
+    // Ключи в giftDatabase НЕ менялись (некоторые .png, некоторые .PNG),
+    // но бэкенд / Supabase могут присылать ключ в другом регистре.
+    // Строим вспомогательный индекс: lowercase-ключ -> оригинальный ключ giftDatabase.
+    const giftKeyIndex = {};
+    Object.keys(giftDatabase).forEach(originalKey => {
+        giftKeyIndex[originalKey.toLowerCase()] = originalKey;
+    });
+
+    // Находит подарок по любому регистру ключа (и с префиксом img/, и без)
+    function findGiftKey(rawKey) {
+        if (!rawKey) return null;
+        const clean = String(rawKey).replace('img/', '').trim().toLowerCase();
+        return giftKeyIndex[clean] || null;
+    }
+
+    function getGiftItem(rawKey) {
+        const realKey = findGiftKey(rawKey);
+        return realKey ? giftDatabase[realKey] : null;
+    }
+
     const getUserId = () => tg.initDataUnsafe?.user?.id || 12345;
 
     // 1. Загрузка инвентаря пользователя при старте страницы
-// Изменяем старый урл на правильный файл craft_gift
     async function loadUserInventory() {
         try {
             const response = await fetch(`${BACKEND_URL}/get_inventory?user_id=${getUserId()}`);
-// В итоге получается адрес: https://sycchak.vercel.app/api/get_inventory?user_id=...
             const data = await response.json();
+
             if (data.success && Array.isArray(data.inventory)) {
-                userInventory = data.inventory;
+                // Бэкенд может прислать либо массив строк ("star.png"),
+                // либо массив объектов ({key, name, price, img}) — поддерживаем оба формата.
+                userInventory = data.inventory
+                    .map(item => {
+                        const rawKey = (typeof item === 'object' && item !== null)
+                            ? (item.key || item.img)
+                            : item;
+                        return findGiftKey(rawKey); // приводим к реальному ключу из giftDatabase
+                    })
+                    .filter(Boolean); // выбрасываем то, чего нет в giftDatabase
             } else {
                 userInventory = [];
             }
@@ -316,9 +345,13 @@ const tg = window.Telegram.WebApp;
             slot.id = `slot-${i}`;
             
             if (selectedGifts[i]) {
-                const item = giftDatabase[selectedGifts[i]];
+                const item = getGiftItem(selectedGifts[i]);
                 slot.classList.add('filled');
-                slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                if (item) {
+                    slot.innerHTML = `<img src="${IMAGE_FOLDER}${item.img}" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
+                } else {
+                    slot.innerHTML = `<img src="https://cdn-icons-png.flaticon.com/512/1144/1144760.png">`;
+                }
                 slot.onclick = () => removeGiftFromSlot(i); // По клику на заполненный слот — убираем его
             } else {
                 slot.classList.remove('filled');
@@ -405,31 +438,35 @@ const tg = window.Telegram.WebApp;
         }
     }
 
-async function runCraft() {
-    if (selectedGifts.filter(Boolean).length < TOTAL_SLOTS) return;
+    async function runCraft() {
+        if (selectedGifts.filter(Boolean).length < TOTAL_SLOTS) return;
 
-    // Вспомогательная функция для извлечения ключа
-    const getCleanKey = (item) => {
-        if (typeof item === 'string') return item.replace('img/', '');
-        if (typeof item === 'object' && item.img) return item.img.replace('img/', '');
-        return item;
-    };
+        const container = document.getElementById('slots-container');
+        const mainBall = document.getElementById('main-ball');
 
-    // Очищаем массив перед отправкой: превращаем всё в "paska.jpg"
-    const cleanedGiftKeys = selectedGifts.filter(Boolean).map(getCleanKey);
-
-    try {
-        const response = await fetch(`${BACKEND_URL}/craft_gift`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                user_id: getUserId(),
-                gift_keys: cleanedGiftKeys // Отправляем чистые ключи
-            })
+        // Очищаем массив перед отправкой: превращаем всё в "paska.jpg" (точный ключ из giftDatabase)
+        const cleanedGiftKeys = selectedGifts.filter(Boolean).map(key => {
+            const item = getGiftItem(key);
+            return item ? item.img : key;
         });
-            
+
+        // Запускаем анимацию крафта
+        container.classList.add('super-spin');
+        mainBall.classList.add('main-ball-absorb');
+        document.getElementById('start-craft-btn').setAttribute('disabled', 'true');
+
+        try {
+            const response = await fetch(`${BACKEND_URL}/craft_gift`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    user_id: getUserId(),
+                    gift_keys: cleanedGiftKeys // Отправляем чистые ключи
+                })
+            });
+
             const result = await response.json();
-            
+
             if (result.error) {
                 alert("Ошибка: " + result.error);
                 resetCraftMachine();
@@ -440,11 +477,11 @@ async function runCraft() {
                 container.style.opacity = '0';
                 container.classList.remove('super-spin');
 
-                const winKey = result.new_gift_key || "sliva.png"; 
-                const createdItem = giftDatabase[winKey] || { name: "Эпический Предмет", img: "sliva.png" };
+                const winKey = result.new_gift_key || "sliva.png";
+                const createdItem = getGiftItem(winKey) || { name: "Эпический Предмет", img: "sliva.png" };
 
                 mainBall.innerHTML = `<img src="${IMAGE_FOLDER}${createdItem.img}" style="filter: drop-shadow(0 0 15px var(--neon));" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">`;
-                
+
                 if (tg.showAlert) {
                     tg.showAlert(`🎉 Контракт выполнен!\nВы получили: ${createdItem.name}`);
                 } else {
@@ -471,6 +508,7 @@ async function runCraft() {
         const container = document.getElementById('slots-container');
         const mainBall = document.getElementById('main-ball');
         container.classList.remove('super-spin');
+        container.style.opacity = '1';
         mainBall.classList.remove('main-ball-absorb');
         mainBall.innerHTML = `<span id="craft-status-text">КРАФТ</span>`;
         selectedGifts = [];
@@ -483,17 +521,14 @@ async function runCraft() {
     }
 
     // Инициализация при загрузке страницы
-// Инициализация при загрузке страницы после того, как весь HTML готов
     async function startApp() {
         await loadUserInventory();
         initCraftSlots();
     }
-    
-    // Ждем, пока браузер построит DOM-дерево
+
     document.addEventListener("DOMContentLoaded", () => {
         startApp();
     });
-</script>
 </script>
 </body>
 </html>
