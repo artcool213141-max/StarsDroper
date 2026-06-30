@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Rolls — NowearSpin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+:root{ --bg:#0d0a05; --accent:#d4af37; }
+*{box-sizing:border-box;}
+body{
+  background:#0d0a05; color:#fff; font-family:'Inter',sans-serif;
+  margin:0; padding:0; height:100vh; overflow:hidden;
+  display:flex; flex-direction:column; user-select:none; -webkit-tap-highlight-color:transparent;
+}
+header{
+  background:#0d0a05; border-bottom:2px solid rgba(212,175,55,0.3);
+  padding:12px 20px; display:flex; align-items:center; gap:12px; height:65px; flex-shrink:0;
+}
+.logo{font-weight:900; font-size:1.3rem; text-transform:uppercase; font-style:italic;}
+.back-btn{
+  display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%;
+  background:#111; border:1px solid rgba(212,175,55,0.3); flex-shrink:0;
+}
+.back-btn:active{transform:scale(0.9);}
+.icon-cur{width:14px; height:14px; object-fit:contain; vertical-align:-2px;}
+
+.my-balance{margin-left:auto; display:flex; gap:8px;}
+.balance-pill{
+  display:flex; align-items:center; gap:5px; background:rgba(212,175,55,0.08);
+  border:1px solid rgba(212,175,55,0.3); border-radius:999px; padding:6px 10px;
+  font-weight:800; font-size:13px; color:#fff;
+}
+
+.content{flex:1; overflow-y:auto; padding:16px 16px 110px 16px; -webkit-overflow-scrolling:touch;}
+.content::-webkit-scrollbar{display:none;}
+
+.pot-card{background:rgba(255,255,255,0.04); border:1px solid rgba(212,175,55,0.2); border-radius:16px; padding:12px; margin-bottom:16px; display:flex; justify-content:center; gap:18px;}
+.pot-item{display:flex; align-items:center; gap:5px; font-weight:900; font-size:0.95rem;}
+
+.wheel-wrap{position:relative; width:270px; height:270px; margin:0 auto 18px auto;}
+.pointer{
+  position:absolute; top:-6px; left:50%; transform:translateX(-50%); width:0; height:0;
+  border-left:14px solid transparent; border-right:14px solid transparent; border-top:22px solid #fff;
+  z-index:10; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
+}
+.wheel{
+  width:100%; height:100%; border-radius:50%; position:relative;
+  border:6px solid #1a1408; box-shadow:0 0 40px rgba(212,175,55,0.25), inset 0 0 20px rgba(0,0,0,0.5);
+  transition: transform 4.5s cubic-bezier(0.17,0.67,0.18,1);
+  background: conic-gradient(#1f1a10 0deg, #1f1a10 360deg);
+}
+.wedge-avatar{
+  position:absolute; width:30px; height:30px; border-radius:50%; object-fit:cover;
+  border:2px solid #fff; box-shadow:0 0 6px rgba(0,0,0,0.6); transform:translate(-50%,-50%); z-index:3;
+}
+.center-circle{
+  position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+  width:92px; height:92px; border-radius:50%; background:#0d0a05; border:3px solid var(--accent);
+  display:flex; align-items:center; justify-content:center; text-align:center; flex-direction:column;
+  z-index:4; box-shadow:0 0 20px rgba(212,175,55,0.4);
+}
+.center-circle .timer{font-size:1.4rem; font-weight:900; color:#fff;}
+.center-circle .label{font-size:9px; color:var(--accent); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;}
+
+.type-tabs{display:flex; gap:6px; margin-bottom:12px;}
+.type-tab{
+  flex:1; display:flex; align-items:center; justify-content:center; gap:6px; padding:10px 0;
+  background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1); border-radius:12px;
+  font-weight:800; font-size:12px; color:#999;
+}
+.type-tab.active{border-color:var(--accent); color:var(--accent); background:rgba(212,175,55,0.08);}
+.type-tab img{width:16px; height:16px;}
+
+.bet-box{background:rgba(255,255,255,0.04); border:1px solid rgba(212,175,55,0.2); border-radius:18px; padding:14px; margin-bottom:18px;}
+.amount-input{
+  width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(212,175,55,0.3); border-radius:12px;
+  padding:14px; text-align:center; font-size:1.1rem; font-weight:900; color:#fff; outline:none; margin-bottom:10px;
+}
+.amount-input:focus{border-color:var(--accent);}
+.quick-row{display:flex; gap:6px; margin-bottom:10px;}
+.quick-btn{flex:1; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.25); color:var(--accent); font-weight:800; font-size:12px; padding:8px 0; border-radius:10px;}
+.quick-btn:active{transform:scale(0.95);}
+.btn-bet{
+  width:100%; background:var(--accent); color:#0d0a05; font-weight:900; padding:15px; border-radius:14px;
+  text-transform:uppercase; font-size:1rem; border:none;
+}
+.btn-bet:active{transform:scale(0.97);}
+.btn-bet:disabled{opacity:0.4;}
+
+.gifts-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-height:220px; overflow-y:auto; margin-bottom:6px;}
+.gift-slot{
+  aspect-ratio:1/1; background:rgba(255,255,255,0.05); border:1.5px solid rgba(212,175,55,0.2); border-radius:14px;
+  display:flex; align-items:center; justify-content:center; padding:6px; position:relative;
+}
+.gift-slot.selected{border-color:var(--accent); background:rgba(212,175,55,0.15);}
+.gift-slot img{width:80%; height:80%; object-fit:contain;}
+.gift-price{position:absolute; bottom:2px; right:4px; font-size:8px; font-weight:800; color:var(--accent);}
+.gifts-empty{grid-column:1/-1; text-align:center; color:#666; font-size:12px; padding:20px 0;}
+
+.players-title{font-size:12px; text-transform:uppercase; color:#999; font-weight:800; margin:10px 0 8px 2px;}
+.player-row{
+  display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-bottom:8px;
+}
+.player-avatar{width:38px; height:38px; border-radius:50%; object-fit:cover; background:#222; border:2px solid var(--seg-color,#d4af37); flex-shrink:0;}
+.player-info{flex:1; min-width:0;}
+.player-name{font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.player-percent{font-size:11px; color:var(--accent); font-weight:700;}
+.player-breakdown{font-size:11px; color:#bbb; display:flex; gap:6px; align-items:center; flex-wrap:wrap;}
+.player-breakdown img{width:11px; height:11px;}
+.empty-state{text-align:center; color:#666; font-size:12px; padding:30px 0;}
+
+.winner-banner{
+  position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:200;
+  background:#161109; border:2px solid var(--accent); border-radius:20px; padding:24px 30px;
+  text-align:center; box-shadow:0 0 40px rgba(212,175,55,0.5); display:none;
+}
+.winner-banner.show{display:block; animation:pop 0.3s ease;}
+.winner-avatar{
+  width:64px; height:64px; border-radius:50%; object-fit:cover; background:#222;
+  border:3px solid var(--accent); box-shadow:0 0 16px rgba(212,175,55,0.5);
+  display:block; margin:0 auto 10px auto;
+}
+.winner-amount img{width:14px; height:14px; vertical-align:-2px; margin-left:2px;}
+@keyframes pop{from{transform:translate(-50%,-50%) scale(0.7); opacity:0;} to{transform:translate(-50%,-50%) scale(1); opacity:1;}}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="games.html" class="back-btn">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+  </a>
+  <div class="logo"><span class="text-[#d4af37]">ROLLS</span></div>
+  <div class="my-balance">
+    <span class="balance-pill"><img class="icon-cur" src="img/star.png" onerror="this.style.display='none'"><span id="my-stars">0</span></span>
+    <span class="balance-pill"><img class="icon-cur" src="img/ton.png" onerror="this.style.display='none'"><span id="my-ton">0</span></span>
+  </div>
+</header>
+
+<div class="content">
+
+  <div class="wheel-wrap">
+    <div class="pointer"></div>
+    <div class="wheel" id="wheel">
+      <div class="center-circle">
+        <div class="timer" id="timer-text">--</div>
+        <div class="label" id="status-label">Ожидание</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="type-tabs">
+    <div class="type-tab active" id="tab-type-stars" onclick="switchBetType('stars')"><img src="img/star.png" onerror="this.style.display='none'">Stars</div>
+    <div class="type-tab" id="tab-type-ton" onclick="switchBetType('ton')"><img src="img/ton.png" onerror="this.style.display='none'">TON</div>
+    <div class="type-tab" id="tab-type-gift" onclick="switchBetType('gift')">🎁 Подарок</div>
+  </div>
+
+  <div class="bet-box" id="panel-currency">
+    <input type="number" id="bet-amount" class="amount-input" placeholder="Сумма ставки">
+    <div class="quick-row">
+      <div class="quick-btn" onclick="addAmount(10)">+10</div>
+      <div class="quick-btn" onclick="addAmount(50)">+50</div>
+      <div class="quick-btn" onclick="addAmount(100)">+100</div>
+      <div class="quick-btn" onclick="setMax()">MAX</div>
+    </div>
+    <button class="btn-bet" id="btn-bet" onclick="placeBet()">Сделать ставку</button>
+  </div>
+
+  <div class="bet-box hidden" id="panel-gift">
+    <div class="gifts-grid" id="gifts-grid"></div>
+    <button class="btn-bet" id="btn-bet-gift" onclick="placeGiftBet()" disabled>Выберите подарок</button>
+  </div>
+
+  <div class="players-title">Игроки в раунде</div>
+  <div id="players-list">
+    <div class="empty-state">Пока никто не сделал ставку</div>
+  </div>
+
+</div>
+
+<div class="winner-banner" id="winner-banner">
+  <img id="winner-avatar" class="winner-avatar" src="" onerror="this.src='https://img.icons8.com/fluency/96/user-male-circle.png'">
+  <div style="font-size:11px;color:#999;text-transform:uppercase;font-weight:800;">Победитель</div>
+  <div id="winner-name" style="font-size:1.3rem;font-weight:900;color:#d4af37;margin:6px 0;"></div>
+  <div id="winner-amount" class="winner-amount" style="font-size:1rem;font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px;"></div>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const userId = String(tg.initDataUnsafe?.user?.id || ('guest_' + Math.floor(Math.random()*100000)));
+const username = tg.initDataUnsafe?.user?.username || tg.initDataUnsafe?.user?.first_name || 'Player';
+const avatarUrl = tg.initDataUnsafe?.user?.photo_url || 'https://img.icons8.com/fluency/96/user-male-circle.png';
+
+const STARS_PER_TON = 100; // курс: 100 звёзд = 1 тон
+
+// ВАЖНО: реальный инвентарь подарков хранится в колонке users.inventory
+// (см. api/get_inventory.py), а НЕ в users.gifts. Раньше виджет читал
+// несуществующее поле gifts, поэтому подарки никогда не подгружались.
+const INVENTORY_COLUMN = 'inventory';
+
+// тот же словарь подарков, что и в profile.html — имя + фиксированная цена в звёздах
+const ITEMS = {
+    "1may.jpg": { name: "1 May Exclusive", price: 100 },
+    "1may.png": { name: "1 May Classic", price: 100 }, 
+    "chassiki.png": { name: "Golden Watches", price: 4700 }, 
+    "sliva.png": { name: "Juicy Plum Jackpot", price: 33500 }, 
+    "soska.png": { name: "Super Pacifier", price: 2500 }, 
+    "zirka.png": { name: "Shiny Starlet", price: 850 }, 
+    "2025.jpg": { name: "Happy 2025", price: 500 },
+    "bear.png": { name: "Honey Bear", price: 3500 },
+    "book.jpg": { name: "Ancient Book", price: 1000 },
+    "booox.png": { name: "Berry Box", price: 700 },
+    "botinok.png": { name: "Old Boot", price: 400 },
+    "box.png": { name: "Jack in Box", price: 600 },
+    "car.png": { name: "Sports Car", price: 5000 },
+    "raketa.png": { name: "Space Rocket", price: 50 },
+    "ccolso2.png": { name: "Star Ring", price: 3000 },
+    "cerrrdce.jpg": { name: "Gingerbread", price: 500 },
+    "chemodan.jpg": { name: "Traveler Case", price: 5000 },
+    "ciga.png": { name: "Luxury Cigar", price: 3000 },
+    "colso.png": { name: "Blue Diamond", price: 2500 },
+    "costum.jpg": { name: "Royal Costume", price: 10000 },
+    "cvetok.png": { name: "Wild Flower", price: 1000 },
+    "dog.png": { name: "Rich Dog", price: 500 },
+    "dyxi.png": { name: "Gold Perfume", price: 10000 },
+    "fonarik.jpg": { name: "Night Lantern", price: 100 },
+    "grob.jpg": { name: "Ancient Coffin", price: 5000 },
+    "gyba.png": { name: "Lava Lips", price: 5000 },
+    "happybirthday.jpg": { name: "Birthday Cake", price: 200 },
+    "heart.png": { name: "Heart Lock", price: 2000 },
+    "helmet.png": { name: "Spartan Helmet", price: 25000 },
+    "kalendar.png": { name: "Event Calendar", price: 400 },
+    "kepka.png": { name: "Legendary Cap", price: 100000 },
+    "kirpitch.jpg": { name: "Golden Brick", price: 10000 },
+    "koks.jpg": { name: "Party Cocktail", price: 150 },
+    "koktel.png": { name: "Toxic Mix", price: 500 },
+    "kot.png": { name: "Atomic Cat", price: 10000 },
+    "kotel.png": { name: "Witch Cauldron", price: 500 },
+    "krovatka.jpg": { name: "Baby Bow", price: 600 },
+    "lolipop.png": { name: "Sweet Lollipop", price: 500 },
+    "lucky.jpg": { name: "Clover Lucky", price: 500 },
+    "mafin.jpg": { name: "Sugar Muffin", price: 700 },
+    "metch.png": { name: "Star Saber", price: 700 },
+    "narkotiki.png": { name: "Star Token", price: 700 },
+    "obyv.jpg": { name: "Sneakers Pro", price: 10000 },
+    "orel.jpg": { name: "Golden Eagle", price: 5000 },
+    "otkritka.jpg": { name: "Peace Dove", price: 150 },
+    "paska.jpg": { name: "Easter Cake", price: 75 },
+    "rozza.png": { name: "Velvet Rose", price: 2000 },
+    "rykzak.jpg": { name: "Adventurer Bag", price: 500 },
+    "shapka.png": { name: "Santa Hat", price: 500 },
+    "shar.jpg": { name: "Magic Ball", price: 1000 },
+    "shlem.png": { name: "Biker Helmet", price: 3500 },
+    "soska.jpg": { name: "Diamond Pacifier", price: 3000 },
+    "star.png": { name: "Pure Star", price: 5 }, // Лишний дубликат удален
+    "statyya.jpg": { name: "Hero Statue", price: 41000 },
+    "venok.jpg": { name: "Wreath Flower", price: 500 },
+    "yayko.png": { name: "Dragon Egg", price: 600 },
+    "zhele.png": { name: "Slime Jelly", price: 700 },
+    "zmei.png": { name: "Snake Friend", price: 500 },
+    "meczcc.png": { name: "Faith Amulet", price: 600 },
+    "kryg.PNG": { name: "Snow Globe", price: 600 },
+    "gribb.PNG": { name: "Spy Agaric", price: 600 },
+    "zirka.PNG": { name: "Hanging Star", price: 800 },
+    "cvetk.PNG": { name: "Sakura Flower", price: 900 },
+    "sshapka.PNG": { name: "Khabib's Papakha", price: 2300 },
+    "tyfli.PNG": { name: "Sky Stilettos", price: 1800 }
+};
+
+// цвета по типу ставки (hue) — звёзды золото, тон синий, подарок фиолетовый
+const TYPE_HUE = { stars: 45, ton: 205, gift: 280 };
+
+let betType = 'stars';
+let currentRound = null;
+let bets = [];
+let myGifts = [];
+let selectedGift = null;
+let countdownInt = null;
+let pollInt = null;
+let channel = null;
+let settling = false;
+let myProfile = null; // кэш текущего юзера (stars/balance/inventory)
+let spinStartedAt = null; // когда начался спин — для защиты от зависаний
+
+function fmt(n){ return Math.round(n*100)/100; }
+
+function switchBetType(t){
+  betType = t;
+  document.getElementById('tab-type-stars').classList.toggle('active', t==='stars');
+  document.getElementById('tab-type-ton').classList.toggle('active', t==='ton');
+  document.getElementById('tab-type-gift').classList.toggle('active', t==='gift');
+  document.getElementById('panel-currency').classList.toggle('hidden', t==='gift');
+  document.getElementById('panel-gift').classList.toggle('hidden', t!=='gift');
+  if(t==='gift') renderGiftsGrid();
+}
+
+// загружает строку юзера (stars, balance, inventory), создаёт если её ещё нет
+async function loadMe(force){
+  if(myProfile && !force) return myProfile;
+  const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+  if(error) console.error('loadMe error', error);
+  myProfile = data || { user_id: userId, stars: 0, balance: 0, inventory: [] };
+  renderMyBalance();
+  return myProfile;
+}
+
+function renderMyBalance(){
+  if(!myProfile) return;
+  document.getElementById('my-stars').textContent = fmt(myProfile.stars || 0);
+  document.getElementById('my-ton').textContent = fmt(myProfile.balance || 0);
+}
+
+function parseGifts(raw){
+  if(Array.isArray(raw)) return raw;
+  if(typeof raw === 'string' && raw.trim() !== ''){
+    try{ return JSON.parse(raw); } catch(e){ return raw.split(',').map(s=>s.trim()).filter(Boolean); }
+  }
+  return [];
+}
+
+// подарки в инвентаре хранятся как объекты {id, img, name, price} (см. profile.html),
+// но иногда могут быть и просто строкой-именем файла — поддерживаем оба варианта
+function giftFile(g){
+  const f = (typeof g === 'object' && g && g.img) ? g.img : String(g);
+  return f.split('/').pop();
+}
+function giftInfo(g){
+  if(typeof g === 'object' && g){
+    const file = giftFile(g);
+    return {
+      name: g.name || (ITEMS[file]?.name) || file.split('.')[0] || 'Подарок',
+      price: Number(g.price ?? ITEMS[file]?.price ?? 0)
+    };
+  }
+  const file = giftFile(g);
+  return ITEMS[file] || { name: file.split('.')[0] || 'Подарок', price: 0 };
+}
+
+function renderGiftsGrid(){
+  const grid = document.getElementById('gifts-grid');
+  if(myGifts.length === 0){
+    grid.innerHTML = '<div class="gifts-empty">У вас нет подарков</div>';
+    document.getElementById('btn-bet-gift').disabled = true;
+    return;
+  }
+  grid.innerHTML = myGifts.map((g, i)=>{
+    const file = giftFile(g);
+    const info = giftInfo(g);
+    return `<div class="gift-slot ${selectedGift===i?'selected':''}" onclick="selectGift(${i})">
+      <img src="img/${file}" onerror="this.src='img/star.png'">
+      <div class="gift-price">${info.price}</div>
+    </div>`;
+  }).join('');
+}
+
+function selectGift(i){
+  selectedGift = i;
+  renderGiftsGrid();
+  document.getElementById('btn-bet-gift').disabled = false;
+  document.getElementById('btn-bet-gift').textContent = 'Поставить: ' + giftInfo(myGifts[i]).name;
+}
+
+async function loadOrCreateRound(){
+  document.getElementById('winner-banner').classList.remove('show');
+  let { data } = await _supabase.from('roll_rounds')
+    .select('*').order('id', {ascending:false}).limit(1).maybeSingle();
+
+  const needNew = !data || data.status === 'finished';
+
+  if(needNew){
+    const ends_at = new Date(Date.now() + 30000).toISOString();
+    const { data: newRound } = await _supabase.from('roll_rounds')
+      .insert({ status:'waiting', ends_at }).select().single();
+    currentRound = newRound;
+  } else {
+    currentRound = data;
+  }
+
+  await loadBets();
+  renderAll();
+  subscribeRealtime();
+  startTickLoop();
+  startPolling();
+}
+
+async function loadBets(){
+  const { data } = await _supabase.from('roll_bets')
+    .select('*').eq('round_id', currentRound.id).order('id', {ascending:true});
+  bets = data || [];
+}
+
+// каждая ставка = свой сектор (так разные типы и подарки у одного игрока видно отдельно)
+function getWedges(){
+  return bets.map(b=>({
+    id:b.id, user_id:b.user_id, username:b.username, avatar_url:b.avatar_url,
+    type:b.bet_type, amount:Number(b.amount)||0, gift_filename:b.gift_filename,
+    value_stars: Number(b.value_stars)||0
+  }));
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderAll(){
+  const wedges = getWedges();
+  const total = wedges.reduce((s,w)=>s+w.value_stars, 0);
+
+  const totalStars = wedges.filter(w=>w.type==='stars').reduce((s,w)=>s+w.amount,0);
+  const totalTon = wedges.filter(w=>w.type==='ton').reduce((s,w)=>s+w.amount,0);
+  const totalGifts = wedges.filter(w=>w.type==='gift').length;
+
+  // Безопасное обновление плашек банка раунда
+  const elPotStars = document.getElementById('pot-stars');
+  if(elPotStars) elPotStars.textContent = fmt(totalStars);
+  
+  const elPotTon = document.getElementById('pot-ton');
+  if(elPotTon) elPotTon.textContent = fmt(totalTon);
+  
+  const elPotGifts = document.getElementById('pot-gifts');
+  if(elPotGifts) elPotGifts.textContent = totalGifts;
+
+  const wheelEl = document.getElementById('wheel');
+  if (wheelEl) {
+    wheelEl.querySelectorAll('.wedge-avatar').forEach(el=>el.remove());
+
+    if(wedges.length===0 || total<=0){
+      wheelEl.style.background = 'conic-gradient(#1f1a10 0deg, #1f1a10 360deg)';
+    } else {
+      let acc = 0;
+      const stops = [];
+      const counters = {stars:0, ton:0, gift:0};
+      wedges.forEach((w)=>{
+        const start = acc/total*360;
+        acc += w.value_stars;
+        const end = acc/total*360;
+        const hue = TYPE_HUE[w.type] || 0;
+        const lightness = 42 + (counters[w.type]%3)*8;
+        counters[w.type]++;
+        const color = `hsl(${hue},70%,${lightness}%)`;
+        stops.push(`${color} ${start}deg ${end}deg`);
+
+        const mid = (start+end)/2;
+        const rad = mid*Math.PI/180;
+        const R = 92;
+        const cx = 130 + R*Math.sin(rad);
+        const cy = 130 - R*Math.cos(rad);
+        const img = document.createElement('img');
+        img.className = 'wedge-avatar';
+        img.style.left = cx+'px'; img.style.top = cy+'px';
+        img.style.borderColor = color;
+        img.src = w.avatar_url || 'https://img.icons8.com/fluency/96/user-male-circle.png';
+        img.onerror = function(){ this.src='https://img.icons8.com/fluency/96/user-male-circle.png'; };
+        wheelEl.appendChild(img);
+      });
+      wheelEl.style.background = `conic-gradient(${stops.join(',')})`;
+    }
+  }
+
+  const grouped = {};
+  const order = [];
+  wedges.forEach(w=>{
+    if(!grouped[w.user_id]){ grouped[w.user_id] = {user_id:w.user_id, username:w.username, avatar_url:w.avatar_url, value:0, stars:0, ton:0, gifts:[]}; order.push(w.user_id); }
+    const g = grouped[w.user_id];
+    g.value += w.value_stars;
+    if(w.type==='stars') g.stars += w.amount;
+    if(w.type==='ton') g.ton += w.amount;
+    if(w.type==='gift') g.gifts.push(w.gift_filename);
+  });
+  
+  const listEl = document.getElementById('players-list');
+  if(listEl) {
+    if(order.length===0){
+      listEl.innerHTML = '<div class="empty-state">Пока никто не сделал ставку</div>';
+    } else {
+      listEl.innerHTML = order.map((uid,i)=>{
+        const g = grouped[uid];
+        const pct = total>0 ? fmt(g.value/total*100) : 0;
+        const parts = [];
+        if(g.stars>0) parts.push(`<span><img src="img/star.png" onerror="this.style.display='none'"> ${fmt(g.stars)}</span>`);
+        if(g.ton>0) parts.push(`<span><img src="img/ton.png" onerror="this.style.display='none'"> ${fmt(g.ton)}</span>`);
+        if(g.gifts.length>0) parts.push(`<span>🎁 x${g.gifts.length}</span>`);
+        return `<div class="player-row">
+          <img class="player-avatar" src="${g.avatar_url||'https://img.icons8.com/fluency/96/user-male-circle.png'}" onerror="this.src='https://img.icons8.com/fluency/96/user-male-circle.png'">
+          <div class="player-info">
+            <div class="player-name">${escapeHtml(g.username||'Player')}</div>
+            <div class="player-percent">${pct}%</div>
+            <div class="player-breakdown">${parts.join('')}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Безопасное обновление статуса
+  const elStatus = document.getElementById('status-label');
+  if(elStatus) {
+    elStatus.textContent =
+      currentRound.status === 'finished' ? 'Завершено' :
+      currentRound.status === 'spinning' ? 'Крутим...' : 'Ожидание';
+  }
+}
+
+function addAmount(v){
+  const inp = document.getElementById('bet-amount');
+  inp.value = (parseFloat(inp.value)||0) + v;
+}
+async function setMax(){
+  const me = await loadMe(true);
+  document.getElementById('bet-amount').value = betType==='stars' ? (me.stars||0) : (me.balance||0);
+}
+
+async function placeBet(){
+  const inp = document.getElementById('bet-amount');
+  const amount = parseFloat(inp.value);
+  if(!amount || amount<=0){ tg.showAlert ? tg.showAlert('Введите сумму ставки') : alert('Введите сумму ставки'); return; }
+  if(!currentRound || currentRound.status !== 'waiting'){ tg.showAlert ? tg.showAlert('Раунд уже стартовал, дождись нового') : alert('Раунд уже стартовал'); return; }
+
+  const me = await loadMe(true);
+  const field = betType === 'stars' ? 'stars' : 'balance';
+  const balance = me[field] || 0;
+  if(amount > balance){ tg.showAlert ? tg.showAlert('Недостаточно средств') : alert('Недостаточно средств'); return; }
+
+  document.getElementById('btn-bet').disabled = true;
+  try{
+    const { error: balErr } = await _supabase.from('users').update({ [field]: balance - amount }).eq('user_id', userId);
+    if(balErr) throw balErr;
+    myProfile[field] = balance - amount;
+    renderMyBalance();
+
+    const value_stars = betType==='stars' ? amount : amount*STARS_PER_TON;
+    const { error: betErr } = await _supabase.from('roll_bets').insert({
+      round_id: currentRound.id, user_id: userId, username, avatar_url: avatarUrl,
+      bet_type: betType, amount, value_stars
+    });
+    if(betErr) throw betErr;
+
+    inp.value = '';
+    tg.HapticFeedback && tg.HapticFeedback.impactOccurred('medium');
+    await loadBets();
+    renderAll();
+  } catch(e){
+    console.error(e);
+    tg.showAlert ? tg.showAlert('Ошибка: ' + e.message) : alert('Ошибка: ' + e.message);
+  } finally {
+    document.getElementById('btn-bet').disabled = false;
+  }
+}
+
+async function placeGiftBet(){
+  if(selectedGift===null) return;
+  if(!currentRound || currentRound.status !== 'waiting'){ tg.showAlert ? tg.showAlert('Раунд уже стартовал, дождись нового') : alert('Раунд уже стартовал'); return; }
+
+  const giftObj = myGifts[selectedGift];
+  const file = giftFile(giftObj);
+  const info = giftInfo(giftObj);
+
+  document.getElementById('btn-bet-gift').disabled = true;
+  try{
+    const me = await loadMe(true);
+    const inventory = parseGifts(me[INVENTORY_COLUMN]);
+    // сначала ищем точную копию по id (если есть), иначе — первый подарок с тем же файлом
+    let idx = -1;
+    if(giftObj && typeof giftObj === 'object' && giftObj.id !== undefined){
+      idx = inventory.findIndex(g => g && typeof g === 'object' && g.id === giftObj.id);
+    }
+    if(idx === -1){
+      idx = inventory.findIndex(g => giftFile(g) === file);
+    }
+    if(idx === -1){ throw new Error('Подарок уже не в инвентаре'); }
+    inventory.splice(idx,1);
+    const { error: invErr } = await _supabase.from('users').update({ [INVENTORY_COLUMN]: inventory }).eq('user_id', userId);
+    if(invErr) throw invErr;
+    myProfile[INVENTORY_COLUMN] = inventory;
+
+const { error: betErr } = await _supabase.from('roll_bets').insert({
+  round_id: currentRound.id, 
+  user_id: userId, 
+  username, 
+  avatar_url: avatarUrl,
+  bet_type: 'gift', 
+  amount: 1, // <--- Добавьте эту строку, чтобы база данных не ругалась
+  gift_filename: file, 
+  value_stars: info.price
+});
+    if(betErr) throw betErr;
+
+    myGifts.splice(selectedGift,1);
+    selectedGift = null;
+    renderGiftsGrid();
+    document.getElementById('btn-bet-gift').textContent = 'Выберите подарок';
+    tg.HapticFeedback && tg.HapticFeedback.impactOccurred('medium');
+    await loadBets();
+    renderAll();
+  } catch(e){
+    console.error(e);
+    tg.showAlert ? tg.showAlert('Ошибка: ' + e.message) : alert('Ошибка: ' + e.message);
+  } finally {
+    document.getElementById('btn-bet-gift').disabled = selectedGift===null;
+  }
+}
+
+function subscribeRealtime(){
+  if(channel) _supabase.removeChannel(channel);
+  channel = _supabase.channel('round-'+currentRound.id)
+    .on('postgres_changes', { event:'INSERT', schema:'public', table:'roll_bets', filter:`round_id=eq.${currentRound.id}` }, payload=>{
+      bets.push(payload.new);
+      renderAll();
+    })
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'roll_rounds', filter:`id=eq.${currentRound.id}` }, payload=>{
+      currentRound = payload.new;
+      if(currentRound.status === 'spinning'){
+        spinWheelTo(currentRound.result_point);
+      }
+      renderAll();
+    })
+    // если игрок выиграл в этом раунде, его баланс/инвентарь поменяется — обновляем шапку live
+    .on('postgres_changes', { event:'UPDATE', schema:'public', table:'users', filter:`user_id=eq.${userId}` }, payload=>{
+      myProfile = payload.new;
+      renderMyBalance();
+    })
+    .subscribe();
+}
+
+// подстраховка на случай если realtime-канал Supabase не доставил событие
+// (бывает из-за настроек репликации/сети) — без этого чужие ставки и спин
+// у других игроков были видны только если зашедший сам что-то делал
+function startPolling(){
+  if(pollInt) clearInterval(pollInt);
+  pollInt = setInterval(async ()=>{
+    if(!currentRound || settling) return;
+    try{
+      await loadBets();
+      renderAll();
+
+      const { data: fresh } = await _supabase.from('roll_rounds').select('*').eq('id', currentRound.id).single();
+      if(fresh && fresh.status !== currentRound.status){
+        currentRound = fresh;
+        if(fresh.status === 'spinning' && spinStartedAt === null){
+          spinWheelTo(fresh.result_point);
+        } else if(fresh.status === 'finished' && spinStartedAt === null){
+          // раунд уже завершился, а мы даже не видели спин (пропустили оба события) — просто обновляемся
+          setTimeout(()=>{ location.reload(); }, 800);
+        }
+        renderAll();
+      }
+    } catch(e){ console.error('poll error', e); }
+  }, 2500);
+}
+
+function startTickLoop(){
+  if(countdownInt) clearInterval(countdownInt);
+  countdownInt = setInterval(tick, 1000);
+  tick();
+}
+
+function tick(){
+  if(!currentRound) return;
+  const left = Math.ceil((new Date(currentRound.ends_at).getTime() - Date.now())/1000);
+  const timerEl = document.getElementById('timer-text');
+
+  if(currentRound.status === 'waiting'){
+    if(left > 0){ timerEl.textContent = left; }
+    else { timerEl.textContent = '0'; trySettle(); }
+  } else if(currentRound.status === 'spinning'){
+    timerEl.textContent = '🎲';
+    if(spinStartedAt === null) spinStartedAt = Date.now();
+    // если спин "завис" дольше 15 секунд (например, сорвалось realtime-событие
+    // на этом устройстве) — просто перезагружаем страницу и стартуем заново
+    if(Date.now() - spinStartedAt > 15000){ location.reload(); }
+  } else if(currentRound.status === 'finished'){
+    timerEl.textContent = '✓';
+  }
+}
+
+async function trySettle(){
+  if(settling) return;
+  settling = true;
+  try{
+    await loadBets();
+    const wedges = getWedges();
+    const total = wedges.reduce((s,w)=>s+w.value_stars,0);
+
+    if(total === 0){
+      await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id).eq('status','waiting');
+      setTimeout(()=>{ location.reload(); }, 1000);
+      return;
+    }
+
+    let r = Math.random() * total;
+    let acc = 0;
+    let winnerWedge = wedges[wedges.length-1];
+    let startA=0, endA=360;
+    for(let i=0;i<wedges.length;i++){
+      const w = wedges[i];
+      const start = acc/total*360;
+      acc += w.value_stars;
+      const end = acc/total*360;
+      if(r <= acc || i === wedges.length-1){ winnerWedge = w; startA=start; endA=end; break; }
+    }
+    const landingAngle = startA + Math.random()*(endA-startA);
+
+    const totalStars = wedges.filter(w=>w.type==='stars').reduce((s,w)=>s+w.amount,0);
+    const totalTon = wedges.filter(w=>w.type==='ton').reduce((s,w)=>s+w.amount,0);
+    const giftFiles = wedges.filter(w=>w.type==='gift').map(w=>w.gift_filename);
+
+    const { data: updated } = await _supabase.from('roll_rounds')
+      .update({ status:'spinning', winner_user_id: winnerWedge.user_id, winner_username: winnerWedge.username, total_amount: total, result_point: landingAngle })
+      .eq('id', currentRound.id).eq('status','waiting')
+      .select();
+
+    if(updated && updated.length > 0){
+      currentRound = updated[0];
+      spinWheelTo(landingAngle);
+      setTimeout(async ()=>{
+        const { data: winnerRow } = await _supabase.from('users').select('*').eq('user_id', winnerWedge.user_id).single();
+        if(winnerRow){
+          const newStars = (winnerRow.stars||0) + totalStars;
+          const newTon = (winnerRow.balance||0) + totalTon;
+          const existingInventory = parseGifts(winnerRow[INVENTORY_COLUMN]);
+          const newInventory = [...existingInventory, ...giftFiles];
+          await _supabase.from('users').update({ stars:newStars, balance:newTon, [INVENTORY_COLUMN]:newInventory }).eq('user_id', winnerWedge.user_id);
+        }
+        await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id);
+        showWinnerBanner(winnerWedge.username, totalStars, totalTon, giftFiles.length, winnerWedge.avatar_url);
+        // если выиграли мы сами — подтягиваем актуальный баланс и инвентарь сразу
+        if(String(winnerWedge.user_id) === userId){
+          await loadMe(true);
+          myGifts = parseGifts(myProfile[INVENTORY_COLUMN]);
+          renderGiftsGrid();
+        }
+        // через несколько секунд полностью перезагружаем страницу — гарантированно
+        // начинаем новый раунд "с нуля" и избегаем зависаний при частичном обновлении
+        setTimeout(()=>{ location.reload(); }, 4000);
+      }, 4600);
+    } else {
+      // мы проиграли "гонку" — кто-то другой уже перевёл раунд в spinning.
+      // раньше тут ничего не делалось, и колесо у этого клиента просто не крутилось.
+      // теперь подтягиваем актуальные данные раунда и анимируем у себя то же самое
+      const { data: fresh } = await _supabase.from('roll_rounds').select('*').eq('id', currentRound.id).single();
+      if(fresh){
+        currentRound = fresh;
+        if(fresh.status === 'spinning' && spinStartedAt === null){
+          spinWheelTo(fresh.result_point);
+          setTimeout(()=>{
+            const winnerAvatar = wedges.find(w=>String(w.user_id)===String(fresh.winner_user_id))?.avatar_url;
+            showWinnerBanner(fresh.winner_username, totalStars, totalTon, giftFiles.length, winnerAvatar);
+            setTimeout(()=>{ location.reload(); }, 4000);
+          }, 4600);
+        } else if(fresh.status === 'finished'){
+          setTimeout(()=>{ location.reload(); }, 800);
+        }
+      }
+    }
+  } catch(e){
+    console.error('settle error', e);
+  } finally {
+    settling = false;
+  }
+}
+
+let wheelRotation = 0; // накопленный угол поворота колеса (всегда растёт, не сбрасывается)
+
+function spinWheelTo(angle){
+  const wheelEl = document.getElementById('wheel');
+  const spins = 8; // количество полных оборотов — чем больше, тем "живее" раскрутка
+  // считаем от текущего накопленного угла, округлённого вниз до полного круга,
+  // чтобы новый поворот ВСЕГДА был заметно больше предыдущего (раньше из-за
+  // абсолютного rotate() от старого положения колесо иногда крутилось почти
+  // на месте или даже "назад" — отсюда и ощущение "вялого" вращения)
+  const floorBase = Math.floor(wheelRotation/360)*360;
+  const target = floorBase + spins*360 + (360 - angle);
+  wheelRotation = target;
+  spinStartedAt = Date.now();
+  wheelEl.style.transition = 'transform 4.5s cubic-bezier(0.12,0.85,0.2,1)';
+  wheelEl.style.transform = `rotate(${target}deg)`;
+}
+
+function showWinnerBanner(name, totalStars, totalTon, giftCount, avatarUrlWin){
+  document.getElementById('winner-name').textContent = name || 'Player';
+  document.getElementById('winner-avatar').src = avatarUrlWin || 'https://img.icons8.com/fluency/96/user-male-circle.png';
+  const parts = [];
+  if(totalStars>0) parts.push(`<span style="display:inline-flex;align-items:center;gap:3px;">${fmt(totalStars)}<img src="img/star.png" onerror="this.style.display='none'"></span>`);
+  if(totalTon>0) parts.push(`<span style="display:inline-flex;align-items:center;gap:3px;">${fmt(totalTon)}<img src="img/ton.png" onerror="this.style.display='none'"></span>`);
+  if(giftCount>0) parts.push(`<span>${giftCount} 🎁</span>`);
+  document.getElementById('winner-amount').innerHTML = '+ ' + parts.join(' / ');
+  document.getElementById('winner-banner').classList.add('show');
+  tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
+}
+
+async function init(){
+  const me = await loadMe();
+  myGifts = parseGifts(me[INVENTORY_COLUMN]);
+  renderGiftsGrid();
+  await loadOrCreateRound();
+}
+init();
+</script>
+</body>
+</html>
