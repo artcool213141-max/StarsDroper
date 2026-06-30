@@ -13,22 +13,25 @@
             --bg: #0d0a05;
             --card-bg: #151210;
             --accent: #d4af37;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
 
-        * { box-sizing: border-box; }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        body {
+        html, body {
             background-color: var(--bg);
             color: white;
             font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            overscroll-behavior-y: contain;
         }
 
         header {
             background: #0d0a05;
-            padding: 14px 16px;
+            padding: calc(12px + var(--safe-top)) 16px 12px;
             display: flex;
             align-items: center;
             gap: 14px;
@@ -59,6 +62,7 @@
             font-weight: 700;
             font-size: 0.95rem;
             margin: 0 auto;
+            white-space: nowrap;
         }
         .online-dot {
             width: 8px;
@@ -66,6 +70,11 @@
             border-radius: 50%;
             background: #2ecc71;
             box-shadow: 0 0 8px #2ecc71;
+            flex-shrink: 0;
+        }
+        .online-dot.offline {
+            background: #777;
+            box-shadow: none;
         }
 
         .logo {
@@ -81,7 +90,9 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
-            padding-bottom: 40px;
+            padding-bottom: calc(40px + var(--safe-bottom));
+            max-width: 520px;
+            margin: 0 auto;
         }
 
         .game-card {
@@ -110,6 +121,7 @@
 
         .card-info {
             z-index: 2;
+            max-width: 60%;
         }
         .card-info h2 {
             font-size: 1.6rem;
@@ -131,6 +143,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            pointer-events: none;
         }
 
         .game-img {
@@ -139,21 +152,25 @@
             filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.5));
         }
 
+        /* Кнопка play теперь вынесена за пределы картинки, на тёмном фоне карточки,
+           с контрастным белым кольцом и тенью — больше не сливается с золотым артом */
         .play-btn {
             position: absolute;
             right: 18px;
             bottom: 18px;
-            width: 46px;
-            height: 46px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
-            background: var(--accent);
-            border: none;
+            background: #ffffff;
+            border: 3px solid var(--bg);
+            box-shadow: 0 0 0 2px var(--accent), 0 4px 14px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             justify-content: center;
-            z-index: 3;
+            z-index: 5;
             cursor: pointer;
         }
+        .play-btn svg { fill: #0d0a05; }
         .play-btn:active { transform: scale(0.92); }
     </style>
 </head>
@@ -167,8 +184,8 @@
             </svg>
         </a>
         <div class="online-pill">
-            <span class="online-dot"></span>
-            <span id="totalOnline">— онлайн</span>
+            <span class="online-dot offline" id="totalDot"></span>
+            <span id="totalOnline">0 онлайн</span>
         </div>
         <div class="logo">
             <span style="color:var(--accent)">NOWEAR</span><span style="color:#fff">SPIN</span>
@@ -178,38 +195,38 @@
     <div class="games-list" id="gamesList">
 
         <section class="game-card" data-game="mines">
-            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="mine.png" class="game-img"></div>
             <div class="card-info">
                 <h2>Mines</h2>
                 <p>Найди алмазы, избегай мин</p>
             </div>
             <button class="play-btn" onclick="launch('mines.html')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
         </section>
 
         <section class="game-card" data-game="plinko">
-            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="plinko.png" class="game-img"></div>
             <div class="card-info">
                 <h2>Plinko</h2>
                 <p>Брось шарик и лови множители</p>
             </div>
             <button class="play-btn" onclick="launch('plinko.html')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
         </section>
 
         <section class="game-card" data-game="catcher">
-            <div class="card-top"><span class="online-dot"></span><span class="online-count">— онлайн</span></div>
+            <div class="card-top"><span class="online-dot offline"></span><span class="online-count">0 онлайн</span></div>
             <div class="image-container"><img src="catcher.jpeg" class="game-img" alt="Игра"></div>
             <div class="card-info">
                 <h2>Ловля</h2>
                 <p>Лови гифты и выигрывай</p>
             </div>
             <button class="play-btn" onclick="launchWithPayment('Lovlyagift.html')">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="#0d0a05"><path d="M8 5v14l11-7z"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
             </button>
         </section>
 
@@ -217,12 +234,21 @@
 
 <script>
         const tg = window.Telegram.WebApp;
+        tg.ready();
         tg.expand();
+        // Растягиваем мини-апп на весь экран (если поддерживается клиентом Telegram)
+        try { tg.requestFullscreen && tg.requestFullscreen(); } catch (e) {}
+        // Подстраиваем цветовую тему системных элементов под фон апки
+        try {
+            tg.setHeaderColor && tg.setHeaderColor('#0d0a05');
+            tg.setBackgroundColor && tg.setBackgroundColor('#0d0a05');
+        } catch (e) {}
+
         const SB = supabase.createClient("https://xjucalpaoqlrtmofmden.supabase.co", "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx");
         const userId = tg.initDataUnsafe?.user?.id;
 
-        // Реальный счетчик "онлайн": считаем активных пользователей за последние N минут
-        // Требует таблицу presence(user_id, last_seen) в Supabase.
+        // Реальный счётчик "онлайн": считаем активных пользователей за последние N секунд.
+        // Требует таблицу presence(user_id, last_seen, game) в Supabase.
         async function trackPresence() {
             if (!userId) return;
             try {
@@ -230,7 +256,17 @@
             } catch (e) { console.error('presence error', e); }
         }
 
+        // Безопасно ставим текст счётчика: всегда конкретное число (0, 1, 2…),
+        // никогда не оставляем "—", даже если запрос не удался.
+        function setCountText(el, dotEl, n) {
+            const safeN = Number.isFinite(n) ? n : 0;
+            el.textContent = `${safeN} онлайн`;
+            if (dotEl) dotEl.classList.toggle('offline', safeN === 0);
+        }
+
         async function loadOnlineCounts() {
+            const totalEl = document.getElementById('totalOnline');
+            const totalDot = document.getElementById('totalDot');
             try {
                 const cutoff = new Date(Date.now() - 60 * 1000).toISOString(); // активны последние 60 сек
                 const { count, error } = await SB
@@ -238,37 +274,33 @@
                     .select('user_id', { count: 'exact', head: true })
                     .gte('last_seen', cutoff);
 
-                if (!error && typeof count === 'number') {
-                    document.getElementById('totalOnline').textContent = `${count} онлайн`;
-                } else {
-                    document.getElementById('totalOnline').textContent = '— онлайн';
-                }
+                if (error) throw error;
+                setCountText(totalEl, totalDot, count);
             } catch (e) {
                 console.error(e);
-                document.getElementById('totalOnline').textContent = '— онлайн';
+                setCountText(totalEl, totalDot, 0);
             }
         }
 
-        // Если хотите видеть онлайн по каждой игре отдельно — нужна колонка "game" в presence
+        // Онлайн по каждой игре отдельно (нужна колонка "game" в presence)
         async function loadPerGameCounts() {
             const cards = document.querySelectorAll('.game-card');
+            const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
             for (const card of cards) {
                 const game = card.dataset.game;
+                const el = card.querySelector('.online-count');
+                const dot = card.querySelector('.online-dot');
                 try {
-                    const cutoff = new Date(Date.now() - 60 * 1000).toISOString();
                     const { count, error } = await SB
                         .from('presence')
                         .select('user_id', { count: 'exact', head: true })
                         .eq('game', game)
                         .gte('last_seen', cutoff);
-                    const el = card.querySelector('.online-count');
-                    if (!error && typeof count === 'number') {
-                        el.textContent = `${count} онлайн`;
-                    } else {
-                        el.textContent = '0 онлайн';
-                    }
+                    if (error) throw error;
+                    setCountText(el, dot, count);
                 } catch (e) {
                     console.error(e);
+                    setCountText(el, dot, 0);
                 }
             }
         }
