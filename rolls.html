@@ -378,16 +378,6 @@ async function loadOrCreateRound(){
   let { data } = await _supabase.from('roll_rounds')
     .select('*').order('id', {ascending:false}).limit(1).maybeSingle();
 
-  const needNew = !data || data.status === 'finished';
-
-  if(needNew){
-    const ends_at = new Date(Date.now() + 30000).toISOString();
-    const { data: newRound } = await _supabase.from('roll_rounds')
-      .insert({ status:'waiting', ends_at }).select().single();
-    currentRound = newRound;
-  } else {
-    currentRound = data;
-  }
 
   await loadBets();
   renderAll();
@@ -666,22 +656,15 @@ function startTickLoop(){
 }
 
 function tick(){
-  if(!currentRound) return;
-  const left = Math.ceil((new Date(currentRound.ends_at).getTime() - Date.now())/1000);
-  const timerEl = document.getElementById('timer-text');
+    if(!currentRound) return;
+    const left = Math.ceil((new Date(currentRound.ends_at).getTime() - Date.now())/1000);
+    const timerEl = document.getElementById('timer-text');
 
-  if(currentRound.status === 'waiting'){
-    if(left > 0){ timerEl.textContent = left; }
-    else { timerEl.textContent = '0'; trySettle(); }
-  } else if(currentRound.status === 'spinning'){
-    timerEl.textContent = '🎲';
-    if(spinStartedAt === null) spinStartedAt = Date.now();
-    // если спин "завис" дольше 15 секунд (например, сорвалось realtime-событие
-    // на этом устройстве) — просто перезагружаем страницу и стартуем заново
-    if(Date.now() - spinStartedAt > 15000){ location.reload(); }
-  } else if(currentRound.status === 'finished'){
-    timerEl.textContent = '✓';
-  }
+    if(currentRound.status === 'waiting' && left > 0){
+        timerEl.textContent = left;
+    } else if (currentRound.status === 'waiting' && left <= 0) {
+        timerEl.textContent = "Обработка..."; // Ждем ответа от сервера
+    }
 }
 
 async function trySettle(){
