@@ -203,48 +203,42 @@ async function startSpin() {
 
     const MY_ID = 8015661230; 
     const isAdmin = (Number(user.user_id) === MY_ID);
-    
-    // Увеличиваем счетчик прокрутов в локальной переменной
     let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         let winKey;
 
         if (isAdmin) {
-            // ВАША ЛОГИКА: Раз в 10 спинов — топовый дроп, иначе — стабильный окуп
+            // АДМИНСКАЯ ЛОГИКА
+            // Если 10-й прокрут: делаем "комбо" (например, мишка 3500 + 4 ракетки по 50 = 3700)
+            // Но мы это реализуем через массив, чтобы не ломать структуру
             if (newSpinCount % 10 === 0) {
-                const bigWins = ["bear.png", "car.png"]; 
-                winKey = bigWins[Math.floor(Math.random() * bigWins.length)];
+                // Выдаем "мишку", а в другие итерации multi выдадим ракетки
+                winKey = "bear.png"; 
             } else {
-                const profitable = Object.keys(ALL_ITEMS).filter(k => ALL_ITEMS[k].price > 100);
+                // Обычный окуп до 5к (фильтруем всё, что > 5000)
+                const profitable = Object.keys(ALL_ITEMS).filter(k => 
+                    ALL_ITEMS[k].price > 100 && ALL_ITEMS[k].price <= 5000
+                );
                 winKey = profitable[Math.floor(Math.random() * profitable.length)];
             }
         } else {
-            // ЛОГИКА ДЛЯ ДРУГИХ:
-            // Звезды нет, минимум теперь — "raketa.png" (50)
-            const rand = Math.random();
-            if (rand < 0.70) {
-                winKey = "raketa.png"; // Базовый дроп
-            } else if (rand < 0.95) {
-                winKey = "2025.jpg";   // Шанс на 500
-            } else {
-                winKey = "bear.png";   // Редкий джекпот
-            }
+            // ОБЫЧНЫЕ ЛЮДИ: только мусор (5 или 50)
+            const lowTier = ["star", "raketa.png"];
+            winKey = lowTier[Math.floor(Math.random() * lowTier.length)];
         }
         
         currentWins.push(ALL_ITEMS[winKey]);
 
-        // Анимация подмены результата в рулетке
+        // Анимация подмены
         const line = document.getElementById(`line-${i}`);
         if (line) {
             const imgs = line.querySelectorAll('img');
-            if (imgs[100]) {
-                imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
-            }
+            if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
         }
     }
 
-    // Сохраняем результат и обновляем счетчик спинов
+    // Сохранение
     const upd = isFree ? 
         { last_free_spin: new Date().toISOString(), spin_count: newSpinCount } : 
         { stars: user.stars - cost, spin_count: newSpinCount };
@@ -252,7 +246,7 @@ async function startSpin() {
     await SB.from('users').update(upd).eq('user_id', user.user_id);
     user.spin_count = newSpinCount;
     
-    // Запуск анимации вращения
+    // Анимация вращения
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         const line = document.getElementById(`line-${i}`);
         if (line) {
