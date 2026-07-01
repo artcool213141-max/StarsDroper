@@ -216,30 +216,32 @@ def webhook():
             
             # --- ВАЛИДАЦИЯ СУММЫ ИЗ PAYLOAD ---
             payload = payment_info.get('invoice_payload', "")
-            # Разбираем строку формата "stars_USERID_AMOUNT"
             try:
                 # Берем последнюю часть строки после последнего подчеркивания
                 expected_amount = int(payload.split('_')[-1])
             except:
                 expected_amount = int(payment_info.get('total_amount', 0))
             
-            print(f"--- WEBHOOK: User {user_id} оплатил {expected_amount} звезд (по payload) ---")
+            print(f"--- WEBHOOK: User {user_id} оплатил {expected_amount} звезд ---")
             
             uid_int = int(user_id)
             res = supabase.table("users").select("stars").eq("user_id", uid_int).execute()
             
             if not res.data:
+                print(f"ERROR: User {user_id} not in DB")
                 return "OK", 200
             
             current_stars = float(res.data[0].get('stars') or 0)
             
-            # Начисляем именно expected_amount (из payload), а не total_amount
+            # Обновляем, используя expected_amount
             supabase.table("users").update({
                 "stars": current_stars + expected_amount, 
                 "is_paid_75": True
             }).eq("user_id", uid_int).execute()
             
-            print(f"SUCCESS: Пользователь {user_id} обновлен, начислено {paid_amount}")
+            print(f"SUCCESS: Пользователь {user_id} обновлен, начислено {expected_amount}")
+            
+            return "OK", 200
             
             # ВЕСЬ БЛОК С ORDERS УДАЛЕН, ЧТОБЫ НЕ БЫЛО ОШИБОК
             
