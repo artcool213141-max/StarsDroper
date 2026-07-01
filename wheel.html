@@ -201,48 +201,64 @@ async function startSpin() {
     document.getElementById('spin-btn').disabled = true;
     currentWins = [];
 
-    const MY_ID = "8015661230"; // Ваш ID
-    const isAdmin = (String(user.user_id) === MY_ID);
+    const MY_ID = 8015661230; 
+    const isAdmin = (Number(user.user_id) === MY_ID);
+    
+    // Увеличиваем счетчик прокрутов в локальной переменной
+    let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         let winKey;
 
         if (isAdmin) {
-            // ВАША ЛОГИКА: Всегда окуп (выбираем предметы дороже 100 звезд)
-            const profitable = Object.keys(ALL_ITEMS).filter(k => ALL_ITEMS[k].price > 100);
-            winKey = profitable[Math.floor(Math.random() * profitable.length)];
+            // ВАША ЛОГИКА: Раз в 10 спинов — топовый дроп, иначе — стабильный окуп
+            if (newSpinCount % 10 === 0) {
+                const bigWins = ["bear.png", "car.png"]; 
+                winKey = bigWins[Math.floor(Math.random() * bigWins.length)];
+            } else {
+                const profitable = Object.keys(ALL_ITEMS).filter(k => ALL_ITEMS[k].price > 100);
+                winKey = profitable[Math.floor(Math.random() * profitable.length)];
+            }
         } else {
             // ЛОГИКА ДЛЯ ДРУГИХ:
-            // 85% шанс получить дешевый предмет (окупа нет)
-            // 10% шанс выйти в ноль (предмет ~100)
-            // 5% шанс на удачу
+            // Звезды нет, минимум теперь — "raketa.png" (50)
             const rand = Math.random();
-            if (rand < 0.85) {
-                winKey = "star"; // Цена 5 (минус)
+            if (rand < 0.70) {
+                winKey = "raketa.png"; // Базовый дроп
             } else if (rand < 0.95) {
-                winKey = "raketa.png"; // Цена 50 (минус)
+                winKey = "2025.jpg";   // Шанс на 500
             } else {
-                winKey = "2025.jpg"; // Цена 500 (окуп)
+                winKey = "bear.png";   // Редкий джекпот
             }
         }
         
         currentWins.push(ALL_ITEMS[winKey]);
 
-        // Анимация подмены результата
+        // Анимация подмены результата в рулетке
         const line = document.getElementById(`line-${i}`);
-        const imgs = line.querySelectorAll('img');
-        if (imgs[100]) {
-            imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+        if (line) {
+            const imgs = line.querySelectorAll('img');
+            if (imgs[100]) {
+                imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+            }
         }
     }
 
-    const upd = isFree ? { last_free_spin: new Date().toISOString() } : { stars: user.stars - cost };
+    // Сохраняем результат и обновляем счетчик спинов
+    const upd = isFree ? 
+        { last_free_spin: new Date().toISOString(), spin_count: newSpinCount } : 
+        { stars: user.stars - cost, spin_count: newSpinCount };
+        
     await SB.from('users').update(upd).eq('user_id', user.user_id);
+    user.spin_count = newSpinCount;
     
+    // Запуск анимации вращения
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         const line = document.getElementById(`line-${i}`);
-        line.style.transition = `transform 5s cubic-bezier(0.1, 0, 0, 1)`;
-        line.style.transform = `translateX(-${(100 * 88) - (window.innerWidth / 2) + 40}px)`;
+        if (line) {
+            line.style.transition = `transform 5s cubic-bezier(0.1, 0, 0, 1)`;
+            line.style.transform = `translateX(-${(100 * 88) - (window.innerWidth / 2) + 40}px)`;
+        }
     }
     
     setTimeout(showModal, 5500);
