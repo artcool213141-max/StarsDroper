@@ -164,7 +164,7 @@ async function loadActivators(code) {
 
         const actionHtml = a.claimed
             ? `<span class="text-[9px] text-gray-500 uppercase font-bold">Получено</span>`
-            : `<button class="btn-gold px-4 py-2 text-[9px]" onclick="claimReward(${a.id})">ЗАБРАТЬ 5 ⭐</button>`;
+            : `<button class="btn-gold px-4 py-2 text-[9px]" onclick="this.disabled=true; this.innerText='...'; claimReward(${a.id})">ЗАБРАТЬ 5 ⭐</button>`;
 
         row.innerHTML = `
             <div class="flex flex-col">
@@ -184,22 +184,34 @@ function updateEarnedLabel(activations) {
     document.getElementById('my-earned').innerText = `${claimedCount * 5} ⭐`;
 }
 
+let claimInProgress = false;
+
 async function claimReward(activationId) {
+    if (claimInProgress) return;
+    claimInProgress = true;
+
     try {
-        // Перепроверяем, что награда ещё не забрана (защита от двойного клика)
-        const { data: activation, error: fetchErr } = await _supabase
+        // Атомарно "захватываем" эту активацию: обновляем только если она ещё не была забрана.
+        // Если кто-то (или повторный клик) уже успел её забрать — updated будет пустым.
+        const { data: updated, error: claimErr } = await _supabase
             .from('userss_promo_activations')
-            .select('*')
+            .update({ claimed: true, claimed_at: new Date().toISOString() })
             .eq('id', activationId)
             .eq('claimed', false)
-            .maybeSingle();
+            .select();
 
-        if (fetchErr || !activation) {
+        if (claimErr) {
+            tg.showAlert('❌ Ошибка: ' + claimErr.message);
+            return;
+        }
+
+        if (!updated || updated.length === 0) {
             tg.showAlert('❌ Эта награда уже забрана');
             init();
             return;
         }
 
+        // Захват прошёл успешно — только теперь начисляем звёзды
         const { data: me, error: meErr } = await _supabase
             .from('users')
             .select('stars')
@@ -221,16 +233,13 @@ async function claimReward(activationId) {
             return;
         }
 
-        await _supabase
-            .from('userss_promo_activations')
-            .update({ claimed: true, claimed_at: new Date().toISOString() })
-            .eq('id', activationId);
-
         tg.showAlert('✅ Получено 5 ⭐!');
         init();
     } catch (e) {
         console.error(e);
         tg.showAlert('❌ Произошла ошибка');
+    } finally {
+        claimInProgress = false;
     }
 }
 
