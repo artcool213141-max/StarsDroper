@@ -167,6 +167,8 @@ def craft_gift():
  
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
+    import time # Импортируем внутри, чтобы не было конфликтов
+    
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
     try:
@@ -177,26 +179,33 @@ def create_stars_pay():
     if amount < 1:
         return jsonify({"error": "Invalid amount"}), 400
 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    # Генерируем уникальный payload для каждого запроса
+    unique_payload = f"stars_{uid}_{amount}_{int(time.time())}"
+    
     tg_payload = {
         "title": "Stars Topup",
         "description": f"Пополнение {amount} звезд",
-        "payload": f"stars_{uid}_{amount}",
-        "provider_token": "",
+        "payload": unique_payload,
+        "provider_token": "", # Пусто для Telegram Stars
         "currency": "XTR",
         "prices": [{"label": "Stars", "amount": amount}]
     }
 
-    r = requests.post(url, json=tg_payload, timeout=10)
-    resp = r.json()
+    # ВАЖНО: URL для создания инвойса
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+
+    try:
+        r = requests.post(url, json=tg_payload, timeout=10)
+        resp = r.json()
+    except Exception as e:
+        return jsonify({"error": "Request failed", "details": str(e)}), 500
     
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']}), 200
+    
+    print(f"Telegram API Error: {resp}") # Лог для отладки
     return jsonify(resp), 400
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
-
+ 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     try:
