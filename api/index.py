@@ -163,6 +163,54 @@ def craft_gift():
  
     except Exception as e:
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
+
+@app.route('/api/process_withdrawal', methods=['POST'])
+def process_withdrawal():
+    data = request.get_json()
+    uid = str(data.get('user_id'))
+    item_name = data.get('item_name') # Это точное имя гифта из инвентаря
+    
+    # 1. Получаем текущие данные пользователя из Supabase
+    user_res = supabase.table("users").select("stars, inventory").eq("user_id", uid).single().execute()
+    user = user_res.data
+    
+    if not user:
+        return jsonify({"success": False, "error": "Пользователь не найден"}), 404
+        
+    current_stars = float(user.get('stars', 0))
+    inventory = user.get('inventory', [])
+    
+    # 2. Валидация
+    if current_stars < 75:
+        return jsonify({"success": False, "error": "Недостаточно звезд"}), 400
+    
+    if item_name not in inventory:
+        return jsonify({"success": False, "error": "Предмет не найден в инвентаре"}), 400
+
+    # 3. Транзакция: обновляем пользователя и создаем заказ
+    try:
+        # Списываем звезды и удаляем предмет из массива
+        new_inventory = inventory.copy()
+        new_inventory.remove(item_name)
+        
+        supabase.table("users").update({
+            "stars": current_stars - 75,
+            "inventory": new_inventory
+        }).eq("user_id", uid).execute()
+        
+        # Создаем запись в orders (согласно твоей структуре таблицы)
+        supabase.table("orders").insert({
+            "user_id": uid,
+            "item_name": item_name,
+            "item_img": f"{item_name}.png", # Убедись, что файлы называются так
+            "status": "pending"
+        }).execute()
+        
+        return jsonify({"success": True}), 200
+        
+    except Exception as e:
+        print(f"ERROR: {str(e)}")
+        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
  
  
 @app.route('/api/create_stars_pay', methods=['POST'])
