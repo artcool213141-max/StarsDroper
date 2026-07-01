@@ -108,26 +108,14 @@
 <section class="glass-card p-6 mb-6 border-yellow-400/10">
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Реферальная система</h3>
+            <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Ваш промокод</h3>
             <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
-        </div>
-        
-        <!-- Индикатор разработки -->
-        <div class="flex items-center gap-2 bg-yellow-500/5 px-3 py-1.5 rounded-full border border-yellow-500/10">
-            <span class="relative flex h-2 w-2">
-                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-yellow-500 opacity-75"></span>
-                <span class="relative inline-flex rounded-full h-2 w-2 bg-yellow-500"></span>
-            </span>
-            <span class="text-[8px] font-black uppercase text-yellow-500/80 tracking-widest">В разработке</span>
         </div>
     </div>
 
-    <!-- Заглушка вместо активной ссылки -->
-    <div class="relative w-full bg-black/20 border border-white/5 rounded-xl p-4 text-center">
-        <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-            Скоро будет доступно....
-        </p>
-    </div>
+    <a href="Promocode.html" class="w-full btn-gold py-4 text-xs flex items-center justify-center">
+        СОЗДАТЬ ПРОМОКОД
+    </a>
 </section>
         
         <section class="glass-card p-6 min-h-[300px]">
@@ -309,31 +297,88 @@ async function handlePromo() {
     const input = document.getElementById('promo-input');
     const codeText = input.value.trim().toUpperCase();
     if (!codeText || !user) return;
-    
+
+    // ---------- 1. Обычные промокоды (promo_codes) — многоразовые, но не более 1 раза на юзера ----------
     const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
     if (usedCodes.includes(codeText)) {
         tg.showAlert("❌ Вы уже использовали этот промокод");
         return;
     }
-    
-    const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).single();
-    if (!promo) { tg.showAlert("🛑 Промокод не найден"); return; }
-    if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
-    
-    const upd = {
-        stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
-        balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
-        tickets: Number(user.tickets || 0) + Number(promo.reward_tickets || 0),
-        used_promos: user.used_promos ? `${user.used_promos},${codeText}` : codeText
-    };
-    
-    const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
-    if (!updErr) {
-        await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
-        tg.showAlert("✅ Бонус успешно активирован!");
-        input.value = '';
-        loadUser();
+
+    const { data: promo } = await _supabase.from('promo_codes').select('*').eq('code', codeText).maybeSingle();
+
+    if (promo) {
+        if (!promo.active || promo.uses_left <= 0) { tg.showAlert("⏳ Срок действия промокода истек"); return; }
+
+        const upd = {
+            stars: Number(user.stars || 0) + Number(promo.reward_stars || 0),
+            balance: Number(user.balance || 0) + Number(promo.reward_ton || 0),
+            tickets: Number(user.tickets || 0) + Number(promo.reward_tickets || 0),
+            used_promos: user.used_promos ? `${user.used_promos},${codeText}` : codeText
+        };
+
+        const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
+        if (!updErr) {
+            await _supabase.from('promo_codes').update({ uses_left: promo.uses_left - 1 }).eq('code', codeText);
+            tg.showAlert("✅ Бонус успешно активирован!");
+            input.value = '';
+            loadUser();
+        }
+        return;
     }
+
+    // ---------- 2. Реферальные промокоды пользователей (userss_promo) — только ОДИН раз за аккаунт ----------
+    const { data: refPromo, error: refErr } = await _supabase.from('userss_promo').select('*').eq('code', codeText).maybeSingle();
+
+    if (refErr) {
+        console.error("Ошибка проверки реферального промокода:", refErr);
+    }
+
+    if (refPromo) {
+        if (user.has_used_referral) {
+            tg.showAlert("❌ Вы не можете активировать второй промокод, у вас уже есть реф");
+            return;
+        }
+
+        if (refPromo.owner_id === userId) {
+            tg.showAlert("❌ Нельзя активировать собственный промокод");
+            return;
+        }
+
+        const rewardStars = Number(refPromo.reward_stars || 20);
+        const creatorReward = Number(refPromo.creator_reward_stars || 10);
+
+        const upd = {
+            stars: Number(user.stars || 0) + rewardStars,
+            has_used_referral: true,
+            activated_referral_code: codeText
+        };
+
+        const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
+
+        if (!updErr) {
+            // Начисляем бонус создателю промокода и увеличиваем счётчик приглашённых
+            const { data: ownerData } = await _supabase.from('users').select('stars, referral_count').eq('user_id', refPromo.owner_id).maybeSingle();
+            if (ownerData) {
+                await _supabase.from('users').update({
+                    stars: Number(ownerData.stars || 0) + creatorReward,
+                    referral_count: Number(ownerData.referral_count || 0) + 1
+                }).eq('user_id', refPromo.owner_id);
+            }
+
+            await _supabase.from('userss_promo').update({ uses_count: Number(refPromo.uses_count || 0) + 1 }).eq('code', codeText);
+
+            tg.showAlert(`✅ Реферальный код активирован! Получено ${rewardStars} ⭐`);
+            input.value = '';
+            loadUser();
+        } else {
+            tg.showAlert("Ошибка активации: " + updErr.message);
+        }
+        return;
+    }
+
+    // ---------- 3. Код не найден нигде ----------
+    tg.showAlert("🛑 Промокод не найден");
 }
 
 async function withdrawToBot() {
@@ -511,15 +556,6 @@ function openItem(i) {
 
 function closeModal() { 
     document.getElementById('item-modal').style.display = 'none'; 
-}
-
-function copyRefLink() {
-    const refLink = `https://t.me/your_bot_username?start=ref_${userId}`;
-    navigator.clipboard.writeText(refLink).then(() => {
-        tg.showAlert("📋 Реферальная ссылка скопирована!");
-    }).catch(() => {
-        tg.showAlert("Не удалось скопировать ссылку.");
-    });
 }
 
 window.onload = () => { 
