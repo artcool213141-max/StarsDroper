@@ -173,62 +173,49 @@
         }
     }
 
-async function onMainAction() {
-    const btn = document.getElementById('btn-main');
-    const col = cur === 'stars' ? 'stars' : 'balance';
-    
-    // Определяем, является ли игрок админом
-    const isAdmin = currentUser.user_id == '8015661230';
-    
-    if (!isPlaying) {
-        betVal = Number(document.getElementById('input-bet').value);
-        const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
-        if (!user || user[col] < betVal) return tg.showAlert("Недостаточно средств!");
-
-        await SB.from('users').update({ [col]: user[col] - betVal }).eq('user_id', currentUser.user_id);
-        syncBalances();
-
-        isPlaying = true; opened = 0;
-        const userSelectedCount = parseInt(document.getElementById('mines-count').value);
+    async function onMainAction() {
+        const btn = document.getElementById('btn-main');
+        const col = cur === 'stars' ? 'stars' : 'balance';
         
-        // Модифицированная логика скрытой сложности
-        let actualMinesCount;
-        if (isAdmin) {
-            actualMinesCount = 1; // Админу всегда 1 мина
-        } else {
+        if (!isPlaying) {
+            betVal = Number(document.getElementById('input-bet').value);
+            const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
+            if (!user || user[col] < betVal) return tg.showAlert("Недостаточно средств!");
+
+            await SB.from('users').update({ [col]: user[col] - betVal }).eq('user_id', currentUser.user_id);
+            syncBalances();
+
+            isPlaying = true; opened = 0;
+            const userSelectedCount = parseInt(document.getElementById('mines-count').value);
+            
+            // Наша логика скрытой сложности
+            let actualMinesCount;
             if (userSelectedCount === 1) actualMinesCount = 7;
             else if (userSelectedCount === 3) actualMinesCount = 10;
             else if (userSelectedCount === 5) actualMinesCount = 12;
             else if (userSelectedCount === 10) actualMinesCount = 17;
             else actualMinesCount = 24;
-        }
 
-        mines = [];
-        while(mines.length < actualMinesCount) {
-            let r = Math.floor(Math.random() * 25);
-            
-            // Защита админа: мина не ставится на первые 3 открываемые ячейки
-            if (isAdmin && opened < 3) {
-                continue; 
+            mines = [];
+            while(mines.length < actualMinesCount) {
+                let r = Math.floor(Math.random() * 25);
+                if(!mines.includes(r)) mines.push(r);
             }
 
-            if(!mines.includes(r)) mines.push(r);
+            btn.innerText = "ЗАБРАТЬ 0.00";
+            btn.classList.add('btn-cashout');
+            document.getElementById('stats-area').classList.remove('invisible');
+            renderGrid();
+            tg.HapticFeedback.impactOccurred('medium');
+        } else {
+            const mult = calcMult(opened, parseInt(document.getElementById('mines-count').value));
+            const win = betVal * mult;
+            const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
+            await SB.from('users').update({ [col]: user[col] + win }).eq('user_id', currentUser.user_id);
+            tg.HapticFeedback.notificationOccurred('success');
+            finishGame(true);
         }
-
-        btn.innerText = "ЗАБРАТЬ 0.00";
-        btn.classList.add('btn-cashout');
-        document.getElementById('stats-area').classList.remove('invisible');
-        renderGrid();
-        tg.HapticFeedback.impactOccurred('medium');
-    } else {
-        const mult = calcMult(opened, parseInt(document.getElementById('mines-count').value));
-        const win = betVal * mult;
-        const { data: user } = await SB.from('users').select(col).eq('user_id', currentUser.user_id).single();
-        await SB.from('users').update({ [col]: user[col] + win }).eq('user_id', currentUser.user_id);
-        tg.HapticFeedback.notificationOccurred('success');
-        finishGame(true);
     }
-}
 
     function calcMult(opened, mCount) {
         if (opened === 0) return 0;
