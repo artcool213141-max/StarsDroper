@@ -215,9 +215,10 @@ def webhook():
             user_id = str(update['message']['from']['id'])
             paid_amount = int(payment_info.get('total_amount', 0))
             
-            print(f"--- WEBHOOK START: User {user_id} ---")
+            print(f"--- WEBHOOK START: User {user_id} оплатил {paid_amount} звезд ---")
             
             uid_int = int(user_id)
+            # Ищем юзера
             res = supabase.table("users").select("stars").eq("user_id", uid_int).execute()
             
             if not res.data:
@@ -226,25 +227,21 @@ def webhook():
             
             current_stars = float(res.data[0].get('stars') or 0)
             
-            # Обновление
+            # Обновляем только таблицу users
             supabase.table("users").update({
                 "stars": current_stars + paid_amount, 
                 "is_paid_75": True
             }).eq("user_id", uid_int).execute()
             
-            # Запись
-            supabase.table("orders").insert({
-                "user_id": user_id,
-                "item_name": "Stars Topup",
-                "status": "completed"
-            }).execute()
+            print(f"SUCCESS: Пользователь {user_id} обновлен, начислено {paid_amount}")
+            
+            # ВЕСЬ БЛОК С ORDERS УДАЛЕН, ЧТОБЫ НЕ БЫЛО ОШИБОК
             
             return "OK", 200
             
-        return "OK", 200 # Игнорируем другие типы апдейтов
+        return "OK", 200
         
     except Exception as e:
-        # ЭТОТ ПРИНТ ВАЖЕН - он покажет реальную ошибку в логах Vercel
         print(f"CRITICAL WEBHOOK ERROR: {str(e)}")
         return "Internal Server Error", 500
      
