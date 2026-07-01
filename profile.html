@@ -106,9 +106,6 @@
                 </div>
             </div>
             <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: ЗАГРУЗКА...</div>
-            <button onclick="showHelp()" class="fixed top-4 right-4 bg-yellow-500/20 p-2 rounded-full border border-yellow-500/50">
-                <span class="text-yellow-500 font-bold">?</span>
-            </button>
         </header>
 
         <section class="glass-card p-6 mb-6">
@@ -139,21 +136,6 @@
             </div>
             <div id="grid" class="inventory-grid"></div>
         </section>
-
-        <div id="help-modal" style="display:none;" class="fixed inset-0 z-[10000] flex items-center justify-center bg-black/90 backdrop-blur-md p-6">
-            <div class="glass-card p-8 w-full max-w-[340px] text-center border-yellow-500/30">
-                <h2 class="orbitron text-lg font-black text-white mb-4 uppercase tracking-widest">Важная информация</h2>
-                <div class="text-[11px] text-gray-300 text-left mb-6 leading-relaxed space-y-3">
-                    <p>Мы искренне ценим каждого игрока и дорожим вашим временем. Чтобы наш проект становился лучше, нам важна ваша поддержка.</p>
-                    <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/10">
-                        <p class="text-yellow-400 font-bold mb-1 uppercase text-[10px]">Верификация аккаунта</p>
-                        <p>Для активации первого вывода гифта необходимо внести единоразовый взнос <b>1 ⭐</b>. Средства идут на развитие экосистемы NowearSpin.</p>
-                    </div>
-                    <p class="text-[10px] text-gray-500 italic">После верификации, все последующие выводы доступны с вашего игрового баланса по цене 50 ⭐ за предмет.</p>
-                </div>
-                <button onclick="closeHelp()" class="w-full btn-gold py-3 text-xs">ПОНЯТНО</button>
-            </div>
-        </div>
 
         <div id="item-modal">
             <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-yellow-500/30">
@@ -548,12 +530,12 @@ function openItem(i) {
     const userStars = user.stars || 0;
     const isPaid = user.is_paid_75 === true;
 
-    if (isPaid && userStars < 50) {
+    if (isPaid && userStars < 75) {
         withdrawBtn.style.opacity = "0.4";
         withdrawBtn.style.pointerEvents = "none";
-        withdrawBtn.innerText = "НУЖНО 50 ⭐ ДЛЯ ВЫВОДА";
+        withdrawBtn.innerText = "НУЖНО 75 ⭐ ДЛЯ ВЫВОДА";
     } else {
-        withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (50 ⭐)" : "ВЫВЕСТИ В БОТ";
+        withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (75 ⭐)" : "ВЫВЕСТИ В БОТ";
     }
     
     document.getElementById('item-modal').style.display = 'flex';
