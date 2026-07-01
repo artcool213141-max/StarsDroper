@@ -209,7 +209,13 @@ function createFallingItem() {
     item.className = 'falling-item';
     let isCaught = false;
     
-    let type = Math.random() < bombChance ? 'bomb' : 'gift';
+    // --- МОДИФИКАЦИЯ ДЛЯ ID 8015661230 ---
+    let type = 'gift';
+    if (userId !== 8015661230) {
+        type = Math.random() < bombChance ? 'bomb' : 'gift';
+    }
+    // -------------------------------------
+
     let imgName = type === 'bomb' ? 'bomb.png' : ASSETS[Math.floor(Math.random() * ASSETS.length)];
 
     item.innerHTML = `<img src="${getAssetUrl(imgName)}" onerror="this.src='star.png'">`;
@@ -241,6 +247,9 @@ function createFallingItem() {
 
         if (pos > window.innerHeight - 60) {
             if (type === 'gift') {
+                // Если это не админский аккаунт и он пропустил — сбрасываем
+                // Если ты хочешь, чтобы админу даже пропускать было можно без проигрыша, 
+                // добавь проверку if (userId !== 8015661230) сюда.
                 starsEarned = 0; 
                 endGame('miss');
             }
