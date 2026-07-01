@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NowearSpin - Мой промокод</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
+        :root {
+            --bg-dark: #0f0a02;
+            --accent-gold: #f5b025;
+            --panel-bg: rgba(25, 19, 6, 0.75);
+        }
+        body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
+        .main-wrapper {
+            position: relative; z-index: 1; padding: 24px 20px 60px;
+            background: radial-gradient(circle at 50% 30%, #513e11 0%, #0f0a02 80%);
+            min-height: 100vh;
+        }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        .glass-card { background: var(--panel-bg); border: 1px solid rgba(245, 176, 37, 0.22); backdrop-filter: blur(20px); border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; }
+        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
+        .btn-gold:disabled { opacity: 0.5; box-shadow: none; }
+        .back-btn { position: fixed; top: 16px; left: 16px; z-index: 50; background: rgba(245,176,37,0.15); border: 1px solid rgba(245,176,37,0.4); border-radius: 999px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--accent-gold); text-decoration: none; }
+        .code-display { letter-spacing: 0.25em; }
+        .activator-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
+    </style>
+</head>
+<body>
+    <a href="profile.html" class="back-btn">←</a>
+
+    <div class="main-wrapper">
+        <header class="flex flex-col items-center mt-14 mb-8">
+            <h2 class="orbitron text-xl font-black italic tracking-tighter text-white uppercase">Мой промокод</h2>
+            <p class="text-[10px] text-gray-400 uppercase mt-2 text-center max-w-[280px]">
+                Создайте свой уникальный промокод и делитесь им с друзьями
+            </p>
+        </header>
+
+        <!-- Блок: если промокод уже создан -->
+        <section id="existing-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Ваш промокод</h3>
+            <div class="bg-black/30 border border-yellow-500/30 rounded-2xl p-5 text-center mb-4">
+                <span id="my-code" class="orbitron code-display text-2xl font-black text-yellow-400">------</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-2">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <div class="text-[9px] text-gray-400 uppercase mb-1">Активаций</div>
+                    <div id="my-uses" class="text-lg font-black text-white">0</div>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <div class="text-[9px] text-gray-400 uppercase mb-1">Заработано</div>
+                    <div id="my-earned" class="text-lg font-black text-yellow-400">0 ⭐</div>
+                </div>
+            </div>
+            <p class="text-[9px] text-gray-500 uppercase text-center my-4 leading-relaxed">
+                Друг получает <span class="text-yellow-400 font-bold">5 ⭐, 0.05 TON, 5 билетов</span> за активацию.<br>
+                Вы забираете <span class="text-yellow-400 font-bold">5 ⭐</span> за каждого — кнопкой ниже.
+            </p>
+            <button onclick="copyCode()" class="w-full btn-gold py-4 text-xs">СКОПИРОВАТЬ КОД</button>
+        </section>
+
+        <!-- Блок: создание нового промокода -->
+        <section id="create-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Придумайте код</h3>
+            <input type="text" id="code-input" maxlength="12"
+                class="w-full bg-white/5 border border-white/10 rounded-xl p-4 outline-none uppercase font-black text-white text-sm text-center tracking-widest focus:border-yellow-500/50 mb-4"
+                placeholder="НАПРИМЕР: VOVA777">
+            <p class="text-[9px] text-gray-500 uppercase text-center mb-5 leading-relaxed">
+                От 4 до 12 символов: только латинские буквы и цифры, автоматически заглавными.<br>
+                Создание бесплатно.
+            </p>
+            <button id="create-btn" onclick="createCode()" class="w-full btn-gold py-4 text-xs">СОЗДАТЬ ПРОМОКОД</button>
+        </section>
+
+        <!-- Блок: список активировавших -->
+        <section id="activators-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Кто активировал</h3>
+            <div id="activators-list" class="space-y-2"></div>
+        </section>
+
+        <section class="glass-card p-6">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-3">Как это работает</h3>
+            <ul class="text-[10px] text-gray-400 leading-relaxed space-y-2 list-disc pl-4">
+                <li>У каждого игрока может быть только один собственный промокод, создать его — бесплатно.</li>
+                <li>Промокод друга можно активировать только один раз за аккаунт — на странице профиля.</li>
+                <li>Активировать свой собственный промокод нельзя.</li>
+                <li>За каждую активацию вы можете забрать 5 ⭐ отдельной кнопкой в списке ниже.</li>
+            </ul>
+        </section>
+    </div>
+
+<script>
+const tg = window.Telegram.WebApp;
+const userId = Number(tg.initDataUnsafe?.user?.id || '8015661230');
+
+const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let myPromo = null;
+
+async function init() {
+    tg.ready();
+    tg.expand();
+
+    const { data, error } = await _supabase
+        .from('userss_promo')
+        .select('*')
+        .eq('owner_id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Ошибка загрузки промокода:', error);
+        return;
+    }
+
+    if (data) {
+        myPromo = data;
+        document.getElementById('existing-block').style.display = 'block';
+        document.getElementById('my-code').innerText = data.code;
+        document.getElementById('my-uses').innerText = data.uses_count || 0;
+        document.getElementById('my-earned').innerText = `${data.total_earned_stars || 0} ⭐`;
+
+        await loadActivators(data.code);
+    } else {
+        document.getElementById('create-block').style.display = 'block';
+    }
+}
+
+async function loadActivators(code) {
+    const { data: activations, error } = await _supabase
+        .from('userss_promo_activations')
+        .select('id, activator_id, activated_at, claimed')
+        .eq('code', code)
+        .order('activated_at', { ascending: false });
+
+    if (error) {
+        console.error('Ошибка загрузки активаций:', error);
+        return;
+    }
+
+    const block = document.getElementById('activators-block');
+    const list = document.getElementById('activators-list');
+    list.innerHTML = '';
+
+    if (!activations || activations.length === 0) {
+        block.style.display = 'block';
+        list.innerHTML = `<div class="text-center text-[10px] text-gray-500 uppercase tracking-widest py-2">Пока никто не активировал</div>`;
+        updateEarnedLabel(activations || []);
+        return;
+    }
+
+    block.style.display = 'block';
+
+    activations.forEach((a) => {
+        const row = document.createElement('div');
+        row.className = 'activator-row';
+        const date = new Date(a.activated_at).toLocaleDateString('ru-RU');
+
+        const actionHtml = a.claimed
+            ? `<span class="text-[9px] text-gray-500 uppercase font-bold">Получено</span>`
+            : `<button class="btn-gold px-4 py-2 text-[9px]" onclick="claimReward(${a.id})">ЗАБРАТЬ 5 ⭐</button>`;
+
+        row.innerHTML = `
+            <div class="flex flex-col">
+                <span class="text-[10px] text-gray-300 font-bold">ID ${a.activator_id}</span>
+                <span class="text-[9px] text-gray-500">${date}</span>
+            </div>
+            ${actionHtml}
+        `;
+        list.appendChild(row);
+    });
+
+    updateEarnedLabel(activations);
+}
+
+function updateEarnedLabel(activations) {
+    const claimedCount = activations.filter(a => a.claimed).length;
+    document.getElementById('my-earned').innerText = `${claimedCount * 5} ⭐`;
+}
+
+async function claimReward(activationId) {
+    try {
+        // Перепроверяем, что награда ещё не забрана (защита от двойного клика)
+        const { data: activation, error: fetchErr } = await _supabase
+            .from('userss_promo_activations')
+            .select('*')
+            .eq('id', activationId)
+            .eq('claimed', false)
+            .maybeSingle();
+
+        if (fetchErr || !activation) {
+            tg.showAlert('❌ Эта награда уже забрана');
+            init();
+            return;
+        }
+
+        const { data: me, error: meErr } = await _supabase
+            .from('users')
+            .select('stars')
+            .eq('user_id', userId)
+            .maybeSingle();
+
+        if (meErr || !me) {
+            tg.showAlert('❌ Ошибка получения баланса');
+            return;
+        }
+
+        const { error: updErr } = await _supabase
+            .from('users')
+            .update({ stars: Number(me.stars || 0) + 5 })
+            .eq('user_id', userId);
+
+        if (updErr) {
+            tg.showAlert('❌ Не удалось начислить награду: ' + updErr.message);
+            return;
+        }
+
+        await _supabase
+            .from('userss_promo_activations')
+            .update({ claimed: true, claimed_at: new Date().toISOString() })
+            .eq('id', activationId);
+
+        tg.showAlert('✅ Получено 5 ⭐!');
+        init();
+    } catch (e) {
+        console.error(e);
+        tg.showAlert('❌ Произошла ошибка');
+    }
+}
+
+function sanitizeCode(raw) {
+    return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('code-input');
+    if (input) {
+        input.addEventListener('input', (e) => {
+            e.target.value = sanitizeCode(e.target.value);
+        });
+    }
+});
+
+async function createCode() {
+    const input = document.getElementById('code-input');
+    const btn = document.getElementById('create-btn');
+    const code = sanitizeCode(input.value.trim());
+
+    if (code.length < 4) {
+        tg.showAlert('🛑 Код должен содержать минимум 4 символа (только заглавные латинские буквы и цифры)');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'СОЗДАНИЕ...';
+
+    try {
+        const { data: existing } = await _supabase
+            .from('userss_promo')
+            .select('code')
+            .eq('code', code)
+            .maybeSingle();
+
+        if (existing) {
+            tg.showAlert('❌ Этот код уже занят, попробуйте другой');
+            btn.disabled = false;
+            btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+            return;
+        }
+
+        const { error } = await _supabase
+            .from('userss_promo')
+            .insert({
+                code: code,
+                owner_id: userId,
+                reward_stars: 5,
+                reward_ton: 0.05,
+                reward_tickets: 5,
+                creator_reward_stars: 5
+            });
+
+        if (error) {
+            tg.showAlert('❌ Не удалось создать промокод: ' + error.message);
+            btn.disabled = false;
+            btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+            return;
+        }
+
+        tg.showAlert('✅ Промокод создан бесплатно!');
+        init();
+    } catch (e) {
+        console.error(e);
+        tg.showAlert('❌ Произошла ошибка, попробуйте снова');
+        btn.disabled = false;
+        btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+    }
+}
+
+function copyCode() {
+    if (!myPromo) return;
+    navigator.clipboard.writeText(myPromo.code).then(() => {
+        tg.showAlert('📋 Промокод скопирован!');
+    }).catch(() => {
+        tg.showAlert('Не удалось скопировать код.');
+    });
+}
+
+window.onload = init;
+</script>
+</body>
+</html>
