@@ -27,7 +27,7 @@
         .btn-gold:disabled { opacity: 0.5; box-shadow: none; }
         .back-btn { position: fixed; top: 16px; left: 16px; z-index: 50; background: rgba(245,176,37,0.15); border: 1px solid rgba(245,176,37,0.4); border-radius: 999px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--accent-gold); text-decoration: none; }
         .code-display { letter-spacing: 0.25em; }
-        .activator-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; }
+        .activator-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; gap: 8px; }
     </style>
 </head>
 <body>
@@ -157,19 +157,36 @@ async function loadActivators(code) {
 
     block.style.display = 'block';
 
+    // Подтягиваем username и аватарки активировавших одним запросом
+    const activatorIds = [...new Set(activations.map(a => a.activator_id))];
+    const { data: profiles } = await _supabase
+        .from('users')
+        .select('user_id, username, avatar_url')
+        .in('user_id', activatorIds);
+
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+
     activations.forEach((a) => {
         const row = document.createElement('div');
         row.className = 'activator-row';
         const date = new Date(a.activated_at).toLocaleDateString('ru-RU');
 
+        const profile = profileMap[a.activator_id];
+        const displayName = profile?.username ? `@${profile.username}` : `ID ${a.activator_id}`;
+        const avatarSrc = profile?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile?.username || 'U')}&background=513e11&color=f5b025&bold=true`;
+
         const actionHtml = a.claimed
-            ? `<span class="text-[9px] text-gray-500 uppercase font-bold">Получено</span>`
+            ? `<button class="px-4 py-2 text-[9px] font-black uppercase rounded-2xl bg-white/5 border border-white/10 text-gray-500 cursor-not-allowed" disabled>ЗАБРАНО ✓</button>`
             : `<button class="btn-gold px-4 py-2 text-[9px]" onclick="this.disabled=true; this.innerText='...'; claimReward(${a.id})">ЗАБРАТЬ 5 ⭐</button>`;
 
         row.innerHTML = `
-            <div class="flex flex-col">
-                <span class="text-[10px] text-gray-300 font-bold">ID ${a.activator_id}</span>
-                <span class="text-[9px] text-gray-500">${date}</span>
+            <div class="flex items-center gap-3">
+                <img src="${avatarSrc}" onerror="this.src='https://ui-avatars.com/api/?name=U&background=513e11&color=f5b025'" class="w-9 h-9 rounded-full object-cover border border-yellow-500/30 bg-black/30 flex-shrink-0">
+                <div class="flex flex-col">
+                    <span class="text-[10px] text-gray-200 font-bold">${displayName}</span>
+                    <span class="text-[9px] text-gray-500">${date}</span>
+                </div>
             </div>
             ${actionHtml}
         `;
