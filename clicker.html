@@ -46,7 +46,7 @@
             border: 1px solid var(--border);
             display: flex; align-items: center; justify-content: center; gap: 15px;
             box-shadow: 0 15px 35px rgba(250, 204, 21, 0.1);
-            position: relative; overflow: hidden;
+            position: relative; overflow: visible;
         }
 
         #balance-num {
@@ -256,7 +256,7 @@
 /* ==================== СОБЫТИЯ БИРЖИ (крах / расцвет) ==================== */
 .event-banner {
     position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
-    z-index: 150; text-align: center; padding: 16px 26px; border-radius: 20px;
+    z-index: 50; text-align: center; padding: 16px 26px; border-radius: 20px;
     backdrop-filter: blur(15px); animation: event-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     pointer-events: none; width: max-content; max-width: 80%;
 }
@@ -284,7 +284,7 @@
 
 .event-timer {
     position: absolute; top: 3%; left: 50%; transform: translateX(-50%);
-    z-index: 150; font-weight: 900; font-size: 13px; padding: 7px 16px;
+    z-index: 50; font-weight: 900; font-size: 13px; padding: 7px 16px;
     border-radius: 12px; backdrop-filter: blur(10px); letter-spacing: 0.5px;
     animation: event-pop-in 0.3s ease; pointer-events: none;
 }
@@ -310,7 +310,7 @@ body.glitch-active {
     position: absolute; top: 0; width: 14px; height: 200%;
     font-family: monospace; font-size: 11px; line-height: 14px; font-weight: 700;
     text-align: center; color: #39ff14; text-shadow: 0 0 6px #39ff14, 0 0 12px #0f0;
-    z-index: 140; pointer-events: none; opacity: 0.85;
+    z-index: 45; pointer-events: none; opacity: 0.85;
     overflow: hidden; animation: matrix-fall 2.2s linear infinite;
 }
 @keyframes matrix-fall {
@@ -320,7 +320,7 @@ body.glitch-active {
 
 .ddos-lock-badge {
     position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
-    z-index: 150; background: rgba(50,0,0,0.7); border: 2px solid #ff3333;
+    z-index: 50; background: rgba(50,0,0,0.7); border: 2px solid #ff3333;
     color: #ff6666; font-weight: 900; font-size: 12px; padding: 10px 18px;
     border-radius: 16px; text-align: center; letter-spacing: 0.5px;
     box-shadow: 0 0 25px rgba(255,51,51,0.4); animation: event-pop-in 0.4s ease;
@@ -358,7 +358,7 @@ body.glitch-active {
 
 /* ==================== ВИРУС (сжирает баланс во время DDoS) ==================== */
 .virus-icon {
-    position: absolute; top: 8px; right: 8px; width: 28px; height: 28px;
+    position: absolute; top: -16px; right: -16px; width: 56px; height: 56px;
     object-fit: contain; display: none; z-index: 60;
     filter: drop-shadow(0 0 8px rgba(0,0,0,0.8));
     animation: virus-wobble 1.4s ease-in-out infinite;
@@ -941,12 +941,7 @@ function startLoops() {
             if (document.querySelectorAll('.fatal-error-window').length === 0) hideVirus();
         });
         shell.appendChild(win);
-
-        // Если не кликнули - окно само исчезнет, чтобы не заваливало весь экран
-        setTimeout(() => {
-            win.remove();
-            if (document.querySelectorAll('.fatal-error-window').length === 0) hideVirus();
-        }, 6000);
+        // Окно НЕ исчезает само - висит до клика игрока или до конца события (см. endEvent)
     }
 
     function spawnMatrixRain() {
