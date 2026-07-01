@@ -218,58 +218,69 @@ def webhook():
         if 'pre_checkout_query' in update:
             query_id = update['pre_checkout_query']['id']
             requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
-                          json={"pre_checkout_query_id": query_id, "ok": True}, timeout=HTTP_TIMEOUT)
+                          json={"pre_checkout_query_id": query_id, "ok": True}, timeout=10)
             return "OK", 200
 
         # 2. Успешный платеж
         if 'message' in update and 'successful_payment' in update['message']:
-            payment_info = update['message']['successful_payment']
+            payment = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
-            payload = payment_info.get('invoice_payload', "")
+            payload = payment.get('invoice_payload', "")
             
             # Парсинг: stars_uid_amount_time_giftname
             parts = payload.split('_')
-            uid_int = int(parts[1])
-            expected_amount = int(parts[2])
+            uid_str = parts[1]
+            amount = int(parts[2])
             
-            # Получаем текущие данные пользователя
-            user_data = supabase.table("users").select("stars, inventory").eq("user_id", uid_int).execute()
-            if not user_data.data:
+            # Получаем данные пользователя
+            user_response = supabase.table("users").select("stars, inventory").eq("user_id", uid_str).execute()
+            user_data = user_response.data[0] if user_response.data else None
+            
+            if not user_data:
                 return "OK", 200
             
-            current_stars = float(user_data.data[0].get('stars') or 0)
-            current_inventory = user_data.data[0].get('inventory') or []
-
-            # ОБНОВЛЕНИЕ БАЛАНСА
+            # ОБНОВЛЕНИЕ БАЛАНСА (для всех платежей)
             supabase.table("users").update({
-                "stars": current_stars + expected_amount,
+                "stars": float(user_data.get('stars', 0)) + amount,
                 "is_paid_75": True
-            }).eq("user_id", uid_int).execute()
+            }).eq("user_id", uid_str).execute()
 
-            # ЛОГИКА ВЫВОДА (если это оплата за вывод - 1 звезда)
-            if expected_amount == 1 and len(parts) > 4:
-                gift_name = parts[4] # Берем имя гифта из payload
+            # ЛОГИКА ВЫВОДА (если это верификация за 1 звезду)
+            if amount == 1 and len(parts) > 4:
+                gift_name = parts[4]
                 
                 # Создаем заказ
                 supabase.table("orders").insert({
-                    "user_id": str(uid_int),
+                    "user_id": uid_str,
                     "item_name": gift_name,
-                    "item_img": f"{gift_name}.png", # Или какой там у тебя формат
+                    "item_img": f"{gift_name}.png", # Убедись, что имя файла совпадает
                     "status": "pending"
                 }).execute()
                 
-                # Удаляем гифт из инвентаря
-                if gift_name in current_inventory:
-                    current_inventory.remove(gift_name)
-                    supabase.table("users").update({"inventory": current_inventory}).eq("user_id", uid_int).execute()
+                # УДАЛЕНИЕ ИЗ ИНВЕНТАРЯ (более безопасный поиск)
+                inv = user_data.get('inventory', [])
+                if isinstance(inv, list):
+                    # Ищем предмет, который заканчивается на gift_name, чтобы избежать проблем с путями
+                    new_inv = []
+                    removed = False
+                    for item in inv:
+                        # Если item - строка с путем или просто имя
+                        if not removed and gift_name in item:
+                            removed = True
+                            continue
+                        new_inv.append(item)
+                    
+                    if removed:
+                        supabase.table("users").update({"inventory": new_inv}).eq("user_id", uid_str).execute()
 
-            print(f"SUCCESS: User {uid_int} processed. Amount: {expected_amount}")
+            print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
             return "OK", 200
             
         return "OK", 200
     except Exception as e:
         print(f"CRITICAL WEBHOOK ERROR: {str(e)}")
-        return "OK", 200 # Возвращаем 200, чтобы ТГ не слал повторы
+        # Возвращаем 200, иначе Телеграм завалит повторами
+        return "OK", 200
      
  
 @app.route('/api/create_crypto_pay', methods=['POST'])
