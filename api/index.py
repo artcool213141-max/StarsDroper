@@ -165,65 +165,12 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
  
  
-@app.route('/api/create_stars_pay', methods=['POST', 'OPTIONS'])
-def create_stars_pay():
-    if request.method == 'OPTIONS':
-        return '', 200
- 
-    data = request.get_json() or {}
-    uid = str(data.get('user_id', '0'))
-    purpose = data.get('purpose', 'topup')
-    if purpose not in ('topup', 'verify'):
-        purpose = 'topup'
- 
-    try:
-        amount = int(data.get('amount', 0))
-    except (TypeError, ValueError):
-        amount = 0
- 
-    if not uid or uid == '0' or amount < 1:
-        return jsonify({"error": "Некорректный user_id или amount"}), 400
- 
-    if not BOT_TOKEN:
-        return jsonify({"error": "Сервер не настроен (нет BOT_TOKEN)"}), 500
- 
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
-    payload_prefix = "stars_verify" if purpose == 'verify' else "stars_topup"
-    title = "Верификация аккаунта" if purpose == 'verify' else "Stars Topup"
-    description = "Единоразовая верификация для вывода подарков" if purpose == 'verify' else f"Пополнение {amount} звезд"
- 
-    tg_payload = {
-        "title": title,
-        "description": description,
-        "payload": f"{payload_prefix}_{uid}_{amount}",
-        # ВАЖНО: для Stars (currency=XTR) Telegram требует это поле,
-        # даже пустой строкой. Без него createInvoiceLink может отдать
-        # невалидную ссылку, которая виснет на экране подтверждения оплаты.
-        "provider_token": "",
-        "currency": "XTR",
-        "prices": [{"label": "Stars", "amount": amount}]
-    }
- 
-    try:
-        r = requests.post(url, json=tg_payload, timeout=HTTP_TIMEOUT)
-        resp = r.json()
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": "Telegram API недоступен", "details": str(e)}), 502
- 
-    if resp.get('ok'):
-        return jsonify({"pay_url": resp['result']}), 200
- 
-    return jsonify(resp), 400
- 
- 
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
-    print(f"DEBUG: Полный апдейт: {update}") 
-
-    # 1. Обработка PreCheckout
+    
+    # 1. Обработка PreCheckout (подтверждение платежа)
     if 'pre_checkout_query' in update:
-        print("DEBUG: Получен pre_checkout_query")
         query_id = update['pre_checkout_query']['id']
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
         requests.post(url, json={"pre_checkout_query_id": query_id, "ok": True}, timeout=5)
@@ -231,42 +178,67 @@ def webhook():
 
     # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
-        print("DEBUG: Обнаружен успешный платеж!")
         payment_info = update['message']['successful_payment']
+        user_id = str(update['message']['from']['id'])
         provider_payment_charge_id = payment_info.get('provider_payment_charge_id')
         paid_amount = int(payment_info.get('total_amount', 0))
-        user_id = update['message']['from']['id']
 
-        print(f"DEBUG: ID платежа: {provider_payment_charge_id}, Сумма: {paid_amount}, User: {user_id}")
-
-        # Проверка на дубли
+        # Идемпотентность (защита от повторного начисления)
         exists = supabase.table("orders").select("id").eq("provider_payment_charge_id", provider_payment_charge_id).execute()
         if exists.data:
-            print("DEBUG: Платеж уже был в базе, игнорирую.")
             return "OK", 200
 
         try:
-            # Начисление
-            print(f"DEBUG: Пытаюсь начислить {paid_amount} звезд для {user_id}")
-            result = supabase.rpc('increment_stars', {'uid': str(user_id), 'amount': paid_amount}).execute()
-            print(f"DEBUG: Результат RPC: {result}")
+            # Начисление звезд через RPC
+            supabase.rpc('increment_stars', {'uid': user_id, 'amount': paid_amount}).execute()
             
-            # Лог
+            # Запись заказа
             supabase.table("orders").insert({
-                "user_id": str(user_id),
+                "user_id": user_id,
                 "provider_payment_charge_id": provider_payment_charge_id,
                 "amount": paid_amount,
                 "status": "completed"
             }).execute()
-            print("DEBUG: Успешно записано в базу.")
             
         except Exception as e:
-            print(f"CRITICAL ERROR: Ошибка при записи в БД: {str(e)}")
+            print(f"CRITICAL ERROR: {str(e)}")
             return "Error", 500
         
         return "OK", 200
 
     return "OK", 200
+
+@app.route('/api/create_stars_pay', methods=['POST'])
+def create_stars_pay():
+    data = request.get_json() or {}
+    uid = str(data.get('user_id', '0'))
+    try:
+        amount = int(data.get('amount', 0))
+    except:
+        amount = 0
+
+    if amount < 1:
+        return jsonify({"error": "Invalid amount"}), 400
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+    tg_payload = {
+        "title": "Stars Topup",
+        "description": f"Пополнение {amount} звезд",
+        "payload": f"stars_{uid}_{amount}",
+        "provider_token": "",
+        "currency": "XTR",
+        "prices": [{"label": "Stars", "amount": amount}]
+    }
+
+    r = requests.post(url, json=tg_payload, timeout=10)
+    resp = r.json()
+    
+    if resp.get('ok'):
+        return jsonify({"pay_url": resp['result']}), 200
+    return jsonify(resp), 400
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
  
  
 @app.route('/api/create_order', methods=['POST'])
