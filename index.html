@@ -340,43 +340,62 @@
     }
 
     // Синхронизация баланса через Supabase напрямую
-    async function syncData() {
-        if (!userId) return;
-        try {
-            const { data, error } = await _supabase
-                .from('users')
-                .select('*')
-                .eq('user_id', userId)
-                .maybeSingle();
+async function syncData() {
+    if (!userId) return;
+    try {
+        // 1. Пытаемся получить пользователя
+        const { data, error } = await _supabase
+            .from('users')
+            .select('*')
+            .eq('user_id', userId)
+            .maybeSingle();
 
-            if (error) {
-                console.error("Ошибка запроса Supabase:", error);
-                return;
-            }
-
-            if (!data) {
-                console.warn("Данные пользователя не найдены в БД.");
-                return;
-            }
-
-            const update = (id, val) => {
-                const el = document.getElementById(id);
-                if (el) el.innerText = val;
-            };
-
-            const tonVal = data.balance || 0;
-            const starsVal = data.stars || 0;
-            const ticketsVal = data.tickets || 0;
-
-            update('bal-ton', parseFloat(tonVal).toFixed(2));
-            update('bal-stars', Math.floor(starsVal));
-            update('bal-tickets', Math.floor(ticketsVal));
-
-        } catch (e) {
-            console.error("Критическая ошибка при синхронизации:", e);
+        if (error) {
+            console.error("Ошибка запроса Supabase:", error);
+            return;
         }
-    }
 
+        // 2. ЕСЛИ ПОЛЬЗОВАТЕЛЯ НЕТ — СОЗДАЕМ ЕГО
+        if (!data) {
+            console.log("Пользователь не найден, создаю новую запись...");
+            const { error: insertError } = await _supabase
+                .from('users')
+                .insert([
+                    { 
+                        user_id: userId, 
+                        balance: 0, 
+                        stars: 0, 
+                        tickets: 0 
+                    }
+                ]);
+            
+            if (insertError) {
+                console.error("Ошибка при создании пользователя:", insertError);
+            } else {
+                console.log("Пользователь успешно создан!");
+                // После создания можно сразу обновить интерфейс нулями
+            }
+            return; // Выходим, так как данных в переменной data еще нет
+        }
+
+        // 3. Если пользователь есть — обновляем интерфейс
+        const update = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.innerText = val;
+        };
+
+        const tonVal = data.balance || 0;
+        const starsVal = data.stars || 0;
+        const ticketsVal = data.tickets || 0;
+
+        update('bal-ton', parseFloat(tonVal).toFixed(2));
+        update('bal-stars', Math.floor(starsVal));
+        update('bal-tickets', Math.floor(ticketsVal));
+
+    } catch (e) {
+        console.error("Критическая ошибка при синхронизации:", e);
+    }
+}
     // Оплата TON
     const BACKEND_URL = 'https://stars-droper-main.vercel.app';
     async function processPayment(amount) {
