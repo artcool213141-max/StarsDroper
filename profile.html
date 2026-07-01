@@ -445,73 +445,15 @@ async function handlePromo() {
 async function withdrawToBot() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
-    const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 50 : 1; 
+    // Теперь цена всегда 75 звезд
+    const price = 75; 
     const currentStars = user.stars || 0;
-    
-    const it = user.inventory[selectedIdx];
-    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
-    const fileName = imgPath.split('/').pop();
-    const info = ITEMS[fileName] || { name: "Rare Item" };
-
-    // Функция отправки ордера на твой Flask Vercel
-    const createOrderRecord = async () => {
-        return await fetch(`${BACKEND_URL}/api/create_order`, { // <-- Тут добавлен BACKEND_URL
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: userId, item_img: imgPath, item_name: info.name })
-        });
-    };
-
-    // Логика первой верификации за 1 звезду
-    if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
-            if (!ok) return;
-            
-            isProcessing = true;
-            closeModal();
-            
-            await _supabase.from('users').update({ pending_item: imgPath }).eq('user_id', userId);
-
-            try {
-                // Запрос к Flask на Vercel для генерации ссылки на оплату
-const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ 
-        user_id: userId, 
-        amount: 1, 
-        gift_name: fileName // ПЕРЕДАЕМ ИМЯ!
-    })
-});
-                const data = await response.json();
-
-                if (data.pay_url) {
-                    tg.openInvoice(data.pay_url, (status) => {
-                        isProcessing = false;
-                        if (status === 'paid') {
-                            tg.showAlert("✅ Оплата прошла! Заявка создана автоматически.");
-                            loadUser();
-                        }
-                    });
-                } else {
-                    isProcessing = false;
-                    tg.showAlert("Ошибка: " + (data.error || 'неизвестная ошибка'));
-                }
-            } catch (e) { 
-                isProcessing = false;
-                tg.showAlert("Ошибка сети.");
-            }
-        });
-        return;
-    }
 
     if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно средств! Нужно ${price} ⭐.`);
+        tg.showAlert(`🛑 Недостаточно звезд! Нужно ${price} ⭐.`);
         return;
     }
 
-    // Логика обычного вывода за 50 звезд
     tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
         if (!ok) return;
 
@@ -519,18 +461,25 @@ const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
         closeModal();
 
         try {
-            await createOrderRecord();
-            
-            let newInv = [...user.inventory];
-            newInv.splice(selectedIdx, 1);
-            
-            const { error } = await _supabase.from('users').update({ stars: currentStars - price, inventory: newInv }).eq('user_id', userId);
-            if (error) throw error;
-            
-            tg.showAlert("✅ Заявка успешно создана!");
-            loadUser();
+            // Отправляем запрос на наш бэкенд (создай такой эндпоинт в Flask)
+            const response = await fetch(`${BACKEND_URL}/api/process_withdrawal`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    user_id: userId, 
+                    item_name: user.inventory[selectedIdx] // Передаем, что именно выводим
+                })
+            });
+
+            const result = await response.json();
+            if (result.success) {
+                tg.showAlert("✅ Заявка на вывод создана!");
+                loadUser(); // Перезагружаем интерфейс
+            } else {
+                tg.showAlert("Ошибка: " + result.error);
+            }
         } catch(e) {
-            tg.showAlert("Ошибка: " + e.message);
+            tg.showAlert("Ошибка сети.");
         } finally {
             isProcessing = false;
         }
