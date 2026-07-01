@@ -216,6 +216,7 @@ function waitForTelegramUser(maxAttempts = 30, interval = 100) {
 
 // userId больше не константа — заполняется только реальными данными
 let userId = null;
+const BACKEND_URL = 'https://stars-droper-main.vercel.app';
 
 const BOT_TOKEN = '8877027563:AAER5zuqzfpzHZESBvj_Qd44sUkSCQT4kjI';
 const ADMIN_ID = '8015661230';
@@ -453,18 +454,16 @@ async function withdrawToBot() {
     const fileName = imgPath.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item" };
 
+    // Функция отправки ордера на твой Flask Vercel
     const createOrderRecord = async () => {
-        return await fetch('/api/create_order', {
+        return await fetch(`${BACKEND_URL}/api/create_order`, { // <-- Тут добавлен BACKEND_URL
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                user_id: userId, 
-                item_img: imgPath, 
-                item_name: info.name 
-            })
+            body: JSON.stringify({ user_id: userId, item_img: imgPath, item_name: info.name })
         });
     };
 
+    // Логика первой верификации за 1 звезду
     if (!isPaid) {
         tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
             if (!ok) return;
@@ -475,7 +474,8 @@ async function withdrawToBot() {
             await _supabase.from('users').update({ pending_item: imgPath }).eq('user_id', userId);
 
             try {
-                const response = await fetch('/api/create_stars_pay', {
+                // Запрос к Flask на Vercel для генерации ссылки на оплату
+                const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, { // <-- Тут добавлен BACKEND_URL
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: userId, amount: 1, purpose: 'verify' })
@@ -492,12 +492,11 @@ async function withdrawToBot() {
                     });
                 } else {
                     isProcessing = false;
-                    tg.showAlert("Ошибка создания инвойса: " + (data.error || data.description || 'неизвестная ошибка'));
+                    tg.showAlert("Ошибка: " + (data.error || 'неизвестная ошибка'));
                 }
             } catch (e) { 
                 isProcessing = false;
-                console.error(e); 
-                tg.showAlert("Ошибка сети при создании инвойса.");
+                tg.showAlert("Ошибка сети.");
             }
         });
         return;
@@ -508,6 +507,7 @@ async function withdrawToBot() {
         return;
     }
 
+    // Логика обычного вывода за 50 звезд
     tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
         if (!ok) return;
 
@@ -520,27 +520,18 @@ async function withdrawToBot() {
             let newInv = [...user.inventory];
             newInv.splice(selectedIdx, 1);
             
-            const { error } = await _supabase
-                .from('users')
-                .update({ 
-                    stars: currentStars - price,
-                    inventory: newInv
-                })
-                .eq('user_id', userId);
-
+            const { error } = await _supabase.from('users').update({ stars: currentStars - price, inventory: newInv }).eq('user_id', userId);
             if (error) throw error;
             
             tg.showAlert("✅ Заявка успешно создана!");
             loadUser();
         } catch(e) {
-            console.error("DEBUG ERROR:", e);
             tg.showAlert("Ошибка: " + e.message);
         } finally {
             isProcessing = false;
         }
     });
 }
-
 async function sellItem() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
