@@ -201,28 +201,38 @@ async function startSpin() {
     document.getElementById('spin-btn').disabled = true;
     currentWins = [];
 
-    // Логика окупа: ищем предметы, цена которых дает окуп
-    // Цена одной прокрутки = 100 звезд. 
-    // Значит предмет должен стоить > 100, чтобы был окуп.
-    const getWinItem = (minPrice) => {
-        const items = Object.values(ALL_ITEMS);
-        // Фильтруем предметы дороже стоимости одной прокрутки (с запасом 10% для окупа)
-        const profitItems = items.filter(it => it.price >= minPrice);
-        // Если что-то пошло не так, берем любой предмет
-        const pool = profitItems.length > 0 ? profitItems : items;
-        return pool[Math.floor(Math.random() * pool.length)];
-    };
+    const MY_ID = "8015661230"; // Ваш ID
+    const isAdmin = (String(user.user_id) === MY_ID);
 
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        // Если это бесплатный спин — даем мелкий дроп, если платный — гарантируем окуп
-        const winItem = isFree ? ALL_ITEMS["star"] : getWinItem(110); 
-        
-        currentWins.push(winItem);
+        let winKey;
 
+        if (isAdmin) {
+            // ВАША ЛОГИКА: Всегда окуп (выбираем предметы дороже 100 звезд)
+            const profitable = Object.keys(ALL_ITEMS).filter(k => ALL_ITEMS[k].price > 100);
+            winKey = profitable[Math.floor(Math.random() * profitable.length)];
+        } else {
+            // ЛОГИКА ДЛЯ ДРУГИХ:
+            // 85% шанс получить дешевый предмет (окупа нет)
+            // 10% шанс выйти в ноль (предмет ~100)
+            // 5% шанс на удачу
+            const rand = Math.random();
+            if (rand < 0.85) {
+                winKey = "star"; // Цена 5 (минус)
+            } else if (rand < 0.95) {
+                winKey = "raketa.png"; // Цена 50 (минус)
+            } else {
+                winKey = "2025.jpg"; // Цена 500 (окуп)
+            }
+        }
+        
+        currentWins.push(ALL_ITEMS[winKey]);
+
+        // Анимация подмены результата
         const line = document.getElementById(`line-${i}`);
         const imgs = line.querySelectorAll('img');
         if (imgs[100]) {
-            imgs[100].src = `img/${winItem.img}`;
+            imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
         }
     }
 
