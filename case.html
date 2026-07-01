@@ -9,7 +9,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;600;700;900&display=swap');
         
-        :root {
+        :root {star
             --bg-main: #0f0a02; /* Очень темный фон с золотым отливом */
             --neon-gold: #f5b025; /* Чистый благородный золотой */
             --neon-gold-dark: #c68c16; /* Более глубокий оттенок для теней */
@@ -402,37 +402,25 @@ async function startRoll(type) {
     document.getElementById('roulette-rows').innerHTML = '';
 
     currentWinners = [];
-    
-    // --- НАСТРОЙКА ОККУПА ---
-    // cost — это стоимость прокрутки (с учетом мултипликатора)
-    // Мы гарантируем предмет, который стоит больше стоимости прокрутки на 10-50%
-    const minTargetPrice = cost * 1.10; 
-    const maxTargetPrice = cost * 1.50; 
-    const items = Object.values(ITEMS);
+    const ADMIN_ID = "8015661230"; // ВАШ ID
 
     for (let i = 0; i < mul; i++) {
         let win;
         
-        // --- ЛОГИКА ОККУПА (РАБОТАЕТ ДЛЯ ВСЕХ) ---
-        // Ищем предметы в диапазоне окупаемости
-        const profitItems = items.filter(it => it.price >= minTargetPrice && it.price <= maxTargetPrice);
-        
-        if (profitItems.length > 0) {
-            win = profitItems[Math.floor(Math.random() * profitItems.length)];
-        } else {
-            // Если в диапазоне окупа нет, берем самый дорогой предмет из всех
-            win = items.sort((a, b) => b.price - a.price)[0];
-        }
-
-        /* 
-        // ЕСЛИ НУЖНО ВЕРНУТЬ РАЗДЕЛЕНИЕ НА АДМИНА/ЮЗЕРА:
-        const ADMIN_ID = "8015661230";
+        // ЛОГИКА: Если это ВЫ — всегда окуп, если другие — честный рандом
         if (userId === ADMIN_ID) {
-            // логика для админа
+            const minTargetPrice = cost * 1.10; 
+            const maxTargetPrice = cost * 1.50; 
+            const items = Object.values(ITEMS);
+            const profitItems = items.filter(it => it.price >= minTargetPrice && it.price <= maxTargetPrice);
+            
+            win = profitItems.length > 0 
+                ? profitItems[Math.floor(Math.random() * profitItems.length)] 
+                : items.sort((a, b) => b.price - a.price)[0];
         } else {
-            win = getWin(); // обычный рандом
+            // Обычный рандом по шансам из массива loot
+            win = getWin(); 
         }
-        */
 
         currentWinners.push(win);
         createRow(i, win);
