@@ -2,9 +2,12 @@ import os
 import random
 import requests
 from flask import Flask, request, jsonify
+from flask_cors import CORS  # Нужен для надежной работы CORS при ошибках 500/400
 from supabase import create_client
 
 app = Flask(__name__)
+# Включаем CORS глобально, чтобы браузер не ругался при ошибках
+CORS(app, resources={r"/api/*": {"origins": "*"}, r"/webhook": {"origins": "*"}, r"/api/crypto-webhook": {"origins": "*"}})
 
 # Инициализация
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -15,7 +18,6 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
 HTTP_TIMEOUT = 10
 
-# База данных подарков для крафта
 giftDatabase = {
     "1may.jpg": {"price": 100}, "1may.png": {"price": 100}, "chassiki.png": {"price": 4700}, 
     "sliva.png": {"price": 33500}, "soska.png": {"price": 2500}, "zirka.png": {"price": 850}, 
@@ -202,7 +204,6 @@ def create_stars_pay():
 
     return jsonify(resp), 400
 
-# Изменили маршрут на /webhook, чтобы соответствовать setWebhook
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
@@ -222,11 +223,17 @@ def webhook():
     if 'message' in update and 'successful_payment' in update['message']:
         payment_info = update['message']['successful_payment']
         invoice_payload = payment_info.get('invoice_payload', '')
-        user_id = str(update['message']['from']['id'])
         paid_amount = int(payment_info.get('total_amount', 0))
 
         if paid_amount <= 0:
             return "OK", 200
+
+        # Надежно вытаскиваем user_id прямо из инвойса, чтобы избежать несовпадения типов данных
+        try:
+            parts = invoice_payload.split('_')
+            user_id = parts[2]  # stars_verify_USERID_amount -> USERID
+        except Exception:
+            user_id = str(update['message']['from']['id'])
 
         def get_user_row(uid):
             res = supabase.table("users").select("*").eq("user_id", uid).execute()
@@ -325,15 +332,20 @@ def crypto_webhook():
     if request.method == 'GET':
         return "Webhook is active!", 200
 
-    data = request.get_json()
+    data = request.get_json() or {}
     if data.get('update_type') != 'invoice_paid':
         return "OK", 200
 
     try:
-        payload = data.get('payload', {})
-        user_id = str(payload.get('payload'))
-        amount_ton = float(payload.get('asset_pay_amount') or payload.get('amount') or 0)
+        # ИСПРАВЛЕНО: Данные инвойса в CryptoBot API лежат в data['payload'], а не во вложенных словарях
+        payload_data = data.get('payload', {})
+        user_id = str(payload_data.get('payload')) # Твой кастомный ID, переданный при создании
+        amount_ton = float(payload_data.get('asset_pay_amount') or payload_data.get('amount') or 0)
         
+        if not user_id or user_id == "None":
+            print("ERROR: Crypto Webhook received empty user_id")
+            return "OK", 200
+
         query_id = int(user_id) if user_id.isdigit() else user_id
         res = supabase.table("users").select("balance").eq("user_id", query_id).execute()
         
@@ -346,7 +358,7 @@ def crypto_webhook():
             
         return "OK", 200
     except Exception as e:
-        print(f"CRITICAL ERROR: {str(e)}") 
+        print(f"CRITICAL CRYPTO WEBHOOK ERROR: {str(e)}") 
         return "OK", 200
 
 if __name__ == "__main__":
