@@ -411,7 +411,7 @@ async function verifyGift() {
     if (!val || val < 1) return tg.showAlert('Введите число');
     
     try {
-        const res = await fetch('/api/create_stars_pay', {
+        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {   // <-- добавил BACKEND_URL
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ user_id: userId, amount: val })
