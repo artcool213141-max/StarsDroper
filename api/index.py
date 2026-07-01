@@ -165,59 +165,6 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
  
  
-@app.route('/api/webhook', methods=['POST'])
-def webhook():
-    update = request.get_json() or {}
-    
-    # 1. PreCheckout (Telegram должен получить OK, иначе оплата зависнет)
-    if 'pre_checkout_query' in update:
-        query_id = update['pre_checkout_query']['id']
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
-                      json={"pre_checkout_query_id": query_id, "ok": True})
-        return "OK", 200
-
-    # 2. Обработка успешного платежа
-    if 'message' in update and 'successful_payment' in update['message']:
-        payment_info = update['message']['successful_payment']
-        user_id = str(update['message']['from']['id'])
-        # В твоем старом коде ты добавлял +1 звезду, здесь я оставил так же
-        # Но если нужно брать сумму из платежа, используй: int(payment_info.get('total_amount', 0))
-        
-        print(f"--- WEBHOOK START: User {user_id} ---")
-        
-        try:
-            # Ищем юзера
-            res = supabase.table("users").select("stars").eq("user_id", int(user_id)).execute()
-            
-            if not res.data:
-                print(f"ERROR: Пользователь {user_id} не найден!")
-                return "OK", 200
-            
-            user_data = res.data[0]
-            current_stars = float(user_data.get('stars') or 0)
-            
-            # Обновляем напрямую
-            supabase.table("users").update({
-                "stars": current_stars + 1, 
-                "is_paid_75": True
-            }).eq("user_id", int(user_id)).execute()
-            
-            print(f"SUCCESS: Пользователь {user_id} обновлен, было {current_stars}, стало {current_stars + 1}")
-
-            # Пишем в orders (теперь это будет работать, так как мы не лезем в provider_payment_charge_id)
-            supabase.table("orders").insert({
-                "user_id": user_id,
-                "item_name": "Gift",
-                "status": "pending"
-            }).execute()
-            print("SUCCESS: Запись в orders создана")
-            
-        except Exception as e:
-            print(f"CRITICAL ERROR: {str(e)}")
-            return "Error", 500
-            
-    return "OK", 200
-
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
     data = request.get_json() or {}
@@ -247,21 +194,59 @@ def create_stars_pay():
         return jsonify({"pay_url": resp['result']}), 200
     return jsonify(resp), 400
 
-@app.route('/api/create_order', methods=['POST'])
-def create_order():
-    data = request.get_json() or {}
-    # Если user_id ожидается как строка в таблице orders, оставляем str()
-    user_id = str(data.get('user_id'))
-    try:
-        supabase.table("orders").insert({
-            "user_id": user_id,
-            "item_name": data.get('item_name'),
-            "item_img": data.get('item_img'),
-            "status": "pending"
-        }).execute()
-        return jsonify({"status": "ok"}), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+
+@app.route('/webhook', methods=['POST']) # УБРАЛ /api/
+def webhook():
+    update = request.get_json() or {}
+    
+    # 1. PreCheckout (Telegram должен получить OK, иначе оплата зависнет)
+    if 'pre_checkout_query' in update:
+        query_id = update['pre_checkout_query']['id']
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
+                      json={"pre_checkout_query_id": query_id, "ok": True}, timeout=HTTP_TIMEOUT)
+        return "OK", 200
+
+    # 2. Успешный платеж
+    if 'message' in update and 'successful_payment' in update['message']:
+        payment_info = update['message']['successful_payment']
+        user_id = str(update['message']['from']['id'])
+        paid_amount = int(payment_info.get('total_amount', 0))
+        
+        print(f"--- WEBHOOK START: User {user_id} оплатил {paid_amount} звезд ---")
+        
+        try:
+            uid_int = int(user_id)
+            # Ищем юзера
+            res = supabase.table("users").select("stars").eq("user_id", uid_int).execute()
+            
+            if not res.data:
+                print(f"ERROR: Пользователь {user_id} не найден в базе!")
+                return "OK", 200
+            
+            current_stars = float(res.data[0].get('stars') or 0)
+            
+            # Обновляем звезды и статус
+            supabase.table("users").update({
+                "stars": current_stars + paid_amount, 
+                "is_paid_75": True
+            }).eq("user_id", uid_int).execute()
+            
+            print(f"SUCCESS: Пользователь {user_id} обновлен, начислено {paid_amount}")
+
+            # Запись в заказы
+            supabase.table("orders").insert({
+                "user_id": user_id,
+                "item_name": f"Topup {paid_amount} Stars",
+                "status": "completed"
+            }).execute()
+            
+        except Exception as e:
+            print(f"CRITICAL ERROR: {str(e)}")
+            return "Error", 500
+            
+    return "OK", 200
  
  
 @app.route('/api/create_crypto_pay', methods=['POST'])
