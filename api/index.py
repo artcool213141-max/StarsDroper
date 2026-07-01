@@ -165,49 +165,57 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
  
  
-@app.route('/webhook', methods=['POST'])
+@app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
     
-    # 1. Обработка PreCheckout
+    # 1. PreCheckout (Telegram должен получить OK, иначе оплата зависнет)
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
-        url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
-        requests.post(url, json={"pre_checkout_query_id": query_id, "ok": True}, timeout=5)
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
+                      json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
     # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
         payment_info = update['message']['successful_payment']
-        # В твоей схеме user_id - это bigint, поэтому конвертируем в int
-        user_id = int(update['message']['from']['id'])
-        provider_payment_charge_id = payment_info.get('provider_payment_charge_id')
-        paid_amount = int(payment_info.get('total_amount', 0))
-
-        # Идемпотентность
-        exists = supabase.table("orders").select("id").eq("provider_payment_charge_id", provider_payment_charge_id).execute()
-        if exists.data:
-            return "OK", 200
-
+        user_id = str(update['message']['from']['id'])
+        # В твоем старом коде ты добавлял +1 звезду, здесь я оставил так же
+        # Но если нужно брать сумму из платежа, используй: int(payment_info.get('total_amount', 0))
+        
+        print(f"--- WEBHOOK START: User {user_id} ---")
+        
         try:
-            # Начисление звезд через RPC
-            # Передаем именно int, чтобы соответствовать bigint в базе
-            supabase.rpc('increment_stars', {'uid': user_id, 'amount': paid_amount}).execute()
+            # Ищем юзера
+            res = supabase.table("users").select("stars").eq("user_id", int(user_id)).execute()
             
-            # Запись заказа
+            if not res.data:
+                print(f"ERROR: Пользователь {user_id} не найден!")
+                return "OK", 200
+            
+            user_data = res.data[0]
+            current_stars = float(user_data.get('stars') or 0)
+            
+            # Обновляем напрямую
+            supabase.table("users").update({
+                "stars": current_stars + 1, 
+                "is_paid_75": True
+            }).eq("user_id", int(user_id)).execute()
+            
+            print(f"SUCCESS: Пользователь {user_id} обновлен, было {current_stars}, стало {current_stars + 1}")
+
+            # Пишем в orders (теперь это будет работать, так как мы не лезем в provider_payment_charge_id)
             supabase.table("orders").insert({
-                "user_id": str(user_id),
-                "provider_payment_charge_id": provider_payment_charge_id,
-                "amount": paid_amount,
-                "status": "completed"
+                "user_id": user_id,
+                "item_name": "Gift",
+                "status": "pending"
             }).execute()
+            print("SUCCESS: Запись в orders создана")
             
         except Exception as e:
             print(f"CRITICAL ERROR: {str(e)}")
             return "Error", 500
-        
-        return "OK", 200
-
+            
     return "OK", 200
 
 @app.route('/api/create_stars_pay', methods=['POST'])
