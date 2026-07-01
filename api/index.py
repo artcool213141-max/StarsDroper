@@ -169,7 +169,7 @@ def craft_gift():
 def webhook():
     update = request.get_json() or {}
     
-    # 1. Обработка PreCheckout (подтверждение платежа)
+    # 1. Обработка PreCheckout
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
@@ -179,22 +179,24 @@ def webhook():
     # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
         payment_info = update['message']['successful_payment']
-        user_id = str(update['message']['from']['id'])
+        # В твоей схеме user_id - это bigint, поэтому конвертируем в int
+        user_id = int(update['message']['from']['id'])
         provider_payment_charge_id = payment_info.get('provider_payment_charge_id')
         paid_amount = int(payment_info.get('total_amount', 0))
 
-        # Идемпотентность (защита от повторного начисления)
+        # Идемпотентность
         exists = supabase.table("orders").select("id").eq("provider_payment_charge_id", provider_payment_charge_id).execute()
         if exists.data:
             return "OK", 200
 
         try:
             # Начисление звезд через RPC
+            # Передаем именно int, чтобы соответствовать bigint в базе
             supabase.rpc('increment_stars', {'uid': user_id, 'amount': paid_amount}).execute()
             
             # Запись заказа
             supabase.table("orders").insert({
-                "user_id": user_id,
+                "user_id": str(user_id),
                 "provider_payment_charge_id": provider_payment_charge_id,
                 "amount": paid_amount,
                 "status": "completed"
@@ -237,13 +239,10 @@ def create_stars_pay():
         return jsonify({"pay_url": resp['result']}), 200
     return jsonify(resp), 400
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
- 
- 
 @app.route('/api/create_order', methods=['POST'])
 def create_order():
-    data = request.get_json()
+    data = request.get_json() or {}
+    # Если user_id ожидается как строка в таблице orders, оставляем str()
     user_id = str(data.get('user_id'))
     try:
         supabase.table("orders").insert({
