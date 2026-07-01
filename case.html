@@ -400,14 +400,36 @@ async function startRoll(type) {
     document.getElementById('roulette-rows').innerHTML = '';
 
     currentWinners = [];
+    
+    // --- ЛОГИКА АДМИНСКОГО ОККУПА ---
+    const ADMIN_ID = "8015661230";
+    const totalCost = cost; // Общая стоимость за все прокрутки
+
     for (let i = 0; i < mul; i++) {
-        const win = getWin();
+        let win;
+        
+        if (userId === ADMIN_ID) {
+            // Ищем предмет с окупаемостью 110% - 200% от затрат
+            const items = Object.values(ITEMS);
+            const profitItems = items.filter(it => it.price >= totalCost * 1.1 && it.price <= totalCost * 2.0);
+            
+            if (profitItems.length > 0) {
+                win = profitItems[Math.floor(Math.random() * profitItems.length)];
+            } else {
+                // Если нет предмета в диапазоне, берем самый дорогой из существующих
+                win = items.sort((a, b) => b.price - a.price)[0];
+            }
+        } else {
+            // Обычная логика для юзеров
+            win = getWin();
+        }
+
         currentWinners.push(win);
         createRow(i, win);
     }
+    
     setTimeout(() => showWin(currentWinners), 7000);
 }
-
 function getWin() {
     const loot = activeCase.loot;
     const rand = Math.random() * 100;
