@@ -205,40 +205,52 @@ async function startSpin() {
     const isAdmin = (Number(user.user_id) === MY_ID);
     let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
-    for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        let winKey;
+    if (isAdmin) {
+        // АДМИНСКАЯ ЛОГИКА
+        const isGoldSpin = (newSpinCount % 10 === 0);
+        let bearGiven = false; 
 
-        if (isAdmin) {
-            // АДМИНСКАЯ ЛОГИКА
-            // Если 10-й прокрут: делаем "комбо" (например, мишка 3500 + 4 ракетки по 50 = 3700)
-            // Но мы это реализуем через массив, чтобы не ломать структуру
-            if (newSpinCount % 10 === 0) {
-                // Выдаем "мишку", а в другие итерации multi выдадим ракетки
+        for(let i = 0; i < (isFree ? 1 : multi); i++) {
+            let winKey;
+            if (isGoldSpin && !bearGiven && (i === 0 || Math.random() > 0.5)) {
                 winKey = "bear.png"; 
+                bearGiven = true;
             } else {
-                // Обычный окуп до 5к (фильтруем всё, что > 5000)
                 const profitable = Object.keys(ALL_ITEMS).filter(k => 
-                    ALL_ITEMS[k].price > 100 && ALL_ITEMS[k].price <= 5000
+                    ALL_ITEMS[k].price > 100 && ALL_ITEMS[k].price <= 5000 && k !== "bear.png"
                 );
                 winKey = profitable[Math.floor(Math.random() * profitable.length)];
             }
-        } else {
-            // ОБЫЧНЫЕ ЛЮДИ: только мусор (5 или 50)
-            const lowTier = ["star", "raketa.png"];
-            winKey = lowTier[Math.floor(Math.random() * lowTier.length)];
+            
+            currentWins.push(ALL_ITEMS[winKey]);
+            const line = document.getElementById(`line-${i}`);
+            if (line) {
+                const imgs = line.querySelectorAll('img');
+                if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+            }
         }
-        
-        currentWins.push(ALL_ITEMS[winKey]);
-
-        // Анимация подмены
-        const line = document.getElementById(`line-${i}`);
-        if (line) {
-            const imgs = line.querySelectorAll('img');
-            if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+    } else {
+        // ЛОГИКА ОБЫЧНЫХ ИГРОКОВ
+        for(let i = 0; i < (isFree ? 1 : multi); i++) {
+            let winKey;
+            const rand = Math.random();
+            
+            if (rand < 0.05) {
+                winKey = "2025.jpg"; // 5% шанс на подарок 500
+            } else {
+                const lowTier = ["star", "raketa.png"];
+                winKey = lowTier[Math.floor(Math.random() * lowTier.length)];
+            }
+            
+            currentWins.push(ALL_ITEMS[winKey]);
+            const line = document.getElementById(`line-${i}`);
+            if (line) {
+                const imgs = line.querySelectorAll('img');
+                if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+            }
         }
     }
 
-    // Сохранение
     const upd = isFree ? 
         { last_free_spin: new Date().toISOString(), spin_count: newSpinCount } : 
         { stars: user.stars - cost, spin_count: newSpinCount };
@@ -246,7 +258,6 @@ async function startSpin() {
     await SB.from('users').update(upd).eq('user_id', user.user_id);
     user.spin_count = newSpinCount;
     
-    // Анимация вращения
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         const line = document.getElementById(`line-${i}`);
         if (line) {
@@ -257,7 +268,6 @@ async function startSpin() {
     
     setTimeout(showModal, 5500);
 }
-
     function showModal() {
         const container = document.getElementById('win-items-container');
         container.innerHTML = '';
