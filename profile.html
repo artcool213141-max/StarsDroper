@@ -466,7 +466,7 @@ async function withdrawToBot() {
     };
 
     if (!isPaid) {
-        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 45 ⭐.`, async (ok) => {
+        tg.showConfirm(`Для первого вывода нужна верификация аккаунта.\nСтоимость: 1 ⭐.`, async (ok) => {
             if (!ok) return;
             
             isProcessing = true;
@@ -478,7 +478,7 @@ async function withdrawToBot() {
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 45 })
+                    body: JSON.stringify({ user_id: userId, amount: 1 })
                 });
                 const data = await response.json();
 
