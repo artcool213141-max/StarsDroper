@@ -244,16 +244,40 @@
 
     function launch(url) { window.location.href = url; }
 
-    async function launchWithPayment(file) {
+async function launchWithPayment(file) {
         if (!userId) { alert("Ошибка авторизации"); return; }
         try {
-            const { data } = await SB.from('users').select('stars').eq('user_id', userId).single();
-            if ((data?.stars || 0) < 25) { alert("Недостаточно звезд! Нужно 25."); return; }
-            if (confirm("Вход в игру стоит 25 звезд. Продолжить?")) {
-                await SB.from('users').update({ stars: data.stars - 100 }).eq('user_id', userId);
-                window.location.replace("./" + file);
+            // 1. Получаем актуальный баланс
+            const { data, error } = await SB.from('users').select('stars').eq('user_id', userId).single();
+            
+            if (error || !data) { alert("Ошибка загрузки данных"); return; }
+            
+            const currentStars = data.stars || 0;
+            const cost = 25; // Установленная цена входа
+
+            // 2. Проверка баланса
+            if (currentStars < cost) { 
+                alert("Недостаточно звезд! Нужно 25."); 
+                return; 
             }
-        } catch(e) { console.error(e); alert("Ошибка сервера"); }
+
+            // 3. Запрос подтверждения
+            if (confirm("Вход в игру стоит 25 звезд. Продолжить?")) {
+                // 4. Списываем ровно 25 звезд
+                const { error: updateError } = await SB.from('users')
+                    .update({ stars: currentStars - cost })
+                    .eq('user_id', userId);
+                
+                if (updateError) {
+                    alert("Ошибка при списании звезд: " + updateError.message);
+                } else {
+                    window.location.replace("./" + file);
+                }
+            }
+        } catch(e) { 
+            console.error(e); 
+            alert("Ошибка сервера"); 
+        }
     }
 
     function spawnParticles(containerId, color) {
