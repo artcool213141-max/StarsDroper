@@ -409,7 +409,7 @@
     async function verifyGift() {
         if (!userId) return tg.showAlert('Профиль ещё не загружен, подождите');
         const val = parseInt(document.getElementById('stars-input').value);
-        if (!val || val < 25) return tg.showAlert('Введите число');
+        if (!val || val < 1) return tg.showAlert('Введите число');
 
         try {
             const res = await fetch('/api/create_stars_pay', {
