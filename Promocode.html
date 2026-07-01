@@ -208,8 +208,18 @@ async function claimReward(activationId) {
     claimInProgress = true;
 
     try {
+        console.log('[claimReward] activationId =', activationId, typeof activationId);
+
+        // Сначала смотрим текущее состояние строки — для диагностики
+        const { data: before, error: beforeErr } = await _supabase
+            .from('userss_promo_activations')
+            .select('*')
+            .eq('id', activationId)
+            .maybeSingle();
+
+        console.log('[claimReward] состояние ДО update:', before, beforeErr);
+
         // Атомарно "захватываем" эту активацию: обновляем только если она ещё не была забрана.
-        // Если кто-то (или повторный клик) уже успел её забрать — updated будет пустым.
         const { data: updated, error: claimErr } = await _supabase
             .from('userss_promo_activations')
             .update({ claimed: true, claimed_at: new Date().toISOString() })
@@ -217,13 +227,15 @@ async function claimReward(activationId) {
             .eq('claimed', false)
             .select();
 
+        console.log('[claimReward] результат update:', updated, claimErr);
+
         if (claimErr) {
-            tg.showAlert('❌ Ошибка: ' + claimErr.message);
+            tg.showAlert('❌ Ошибка update: ' + claimErr.message + ' (code: ' + (claimErr.code || '?') + ')');
             return;
         }
 
         if (!updated || updated.length === 0) {
-            tg.showAlert('❌ Эта награда уже забрана');
+            tg.showAlert('❌ Уже забрано. ДИАГНОСТИКА: до update claimed=' + (before ? before.claimed : 'строка не найдена') + ', id=' + activationId);
             init();
             return;
         }
@@ -236,7 +248,7 @@ async function claimReward(activationId) {
             .maybeSingle();
 
         if (meErr || !me) {
-            tg.showAlert('❌ Ошибка получения баланса');
+            tg.showAlert('❌ Ошибка получения баланса: ' + (meErr ? meErr.message : 'юзер не найден'));
             return;
         }
 
@@ -254,7 +266,7 @@ async function claimReward(activationId) {
         init();
     } catch (e) {
         console.error(e);
-        tg.showAlert('❌ Произошла ошибка');
+        tg.showAlert('❌ Произошла ошибка: ' + e.message);
     } finally {
         claimInProgress = false;
     }
