@@ -201,24 +201,28 @@ async function startSpin() {
     document.getElementById('spin-btn').disabled = true;
     currentWins = [];
 
-    // --- ЛОГИКА АДМИНА ---
-    const isAdmin = (user.user_id == 8015661230);
+    // Логика окупа: ищем предметы, цена которых дает окуп
+    // Цена одной прокрутки = 100 звезд. 
+    // Значит предмет должен стоить > 100, чтобы был окуп.
+    const getWinItem = (minPrice) => {
+        const items = Object.values(ALL_ITEMS);
+        // Фильтруем предметы дороже стоимости одной прокрутки (с запасом 10% для окупа)
+        const profitItems = items.filter(it => it.price >= minPrice);
+        // Если что-то пошло не так, берем любой предмет
+        const pool = profitItems.length > 0 ? profitItems : items;
+        return pool[Math.floor(Math.random() * pool.length)];
+    };
 
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        let winKey;
-        if (isAdmin) {
-            // Админу всегда выпадает топовый предмет (например, "kepka.png")
-            winKey = "kepka.png";
-        } else {
-            winKey = isFree ? "star" : (Math.random() < 0.95 ? "raketa.png" : "2025.jpg");
-        }
+        // Если это бесплатный спин — даем мелкий дроп, если платный — гарантируем окуп
+        const winItem = isFree ? ALL_ITEMS["star"] : getWinItem(110); 
         
-        currentWins.push(ALL_ITEMS[winKey]);
+        currentWins.push(winItem);
 
         const line = document.getElementById(`line-${i}`);
         const imgs = line.querySelectorAll('img');
         if (imgs[100]) {
-            imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+            imgs[100].src = `img/${winItem.img}`;
         }
     }
 
