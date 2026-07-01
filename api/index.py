@@ -16,6 +16,9 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
+
+# Таймаут для всех внешних HTTP-запросов (сек), чтобы сервер никогда не вис бесконечно
+HTTP_TIMEOUT = 10
  
 # База данных подарков для крафта
 giftDatabase = {
@@ -170,9 +173,20 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
  
 # ================================================================
-# ============  ВОТ ЗДЕСЬ НАЧИНАЮТСЯ РЕАЛЬНЫЕ ПРАВКИ  ============
-# ============  (STARS: create_stars_pay + webhook)    ============
+# ============  STARS: create_stars_pay + webhook    ============
 # ================================================================
+#
+# ВАЖНО: теперь есть ДВА типа "звёздных" платежей, и они различаются
+# префиксом в invoice_payload:
+#   - "stars_topup_{uid}_{amount}"  -> обычное пополнение баланса звёзд
+#   - "stars_verify_{uid}_{amount}" -> оплата верификации аккаунта
+#     (первый вывод). После неё нужно:
+#       1) НЕ зачислять оплаченные звёзды на баланс (это плата за услугу)
+#       2) выставить is_paid_75 = True
+#       3) создать заявку на вывод из pending_item (если он есть)
+#
+# Раньше оба случая обрабатывались одинаково — просто зачислялись звёзды,
+# из-за чего верификация "съедала" деньги, но ничего не разблокировала.
  
 # --- 1. STARS PAYMENT ---
 @app.route('/api/create_stars_pay', methods=['POST', 'OPTIONS'])
@@ -182,6 +196,10 @@ def create_stars_pay():
  
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
+    purpose = data.get('purpose', 'topup')  # 'topup' или 'verify'
+    if purpose not in ('topup', 'verify'):
+        purpose = 'topup'
+
     try:
         amount = int(data.get('amount', 0))
     except (TypeError, ValueError):
@@ -189,85 +207,148 @@ def create_stars_pay():
  
     if not uid or uid == '0' or amount < 1:
         return jsonify({"error": "Некорректный user_id или amount"}), 400
+
+    if not BOT_TOKEN:
+        print("--- ERROR: BOT_TOKEN не задан в переменных окружения ---")
+        return jsonify({"error": "Сервер не настроен (нет BOT_TOKEN)"}), 500
  
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
-    payload = {
-        "title": "Stars Topup",
-        "description": f"Пополнение {amount} звезд",
-        # Кладём и user_id, и сумму в payload — они понадобятся в вебхуке,
-        # чтобы точно знать, кому и сколько звёзд начислить после оплаты.
-        "payload": f"stars_topup_{uid}_{amount}",
+    payload_prefix = "stars_verify" if purpose == 'verify' else "stars_topup"
+    title = "Верификация аккаунта" if purpose == 'verify' else "Stars Topup"
+    description = "Единоразовая верификация для вывода подарков" if purpose == 'verify' else f"Пополнение {amount} звезд"
+
+    tg_payload = {
+        "title": title,
+        "description": description,
+        "payload": f"{payload_prefix}_{uid}_{amount}",
         "currency": "XTR",
         "prices": [{"label": "Stars", "amount": amount}]
     }
-    r = requests.post(url, json=payload)
-    resp = r.json()
+
+    try:
+        r = requests.post(url, json=tg_payload, timeout=HTTP_TIMEOUT)
+        resp = r.json()
+    except requests.exceptions.RequestException as e:
+        print(f"--- ERROR create_stars_pay (network): {e} ---")
+        return jsonify({"error": "Telegram API недоступен", "details": str(e)}), 502
+
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']}), 200
+
+    print(f"--- ERROR create_stars_pay (telegram response): {resp} ---")
     return jsonify(resp), 400
  
 @app.route('/api/webhook', methods=['POST'])
 def webhook():
     update = request.get_json()
  
-    # 1. Подтверждение pre_checkout (без изменений)
+    # 1. Подтверждение pre_checkout
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
-        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery",
-                      json={"pre_checkout_query_id": query_id, "ok": True})
+        try:
+            requests.post(
+                f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery",
+                json={"pre_checkout_query_id": query_id, "ok": True},
+                timeout=HTTP_TIMEOUT
+            )
+        except requests.exceptions.RequestException as e:
+            print(f"--- ERROR answerPreCheckoutQuery: {e} ---")
         return "OK", 200
  
     # 2. Обработка УСПЕШНОЙ ОПЛАТЫ ЗВЁЗДАМИ
     if 'message' in update and 'successful_payment' in update['message']:
         payment_info = update['message']['successful_payment']
         invoice_payload = payment_info.get('invoice_payload', '')
- 
-        # Обрабатываем в этой ветке ТОЛЬКО платежи звёздами (payload начинается
-        # с "stars_topup_"). Если у вас позже появятся другие типы XTR-платежей,
-        # они сюда не попадут и не будут случайно задеты.
-        if not invoice_payload.startswith('stars_topup_'):
-            print(f"--- WEBHOOK: неизвестный payload '{invoice_payload}', пропускаем ---")
-            return "OK", 200
- 
         user_id = str(update['message']['from']['id'])
-        # total_amount для валюты XTR приходит РОВНО в звёздах (без копеек/центов)
         paid_amount = int(payment_info.get('total_amount', 0))
- 
-        print(f"--- WEBHOOK START (STARS): User {user_id}, amount={paid_amount} ---")
- 
+
+        print(f"--- WEBHOOK START: User {user_id}, payload='{invoice_payload}', amount={paid_amount} ---")
+
         if paid_amount <= 0:
-            print("ERROR: total_amount <= 0, начисление пропущено")
+            print("ERROR: total_amount <= 0, пропускаем")
             return "OK", 200
- 
-        try:
-            res = supabase.table("users").select("stars").eq("user_id", user_id).execute()
+
+        def get_user_row(uid):
+            res = supabase.table("users").select("*").eq("user_id", uid).execute()
             if not res.data:
-                res = supabase.table("users").select("stars").eq("user_id", int(user_id) if user_id.isdigit() else user_id).execute()
- 
-            if not res.data:
-                print(f"ERROR: Пользователь {user_id} не найден в базе!")
-                return "OK", 200
- 
-            current_stars = res.data[0].get('stars') or 0
-            new_stars = current_stars + paid_amount
- 
-            # Начисляем ровно оплаченную сумму звёзд.
-            # ВАЖНО: inventory и is_paid_75 здесь не трогаем вообще —
-            # эта ветка отвечает только за баланс звёзд.
-            supabase.table("users").update({
-                "stars": new_stars
-            }).eq("user_id", user_id).execute()
-            print(f"SUCCESS: Баланс звёзд обновлён: {current_stars} -> {new_stars}")
- 
-            supabase.table("orders").insert({
-                "user_id": user_id,
-                "item_name": f"Stars Topup ({paid_amount})",
-                "status": "completed"
-            }).execute()
-            print("SUCCESS: Запись в orders создана")
- 
-        except Exception as e:
-            print(f"CRITICAL ERROR: {str(e)}")
+                res = supabase.table("users").select("*").eq("user_id", int(uid) if uid.isdigit() else uid).execute()
+            return res.data[0] if res.data else None
+
+        # ---------- Ветка А: верификация (первый вывод) ----------
+        if invoice_payload.startswith('stars_verify_'):
+            try:
+                user_row = get_user_row(user_id)
+                if not user_row:
+                    print(f"ERROR: Пользователь {user_id} не найден в базе (verify)")
+                    return "OK", 200
+
+                update_data = {"is_paid_75": True}
+
+                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
+                print(f"SUCCESS: is_paid_75 = True для {user_id}")
+
+                pending_item = user_row.get("pending_item")
+                if pending_item:
+                    inv = user_row.get("inventory") or []
+                    if not isinstance(inv, list):
+                        inv = []
+
+                    item_file = str(pending_item).split('/')[-1]
+                    info = giftDatabase.get(item_file, {"price": 0})
+
+                    # Убираем предмет из инвентаря (он выводится) и заявку в orders
+                    new_inv = [it for it in inv if (it if isinstance(it, str) else it.get('img', '')).split('/')[-1] != item_file]
+
+                    supabase.table("users").update({
+                        "inventory": new_inv,
+                        "pending_item": None
+                    }).eq("user_id", user_id).execute()
+
+                    supabase.table("orders").insert({
+                        "user_id": user_id,
+                        "item_name": item_file,
+                        "item_img": pending_item,
+                        "status": "pending"
+                    }).execute()
+                    print(f"SUCCESS: заявка на вывод {item_file} создана после верификации")
+                else:
+                    print(f"WARNING: pending_item пуст у {user_id}, заявка не создана")
+
+            except Exception as e:
+                print(f"CRITICAL ERROR (verify branch): {str(e)}")
+
+            return "OK", 200
+
+        # ---------- Ветка Б: обычное пополнение баланса звёзд ----------
+        if invoice_payload.startswith('stars_topup_'):
+            try:
+                user_row = get_user_row(user_id)
+                if not user_row:
+                    print(f"ERROR: Пользователь {user_id} не найден в базе (topup)")
+                    return "OK", 200
+
+                current_stars = user_row.get('stars') or 0
+                new_stars = current_stars + paid_amount
+
+                supabase.table("users").update({
+                    "stars": new_stars
+                }).eq("user_id", user_id).execute()
+                print(f"SUCCESS: Баланс звёзд обновлён: {current_stars} -> {new_stars}")
+
+                supabase.table("orders").insert({
+                    "user_id": user_id,
+                    "item_name": f"Stars Topup ({paid_amount})",
+                    "status": "completed"
+                }).execute()
+                print("SUCCESS: Запись в orders создана")
+
+            except Exception as e:
+                print(f"CRITICAL ERROR (topup branch): {str(e)}")
+
+            return "OK", 200
+
+        print(f"--- WEBHOOK: неизвестный payload '{invoice_payload}', пропускаем ---")
+        return "OK", 200
  
     return "OK", 200
  
@@ -287,10 +368,9 @@ def create_order():
         return jsonify({"status": "error", "message": str(e)}), 400
  
 # ================================================================
-# ==============  ДАЛЬШЕ TON — НИЧЕГО НЕ МЕНЯЛОСЬ  ================
+# ==============  TON (CRYPTOBOT)  ================
 # ================================================================
  
-# --- TON (CRYPTOBOT) ---
 @app.route('/api/create_crypto_pay', methods=['POST'])
 def create_crypto_pay():
     data = request.get_json() or {}
@@ -298,8 +378,13 @@ def create_crypto_pay():
     amount = float(data.get('amount'))
     headers = {"Crypto-Pay-API-Token": CRYPTO_TOKEN}
     payload = {"asset": "TON", "amount": str(amount), "payload": uid}
-    r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers)
-    resp = r.json()
+    try:
+        r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers, timeout=HTTP_TIMEOUT)
+        resp = r.json()
+    except requests.exceptions.RequestException as e:
+        print(f"--- ERROR create_crypto_pay: {e} ---")
+        return jsonify({"error": "CryptoBot API недоступен", "details": str(e)}), 502
+
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']['pay_url']}), 200
     return jsonify(resp), 400
