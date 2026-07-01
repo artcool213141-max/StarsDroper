@@ -223,15 +223,20 @@ def webhook():
             payment_info = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
             
-            # --- ВАЛИДАЦИЯ СУММЫ ИЗ PAYLOAD ---
             payload = payment_info.get('invoice_payload', "")
+            
+            # --- ИСПРАВЛЕННАЯ ЛОГИКА ---
+            # Предполагаем формат: stars_user_amount_timestamp
             try:
-                # Берем последнюю часть строки после последнего подчеркивания
-                expected_amount = int(payload.split('_')[-1])
-            except:
+                parts = payload.split('_')
+                # stars[0], uid[1], amount[2], time[3]
+                expected_amount = int(parts[2]) 
+            except Exception as e:
+                print(f"CRITICAL: Ошибка парсинга payload {payload}: {e}")
+                # Если парсинг упал, используем данные от Telegram (total_amount в копейках/звездах)
                 expected_amount = int(payment_info.get('total_amount', 0))
             
-            print(f"--- WEBHOOK: User {user_id} оплатил {expected_amount} звезд ---")
+            print(f"DEBUG: Payload: {payload}, Начисляем: {expected_amount}")
             
             uid_int = int(user_id)
             res = supabase.table("users").select("stars").eq("user_id", uid_int).execute()
