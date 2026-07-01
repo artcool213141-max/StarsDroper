@@ -232,52 +232,37 @@ def webhook():
             print(f"--- CRITICAL ERROR in PreCheckout: {e} ---")
         return "OK", 200
 
-    # 2. Обработка успешного платежа
+# 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
-        print("DEBUG: Получен successful_payment")
         payment_info = update['message']['successful_payment']
-        invoice_payload = payment_info.get('invoice_payload', '')
+        # Уникальный ID платежа от Telegram
+        provider_payment_charge_id = payment_info.get('provider_payment_charge_id')
         paid_amount = int(payment_info.get('total_amount', 0))
-        
-        print(f"DEBUG: Payload: {invoice_payload}, Amount: {paid_amount}")
+        user_id = update['message']['from']['id'] # Берем ID из сообщения, а не из payload
 
+        # 1. Проверяем, не обрабатывали ли мы этот платеж уже (идемпотентность)
+        exists = supabase.table("orders").select("id").eq("provider_payment_charge_id", provider_payment_charge_id).execute()
+        if exists.data:
+            return "OK", 200 # Платеж уже обработан
+
+        # 2. Начисляем
         try:
-            # Парсим user_id из payload (ожидаем формат: stars_topup_USERID_amount)
-            parts = invoice_payload.split('_')
-            user_id = parts[2] 
-            print(f"DEBUG: Extracted user_id: {user_id}")
+            # Используем атомарный апдейт, если Supabase позволяет, или просто лог
+            supabase.rpc('increment_stars', {'uid': str(user_id), 'amount': paid_amount}).execute()
             
-            # Получаем текущие звезды пользователя
-            res = supabase.table("users").select("stars").eq("user_id", str(user_id)).execute()
-            
-            if not res.data:
-                print(f"DEBUG: Пользователь {user_id} не найден в БД!")
-                return "OK", 200
-            
-            current_stars = res.data[0].get('stars') or 0
-            new_stars = current_stars + paid_amount
-            
-            print(f"DEBUG: Обновляю баланс с {current_stars} до {new_stars}")
-            
-            # Обновляем баланс
-            supabase.table("users").update({"stars": new_stars}).eq("user_id", str(user_id)).execute()
-            
-            # Логируем заказ
+            # 3. Сохраняем факт обработки
             supabase.table("orders").insert({
-                "user_id": user_id,
-                "item_name": f"Stars Topup ({paid_amount})",
+                "user_id": str(user_id),
+                "provider_payment_charge_id": provider_payment_charge_id,
+                "amount": paid_amount,
                 "status": "completed"
             }).execute()
             
-            print("DEBUG: Баланс успешно обновлен!")
-            
         except Exception as e:
-            print(f"CRITICAL ERROR in successful_payment: {str(e)}")
+            print(f"CRITICAL ERROR: {e}")
             return "Error", 500
         
         return "OK", 200
-
-    return "OK", 200
  
  
 @app.route('/api/create_order', methods=['POST'])
