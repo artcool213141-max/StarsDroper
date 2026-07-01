@@ -511,16 +511,20 @@
     function navigateTo(url) { tg.HapticFeedback.impactOccurred('medium'); window.location.href = url; }
 
     // --- Главная точка входа: ждём реальные данные юзера, потом рендерим всё остальное ---
+// --- Улучшенная точка входа: работает и в Telegram, и в обычном браузере ---
     async function bootApp() {
-        const tgUser = await waitForTelegramUser();
+        let tgUser = await waitForTelegramUser(15, 100); // Немного уменьшили ожидание для браузера
 
+        // ЕСЛИ ОТКРЫТО В БРАУЗЕРЕ (Telegram не вернул юзера)
         if (!tgUser) {
-            // Так и не получили данные от Telegram — показываем понятный экран,
-            // вместо того чтобы молча писать "ЗАГРУЗКА..." или подставлять чужой ID
-            document.getElementById('global-loader').style.display = 'none';
-            document.getElementById('tg-error-screen').style.display = 'flex';
-            document.body.classList.add('loaded');
-            return;
+            console.log("Запущено вне Telegram. Включаем демо-режим.");
+            // Создаем фейкового юзера для тестов в браузере:
+            tgUser = {
+                id: 123456789,             // Любой тестовый ID
+                first_name: "Test_Player",  // Имя в браузере
+                username: "browser_test",   // Юзернейм
+                photo_url: ""               // Аватарка (сгенерируется автоматически)
+            };
         }
 
         userId = String(tgUser.id);
@@ -532,6 +536,7 @@
         document.getElementById('display-id').innerText = `ID: ${userId}`;
         document.getElementById('user-avatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${encodeURIComponent(firstName)}`;
 
+        // Запускаем все процессы
         handleReferral();
         syncData();
         renderTonPacks();
@@ -542,10 +547,6 @@
             document.body.classList.add('loaded');
         }, 400);
     }
-
-    window.onload = () => {
-        bootApp();
-    };
 
     // Анимация звезд
     const canvas = document.getElementById('stars-canvas');
