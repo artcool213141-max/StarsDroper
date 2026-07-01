@@ -77,7 +77,8 @@
         .hero-platform {
             width: 280px; height: 80px; background: var(--neon);
             border-radius: 50%; filter: blur(60px); opacity: 0.2;
-            position: absolute; bottom: 22%; transition: var(--trans);
+            position: absolute; bottom: 22%; left: 50%; transform: translateX(-50%);
+            transition: var(--trans);
         }
 
         #hero-img {
@@ -276,6 +277,21 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(8px); }
 }
+.event-banner-fadeout {
+    opacity: 0 !important; transform: translateX(-50%) scale(0.8) !important;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.event-timer {
+    position: absolute; top: 3%; left: 50%; transform: translateX(-50%);
+    z-index: 150; font-weight: 900; font-size: 13px; padding: 7px 16px;
+    border-radius: 12px; backdrop-filter: blur(10px); letter-spacing: 0.5px;
+    animation: event-pop-in 0.3s ease; pointer-events: none;
+}
+.event-timer-green { background: rgba(0,60,15,0.55); border: 1.5px solid #2ecc71; color: #8bf7ae; box-shadow: 0 0 15px rgba(46,204,113,0.35); }
+.event-timer-red   { background: rgba(60,0,0,0.55); border: 1.5px solid #ff3333; color: #ff8080; box-shadow: 0 0 15px rgba(255,51,51,0.35); }
+
+.ddos-timer { display: block; font-size: 16px; margin-top: 4px; }
 
 /* ==================== DDOS-АТАКА / ГЛЮКИ ==================== */
 body.glitch-active {
@@ -293,11 +309,10 @@ body.glitch-active {
 .matrix-col {
     position: absolute; top: 0; width: 14px; height: 200%;
     font-family: monospace; font-size: 11px; line-height: 14px; font-weight: 700;
-    text-align: center; color: #0ff; text-shadow: 0 0 5px #0ff, 0 0 10px #f0f;
-    z-index: 140; pointer-events: none; opacity: 0.8;
+    text-align: center; color: #39ff14; text-shadow: 0 0 6px #39ff14, 0 0 12px #0f0;
+    z-index: 140; pointer-events: none; opacity: 0.85;
     overflow: hidden; animation: matrix-fall 2.2s linear infinite;
 }
-.matrix-col.pink { color: #f0f; text-shadow: 0 0 5px #f0f, 0 0 10px #0ff; }
 @keyframes matrix-fall {
     0% { transform: translateY(-50%); }
     100% { transform: translateY(0%); }
@@ -341,6 +356,22 @@ body.glitch-active {
     cursor: pointer; font-weight: 700;
 }
 
+/* ==================== ВИРУС (сжирает баланс во время DDoS) ==================== */
+.virus-icon {
+    position: absolute; top: 8px; right: 8px; width: 28px; height: 28px;
+    object-fit: contain; display: none; z-index: 60;
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.8));
+    animation: virus-wobble 1.4s ease-in-out infinite;
+}
+.virus-icon.active { display: block; }
+@keyframes virus-wobble {
+    0%, 100% { transform: rotate(-8deg) scale(1); }
+    50% { transform: rotate(8deg) scale(1.1); }
+}
+.virus-loss-pop {
+    color: #ff3333 !important; text-shadow: 0 0 10px rgba(255,51,51,0.7) !important;
+}
+
 /* ==================== DEV-ПАНЕЛЬ (для тестов) ==================== */
 .dev-input {
     width: 100%; box-sizing: border-box; padding: 14px; border-radius: 14px;
@@ -373,6 +404,7 @@ body.glitch-active {
         <div class="balance-card">
             <img src="img/Nova Token.png" class="main-coin" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1205/1205194.png'">
             <h1 id="balance-num">0</h1>
+            <img id="virus-icon" src="img/virus.png" class="virus-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2913/2913976.png'">
         </div>
         <div class="energy-container">
             <div class="energy-bar-bg"><div id="energy-fill"></div></div>
@@ -720,9 +752,15 @@ function startLoops() {
     let activeEvent = null;
     let eventIncomeMultiplier = 1;
     let eventEndTimer = null;
+    let eventCountdownInterval = null;
+    let bannerFadeTimer = null;
     let ddosSpawnInterval = null;
     let matrixRainInterval = null;
-    const EVENT_DURATION_MS = 30000; // все события длятся 30 секунд
+    let virusDrainInterval = null;
+    const EVENT_DURATION_MS = 30000;      // все события длятся 30 секунд
+    const BANNER_SHOW_MS = 3500;          // крупная плашка крах/расцвет висит всего пару секунд
+    const VIRUS_DRAIN_INTERVAL_MS = 3000; // как часто вирус "кусает" баланс
+    const VIRUS_DRAIN_PERCENT = 0.10;     // сколько съедает за раз (10%)
 
     function clearEventVisuals() {
         document.querySelectorAll('.fatal-error-window').forEach(w => w.remove());
@@ -730,10 +768,16 @@ function startLoops() {
         if (banner) banner.remove();
         const lockBadge = document.getElementById('ddos-lock-badge');
         if (lockBadge) lockBadge.remove();
+        const timer = document.getElementById('event-timer');
+        if (timer) timer.remove();
         document.querySelectorAll('.matrix-col').forEach(m => m.remove());
         document.body.classList.remove('glitch-active');
+        hideVirus();
         if (ddosSpawnInterval) { clearInterval(ddosSpawnInterval); ddosSpawnInterval = null; }
         if (matrixRainInterval) { clearInterval(matrixRainInterval); matrixRainInterval = null; }
+        if (virusDrainInterval) { clearInterval(virusDrainInterval); virusDrainInterval = null; }
+        if (eventCountdownInterval) { clearInterval(eventCountdownInterval); eventCountdownInterval = null; }
+        clearTimeout(bannerFadeTimer);
     }
 
     window.endEvent = function() {
@@ -741,6 +785,38 @@ function startLoops() {
         activeEvent = null;
         eventIncomeMultiplier = 1;
         clearEventVisuals();
+    }
+
+    // Запускает отсчёт до конца события. isGood=true -> зелёный таймер, false -> красный.
+    // Если passed ddosBadge - таймер встраивается прямо в плашку DDoS, а не создаёт отдельный виджет.
+    function startEventCountdown(durationMs, isGood, ddosBadge) {
+        clearInterval(eventCountdownInterval);
+        const endTime = Date.now() + durationMs;
+
+        let timerEl = null;
+        if (!ddosBadge) {
+            timerEl = document.createElement('div');
+            timerEl.id = 'event-timer';
+            timerEl.className = 'event-timer ' + (isGood ? 'event-timer-green' : 'event-timer-red');
+            document.getElementById('tap-zone').appendChild(timerEl);
+        }
+
+        function tick() {
+            const remain = Math.max(0, endTime - Date.now());
+            const secs = Math.ceil(remain / 1000);
+            const text = '⏱ 0:' + secs.toString().padStart(2, '0');
+
+            if (ddosBadge) {
+                const t = ddosBadge.querySelector('.ddos-timer');
+                if (t) t.textContent = text;
+            } else if (timerEl) {
+                timerEl.textContent = text;
+            }
+
+            if (remain <= 0) clearInterval(eventCountdownInterval);
+        }
+        tick();
+        eventCountdownInterval = setInterval(tick, 1000);
     }
 
     // Крах биржи (-20% дохода) / Расцвет биржи (+50% дохода)
@@ -760,12 +836,21 @@ function startLoops() {
         `;
         document.getElementById('tap-zone').appendChild(banner);
 
+        // Крупная плашка-объявление висит всего несколько секунд, дальше остаётся только таймер
+        bannerFadeTimer = setTimeout(() => {
+            banner.classList.add('event-banner-fadeout');
+            setTimeout(() => banner.remove(), 500);
+        }, BANNER_SHOW_MS);
+
+        startEventCountdown(EVENT_DURATION_MS, !isCrash, null);
+
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(isCrash ? 'error' : 'success');
 
         eventEndTimer = setTimeout(() => window.endEvent(), EVENT_DURATION_MS);
     }
 
-    // DDoS-атака: спам фейковых окон ошибок + глюки экрана, клики по герою заблокированы
+    // DDoS-атака: спам фейковых окон ошибок + глюки экрана, клики по герою заблокированы,
+    // вирус подъедает баланс, пока окна не закрыты. Плашка висит ВСЮ атаку (не исчезает).
     window.startDdosEvent = function() {
         clearTimeout(eventEndTimer);
         clearEventVisuals();
@@ -776,16 +861,57 @@ function startLoops() {
         const badge = document.createElement('div');
         badge.id = 'ddos-lock-badge';
         badge.className = 'ddos-lock-badge';
-        badge.innerHTML = '💀 DDOS-АТАКА! КЛИКИ ЗАБЛОКИРОВАНЫ';
+        badge.innerHTML = '💀 DDOS-АТАКА! КЛИКИ ЗАБЛОКИРОВАНЫ<span class="ddos-timer">⏱ 0:30</span>';
         document.getElementById('tap-zone').appendChild(badge);
+
+        startEventCountdown(EVENT_DURATION_MS, false, badge);
 
         spawnMatrixRain();
         spawnFatalErrorWindow();
         ddosSpawnInterval = setInterval(spawnFatalErrorWindow, 2200);
+        virusDrainInterval = setInterval(virusDrainTick, VIRUS_DRAIN_INTERVAL_MS);
 
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
 
         eventEndTimer = setTimeout(() => window.endEvent(), EVENT_DURATION_MS);
+    }
+
+    // Пока хоть одно окно "Fatal Error" не закрыто игроком - вирус сжирает часть баланса
+    function virusDrainTick() {
+        const openWindows = document.querySelectorAll('.fatal-error-window').length;
+        if (openWindows === 0) {
+            hideVirus();
+            return;
+        }
+        showVirus();
+        const lost = Math.floor(state.points * VIRUS_DRAIN_PERCENT);
+        if (lost > 0) {
+            state.points -= lost;
+            updateUI();
+            showVirusLossPop(lost);
+        }
+    }
+
+    function showVirus() {
+        const v = document.getElementById('virus-icon');
+        if (v) v.classList.add('active');
+    }
+    function hideVirus() {
+        const v = document.getElementById('virus-icon');
+        if (v) v.classList.remove('active');
+    }
+
+    function showVirusLossPop(amountLost) {
+        const balanceCard = document.querySelector('.balance-card');
+        if (!balanceCard) return;
+        const rect = balanceCard.getBoundingClientRect();
+        const p = document.createElement('div');
+        p.className = 'click-pop virus-loss-pop';
+        p.innerHTML = `-${formatNumber(amountLost)}`;
+        p.style.left = (rect.left + rect.width / 2) + 'px';
+        p.style.top = (rect.top + rect.height / 2) + 'px';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 800);
     }
 
     function spawnFatalErrorWindow() {
@@ -809,11 +935,18 @@ function startLoops() {
             </div>
         `;
         // Клик в любом месте окна закрывает его
-        win.addEventListener('click', () => win.remove());
+        win.addEventListener('click', () => {
+            win.remove();
+            // Если это было последнее открытое окно - вирус сразу прячется
+            if (document.querySelectorAll('.fatal-error-window').length === 0) hideVirus();
+        });
         shell.appendChild(win);
 
         // Если не кликнули - окно само исчезнет, чтобы не заваливало весь экран
-        setTimeout(() => win.remove(), 6000);
+        setTimeout(() => {
+            win.remove();
+            if (document.querySelectorAll('.fatal-error-window').length === 0) hideVirus();
+        }, 6000);
     }
 
     function spawnMatrixRain() {
@@ -823,8 +956,7 @@ function startLoops() {
         const total = colsPerSide * 2;
         for (let i = 0; i < total; i++) {
             const col = document.createElement('div');
-            const pink = i % 2 === 0;
-            col.className = 'matrix-col' + (pink ? ' pink' : '');
+            col.className = 'matrix-col';
             const onLeft = i < colsPerSide;
             const edgeIndex = onLeft ? i : (i - colsPerSide);
             if (onLeft) {
