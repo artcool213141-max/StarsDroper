@@ -235,6 +235,16 @@
     50% { background-color: #500; }
 }
 
+.card-item.hero-locked {
+    filter: grayscale(0.8) brightness(0.55);
+    opacity: 0.75;
+}
+.card-item.hero-locked .btn-buy {
+    background: #444 !important;
+    color: #ccc !important;
+    cursor: pointer;
+}
+
 /* Контейнер для текста предупреждения */
 #overheat-msg {
     position: absolute; top: 30%; color: #ff3333; font-weight: 900;
@@ -507,9 +517,80 @@ function startLoops() {
     const heroImg = document.getElementById('hero-img');
     let isOverheated = false;
 
-    function handleTapLogic(x, y) {
+    // ==================== АНТИ-АВТОКЛИКЕР ====================
+    // Идея: у каждого касания (пальца/курсора) есть свой pointerId.
+    // Настоящий человек, даже тапая очень быстро одним пальцем, не может
+    // тапать идеально равномерно (всегда есть "дрожь" в интервалах).
+    // Автокликер (скрипт/бот) тапает либо с идеально ровными интервалами,
+    // либо посылает события с isTrusted = false (программная генерация).
+    // Тапы РАЗНЫМИ пальцами (мультитач) друг на друга не влияют,
+    // т.к. история ведётся отдельно по каждому pointerId.
+    const tapHistoryByPointer = {};
+    const ANTICHEAT_WINDOW_MS = 2500;   // окно наблюдения для одного "пальца"
+    const ANTICHEAT_SAMPLE_SIZE = 6;    // минимум тапов для анализа
+    const ANTICHEAT_MAX_CPS = 9;        // порог тапов/сек для одного пальца
+    const ANTICHEAT_MIN_STDDEV = 14;    // мс - минимальный "человеческий" разброс интервалов
+    const OVERHEAT_ENERGY_MULTIPLIER = 50; // энергия тратится в 50 раз быстрее
+    const OVERHEAT_COOLDOWN_MS = 4000;  // сколько держится перегрев без новых нарушений
+    let overheatTimer = null;
+
+    function checkAutoclicker(pointerId, isTrusted) {
+        const now = Date.now();
+
+        // Программно сгенерированное событие (не настоящее касание/клик) - мгновенный флаг
+        if (isTrusted === false) return true;
+
+        const key = (pointerId === undefined || pointerId === null) ? 'default' : pointerId;
+        if (!tapHistoryByPointer[key]) tapHistoryByPointer[key] = [];
+        const hist = tapHistoryByPointer[key];
+
+        hist.push(now);
+        while (hist.length && now - hist[0] > ANTICHEAT_WINDOW_MS) hist.shift();
+
+        if (hist.length < ANTICHEAT_SAMPLE_SIZE) return false;
+
+        const intervals = [];
+        for (let i = 1; i < hist.length; i++) intervals.push(hist[i] - hist[i - 1]);
+
+        const avgInterval = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+        const cps = 1000 / avgInterval;
+
+        const mean = avgInterval;
+        const variance = intervals.reduce((a, b) => a + (b - mean) * (b - mean), 0) / intervals.length;
+        const stddev = Math.sqrt(variance);
+
+        // Флагаем только если ОЧЕНЬ быстро И ОЧЕНЬ ровно по времени - так делают боты,
+        // а не человек, тапающий пальцем.
+        if (cps > ANTICHEAT_MAX_CPS && stddev < ANTICHEAT_MIN_STDDEV) {
+            return true;
+        }
+        return false;
+    }
+
+    function triggerOverheat() {
+        isOverheated = true;
+        document.body.classList.add('overheat-flash');
+        const msg = document.getElementById('overheat-msg');
+        if (msg) msg.style.opacity = '1';
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+
+        clearTimeout(overheatTimer);
+        overheatTimer = setTimeout(() => {
+            isOverheated = false;
+            document.body.classList.remove('overheat-flash');
+            if (msg) msg.style.opacity = '0';
+        }, OVERHEAT_COOLDOWN_MS);
+    }
+    // ==================== /АНТИ-АВТОКЛИКЕР ====================
+
+    function handleTapLogic(x, y, pointerId, isTrusted) {
         const currentHero = heroes.find(h => h.id === state.activeHeroId) || heroes[0];
-        const tapCost = 1; // Расход энергии за 1 тап
+
+        if (checkAutoclicker(pointerId, isTrusted)) {
+            triggerOverheat();
+        }
+
+        const tapCost = isOverheated ? OVERHEAT_ENERGY_MULTIPLIER : 1; // при перегреве энергия тратится в 50 раз быстрее
 
         if (state.energy >= tapCost) {
             state.energy -= tapCost;
@@ -576,7 +657,7 @@ function showPop(x, y, val) {
             }
 
 // ... (оставляем логику как есть до самого конца функции
-            const isLocked = index > 0 && index < 20 && (state.marketLevels[marketData[index - 1].id] || 0) === 0;
+            const isLocked = index > 0 && (state.marketLevels[marketData[index - 1].id] || 0) === 0;
             
             container.innerHTML += `
                 <div class="card-item ${isLocked ? 'locked' : ''}">
@@ -586,7 +667,7 @@ function showPop(x, y, val) {
                     <button class="btn-action btn-buy" 
                         ${(isLocked || isDisabled) ? 'disabled' : ''} 
                         onclick="buyMarketItem(${item.id})">
-                        ${isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : formatNumber(price))}
+                        ${isLocked ? '🔒' : (isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : formatNumber(price)))}
                     </button>
                 </div>`;
         });
@@ -637,14 +718,18 @@ function renderSkins() {
         heroes.forEach(h => {
             const isOwned = state.ownedHeroes.includes(h.id);
             const isActive = state.activeHeroId === h.id;
+            // Героя нельзя купить, пока не куплен предыдущий по порядку
+            const isLocked = !isOwned && h.id > 0 && !state.ownedHeroes.includes(h.id - 1);
+            // Кнопка НЕ дизейблится флагом isLocked (только нехваткой средств),
+            // чтобы клик по ней вызвал handleHero и показал попап с объяснением
             container.innerHTML += `
-                <div class="card-item ${isActive ? 'active-item' : ''}">
+                <div class="card-item ${isActive ? 'active-item' : ''} ${isLocked ? 'hero-locked' : ''}">
                     <img src="${h.img}" class="card-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
-                    <div class="card-desc" style="margin-top: 10px;">МНОЖИТЕЛЬ x${h.x}</div>
+                    <div class="card-desc" style="margin-top: 10px;">${isLocked ? '🔒 Сначала купите предыдущего героя' : 'МНОЖИТЕЛЬ x' + h.x}</div>
                     <button class="btn-action ${isOwned ? 'btn-owned' : 'btn-buy'}" 
-                            ${(!isOwned && state.points < h.price) ? 'disabled' : ''} 
+                            ${(!isOwned && !isLocked && state.points < h.price) ? 'disabled' : ''} 
                             onclick="handleHero(${h.id})">
-                        ${isOwned ? (isActive ? 'АКТИВЕН' : 'ВЫБРАТЬ') : formatNumber(h.price)}
+                        ${isOwned ? (isActive ? 'АКТИВЕН' : 'ВЫБРАТЬ') : (isLocked ? '🔒 ЗАКРЫТО' : formatNumber(h.price))}
                     </button>
                 </div>`;
         });
@@ -659,6 +744,17 @@ window.handleHero = function(id) {
             renderSkins(); 
             updateUI(); 
             triggerSaveProcess();
+            return;
+        }
+
+        // Нельзя перескакивать через героев - сначала нужно купить предыдущего
+        if (id > 0 && !state.ownedHeroes.includes(id - 1)) {
+            const prevHero = heroes.find(x => x.id === id - 1);
+            tg.showPopup({
+                title: 'Сначала предыдущий герой',
+                message: `Чтобы купить героя с множителем x${h.x}, сначала нужно приобрести героя с множителем x${prevHero.x}.`,
+                buttons: [{ type: 'ok', text: 'Понятно' }]
+            });
             return;
         }
 
@@ -732,7 +828,7 @@ window.handleHero = function(id) {
         const heroImgEl = document.getElementById('hero-img');
         heroImgEl.addEventListener('pointerdown', (e) => {
             e.preventDefault();
-            handleTapLogic(e.clientX, e.clientY);
+            handleTapLogic(e.clientX, e.clientY, e.pointerId, e.isTrusted);
         });
 
         await loadFromDB();
