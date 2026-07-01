@@ -219,50 +219,54 @@ def create_stars_pay():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
-    print(f"DEBUG: Received update: {update}") 
+    print(f"DEBUG: Полный апдейт: {update}") 
 
-    # 1. Обработка PreCheckout (подтверждение возможности оплаты)
+    # 1. Обработка PreCheckout
     if 'pre_checkout_query' in update:
+        print("DEBUG: Получен pre_checkout_query")
         query_id = update['pre_checkout_query']['id']
-        try:
-            url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
-            requests.post(url, json={"pre_checkout_query_id": query_id, "ok": True}, timeout=5)
-            print(f"DEBUG: PreCheckout подтвержден для {query_id}")
-        except Exception as e:
-            print(f"--- CRITICAL ERROR in PreCheckout: {e} ---")
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
+        requests.post(url, json={"pre_checkout_query_id": query_id, "ok": True}, timeout=5)
         return "OK", 200
 
-# 2. Обработка успешного платежа
+    # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
+        print("DEBUG: Обнаружен успешный платеж!")
         payment_info = update['message']['successful_payment']
-        # Уникальный ID платежа от Telegram
         provider_payment_charge_id = payment_info.get('provider_payment_charge_id')
         paid_amount = int(payment_info.get('total_amount', 0))
-        user_id = update['message']['from']['id'] # Берем ID из сообщения, а не из payload
+        user_id = update['message']['from']['id']
 
-        # 1. Проверяем, не обрабатывали ли мы этот платеж уже (идемпотентность)
+        print(f"DEBUG: ID платежа: {provider_payment_charge_id}, Сумма: {paid_amount}, User: {user_id}")
+
+        # Проверка на дубли
         exists = supabase.table("orders").select("id").eq("provider_payment_charge_id", provider_payment_charge_id).execute()
         if exists.data:
-            return "OK", 200 # Платеж уже обработан
+            print("DEBUG: Платеж уже был в базе, игнорирую.")
+            return "OK", 200
 
-        # 2. Начисляем
         try:
-            # Используем атомарный апдейт, если Supabase позволяет, или просто лог
-            supabase.rpc('increment_stars', {'uid': str(user_id), 'amount': paid_amount}).execute()
+            # Начисление
+            print(f"DEBUG: Пытаюсь начислить {paid_amount} звезд для {user_id}")
+            result = supabase.rpc('increment_stars', {'uid': str(user_id), 'amount': paid_amount}).execute()
+            print(f"DEBUG: Результат RPC: {result}")
             
-            # 3. Сохраняем факт обработки
+            # Лог
             supabase.table("orders").insert({
                 "user_id": str(user_id),
                 "provider_payment_charge_id": provider_payment_charge_id,
                 "amount": paid_amount,
                 "status": "completed"
             }).execute()
+            print("DEBUG: Успешно записано в базу.")
             
         except Exception as e:
-            print(f"CRITICAL ERROR: {e}")
+            print(f"CRITICAL ERROR: Ошибка при записи в БД: {str(e)}")
             return "Error", 500
         
         return "OK", 200
+
+    return "OK", 200
  
  
 @app.route('/api/create_order', methods=['POST'])
