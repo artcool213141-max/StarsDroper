@@ -206,21 +206,15 @@ async function startSpin() {
     let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
     if (isAdmin) {
-        // АДМИНСКАЯ ЛОГИКА
-        const isGoldSpin = (newSpinCount % 10 === 0);
-        let bearGiven = false; 
-
+        // АДМИНСКАЯ ЛОГИКА (строго по вашим процентам)
         for(let i = 0; i < (isFree ? 1 : multi); i++) {
+            const rand = Math.random() * 100;
             let winKey;
-            if (isGoldSpin && !bearGiven && (i === 0 || Math.random() > 0.5)) {
-                winKey = "bear.png"; 
-                bearGiven = true;
-            } else {
-                const profitable = Object.keys(ALL_ITEMS).filter(k => 
-                    ALL_ITEMS[k].price > 100 && ALL_ITEMS[k].price <= 5000 && k !== "bear.png"
-                );
-                winKey = profitable[Math.floor(Math.random() * profitable.length)];
-            }
+            
+            if (rand < 35) winKey = "2025.jpg";      // 35%
+            else if (rand < 85) winKey = "raketa.png"; // 50% (35+50=85)
+            else if (rand < 92) winKey = "bear.png";   // 7% (85+7=92)
+            else winKey = "car.png";                   // 8% (92+8=100)
             
             currentWins.push(ALL_ITEMS[winKey]);
             const line = document.getElementById(`line-${i}`);
@@ -230,17 +224,11 @@ async function startSpin() {
             }
         }
     } else {
-        // ЛОГИКА ОБЫЧНЫХ ИГРОКОВ
+        // ЛОГИКА ОБЫЧНЫХ ИГРОКОВ (5% на 2025, остальное - мусор)
         for(let i = 0; i < (isFree ? 1 : multi); i++) {
             let winKey;
-            const rand = Math.random();
-            
-            if (rand < 0.05) {
-                winKey = "2025.jpg"; // 5% шанс на подарок 500
-            } else {
-                const lowTier = ["star", "raketa.png"];
-                winKey = lowTier[Math.floor(Math.random() * lowTier.length)];
-            }
+            if (Math.random() < 0.05) winKey = "2025.jpg";
+            else winKey = Math.random() < 0.5 ? "star" : "raketa.png";
             
             currentWins.push(ALL_ITEMS[winKey]);
             const line = document.getElementById(`line-${i}`);
@@ -268,6 +256,7 @@ async function startSpin() {
     
     setTimeout(showModal, 5500);
 }
+    
     function showModal() {
         const container = document.getElementById('win-items-container');
         container.innerHTML = '';
