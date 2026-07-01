@@ -251,9 +251,107 @@
     font-size: 20px; text-shadow: 0 0 10px #f00; opacity: 0;
     transition: opacity 0.3s; z-index: 20;
 }
+
+/* ==================== СОБЫТИЯ БИРЖИ (крах / расцвет) ==================== */
+.event-banner {
+    position: absolute; top: 12%; left: 50%; transform: translateX(-50%);
+    z-index: 150; text-align: center; padding: 16px 26px; border-radius: 20px;
+    backdrop-filter: blur(15px); animation: event-pop-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none; width: max-content; max-width: 80%;
+}
+.event-crash { background: rgba(80, 0, 0, 0.65); border: 2px solid #ff3333; box-shadow: 0 0 30px rgba(255,51,51,0.5); }
+.event-boom  { background: rgba(0, 60, 15, 0.65); border: 2px solid #2ecc71; box-shadow: 0 0 30px rgba(46,204,113,0.5); }
+.event-arrow { font-size: 46px; display: block; animation: event-arrow-bounce 1s ease-in-out infinite; }
+.event-crash .event-arrow { filter: drop-shadow(0 0 8px #ff3333); }
+.event-boom .event-arrow { filter: drop-shadow(0 0 8px #2ecc71); }
+.event-text { font-weight: 900; font-size: 13px; margin-top: 8px; letter-spacing: 0.5px; }
+.event-crash .event-text { color: #ff8080; }
+.event-boom .event-text { color: #8bf7ae; }
+
+@keyframes event-pop-in {
+    0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1); }
+}
+@keyframes event-arrow-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(8px); }
+}
+
+/* ==================== DDOS-АТАКА / ГЛЮКИ ==================== */
+body.glitch-active {
+    animation: body-glitch 0.35s steps(1) infinite;
+}
+@keyframes body-glitch {
+    0%, 100% { filter: none; }
+    12% { filter: hue-rotate(20deg) contrast(1.3); }
+    24% { filter: none; }
+    36% { filter: invert(0.06) saturate(2); }
+    48% { filter: none; }
+    75% { filter: hue-rotate(-15deg); }
+}
+
+.matrix-col {
+    position: absolute; top: 0; width: 14px; height: 200%;
+    font-family: monospace; font-size: 11px; line-height: 14px; font-weight: 700;
+    text-align: center; color: #0ff; text-shadow: 0 0 5px #0ff, 0 0 10px #f0f;
+    z-index: 140; pointer-events: none; opacity: 0.8;
+    overflow: hidden; animation: matrix-fall 2.2s linear infinite;
+}
+.matrix-col.pink { color: #f0f; text-shadow: 0 0 5px #f0f, 0 0 10px #0ff; }
+@keyframes matrix-fall {
+    0% { transform: translateY(-50%); }
+    100% { transform: translateY(0%); }
+}
+
+.ddos-lock-badge {
+    position: absolute; top: 8%; left: 50%; transform: translateX(-50%);
+    z-index: 150; background: rgba(50,0,0,0.7); border: 2px solid #ff3333;
+    color: #ff6666; font-weight: 900; font-size: 12px; padding: 10px 18px;
+    border-radius: 16px; text-align: center; letter-spacing: 0.5px;
+    box-shadow: 0 0 25px rgba(255,51,51,0.4); animation: event-pop-in 0.4s ease;
+    pointer-events: none;
+}
+
+.fatal-error-window {
+    position: absolute; width: 220px; z-index: 500;
+    background: #d4d0c8; border: 2px solid #fff;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.6), inset -1px -1px 0 #404040, inset 1px 1px 0 #fff;
+    font-family: 'Tahoma', 'Montserrat', sans-serif; cursor: pointer;
+    animation: fe-appear 0.25s ease-out; transform: translate(-50%, -50%);
+}
+@keyframes fe-appear {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+.fe-titlebar {
+    background: linear-gradient(90deg, #0a246a, #a6caf0);
+    color: white; font-size: 12px; font-weight: 700;
+    padding: 4px 6px; display: flex; justify-content: space-between; align-items: center;
+}
+.fe-close {
+    background: #d4d0c8; color: black; width: 16px; height: 16px;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid #808080; font-size: 10px; font-weight: 900; line-height: 1;
+}
+.fe-body { padding: 20px 15px; text-align: center; }
+.fe-icon { font-size: 30px; margin-bottom: 15px; }
+.fe-ok {
+    padding: 5px 25px; font-size: 11px; background: #d4d0c8;
+    border: 1px solid #404040; box-shadow: 1px 1px 0 #fff inset;
+    cursor: pointer; font-weight: 700;
+}
+
+/* ==================== DEV-ПАНЕЛЬ (для тестов) ==================== */
+.dev-input {
+    width: 100%; box-sizing: border-box; padding: 14px; border-radius: 14px;
+    border: 1px solid var(--border); background: rgba(255,255,255,0.05);
+    color: white; font-weight: 700; margin-bottom: 15px; font-size: 14px;
+}
+.dev-quick-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 5px; }
     </style>
 </head>
 <body>
+
 
 <div id="main-bg"></div>
 
@@ -265,6 +363,9 @@
 </div>
         <button class="btn-info-star" onclick="openPanel('info-panel', this)">
             КАК ПОЛУЧИТЬ STAR?
+        </button>
+        <button class="btn-info-star" style="padding: 10px 12px; margin-left: 8px;" onclick="openPanel('dev-panel', this)" title="Тест событий">
+            🧪
         </button>
     </div>
 
@@ -318,6 +419,25 @@
     <div class="drawer-wardrobe" id="wardrobe-panel">
         <div class="drawer-header"><h3>СКИНЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
         <div class="scroll-area" id="skin-list"></div>
+    </div>
+
+    <div class="drawer-wardrobe" id="dev-panel">
+        <div class="drawer-header"><h3>DEV-ПАНЕЛЬ (ТЕСТ)</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <div style="padding: 5px 0;">
+            <p style="font-size: 12px; opacity: 0.6; margin-bottom: 15px; line-height: 1.5;">
+                Введите код события и нажмите «Запустить», чтобы проверить его сразу, не дожидаясь случайного срабатывания.<br>
+                Доступные коды: <b>crash</b>, <b>boom</b>, <b>ddos</b>, <b>stop</b>
+            </p>
+            <input type="text" id="dev-code-input" class="dev-input" placeholder="Введите код, например: ddos" autocomplete="off">
+            <button class="btn-action btn-buy" onclick="runDevCode()">ЗАПУСТИТЬ ПО КОДУ</button>
+
+            <div class="dev-quick-grid">
+                <button class="btn-action btn-buy" onclick="startMarketEvent('crash')">📉 КРАХ</button>
+                <button class="btn-action btn-buy" onclick="startMarketEvent('boom')">📈 РАСЦВЕТ</button>
+                <button class="btn-action btn-buy" onclick="startDdosEvent()">💀 DDOS</button>
+            </div>
+            <button class="btn-action btn-owned" style="margin-top: 15px;" onclick="endEvent()">⏹ ОСТАНОВИТЬ СОБЫТИЕ</button>
+        </div>
     </div>
 
     <div class="nav-bar">
@@ -511,6 +631,18 @@ function startLoops() {
 
     // Сохранение текущего прогресса на сервер (каждые 15 секунд)
     setInterval(triggerSaveProcess, 15000); 
+
+    // Случайные события (крах/расцвет биржи, DDoS-атака)
+    // Проверка каждые 20 секунд, шанс ~6% - в среднем событие раз в 5-6 минут
+    setInterval(() => {
+        if (activeEvent) return; // событие уже идёт - не начинаем новое
+        if (Math.random() < 0.06) {
+            const roll = Math.random();
+            if (roll < 0.4) window.startMarketEvent('crash');
+            else if (roll < 0.8) window.startMarketEvent('boom');
+            else window.startDdosEvent();
+        }
+    }, 20000);
 }
 
     const tapZone = document.getElementById('tap-zone');
@@ -583,7 +715,161 @@ function startLoops() {
     }
     // ==================== /АНТИ-АВТОКЛИКЕР ====================
 
+    // ==================== СЛУЧАЙНЫЕ СОБЫТИЯ ====================
+    // activeEvent: null | 'crash' | 'boom' | 'ddos'
+    let activeEvent = null;
+    let eventIncomeMultiplier = 1;
+    let eventEndTimer = null;
+    let ddosSpawnInterval = null;
+    let matrixRainInterval = null;
+    const EVENT_DURATION_MS = 30000; // все события длятся 30 секунд
+
+    function clearEventVisuals() {
+        document.querySelectorAll('.fatal-error-window').forEach(w => w.remove());
+        const banner = document.getElementById('event-banner');
+        if (banner) banner.remove();
+        const lockBadge = document.getElementById('ddos-lock-badge');
+        if (lockBadge) lockBadge.remove();
+        document.querySelectorAll('.matrix-col').forEach(m => m.remove());
+        document.body.classList.remove('glitch-active');
+        if (ddosSpawnInterval) { clearInterval(ddosSpawnInterval); ddosSpawnInterval = null; }
+        if (matrixRainInterval) { clearInterval(matrixRainInterval); matrixRainInterval = null; }
+    }
+
+    window.endEvent = function() {
+        clearTimeout(eventEndTimer);
+        activeEvent = null;
+        eventIncomeMultiplier = 1;
+        clearEventVisuals();
+    }
+
+    // Крах биржи (-20% дохода) / Расцвет биржи (+50% дохода)
+    window.startMarketEvent = function(type) {
+        clearTimeout(eventEndTimer);
+        clearEventVisuals();
+        activeEvent = type; // 'crash' | 'boom'
+        eventIncomeMultiplier = (type === 'crash') ? 0.8 : 1.5;
+
+        const isCrash = type === 'crash';
+        const banner = document.createElement('div');
+        banner.id = 'event-banner';
+        banner.className = 'event-banner ' + (isCrash ? 'event-crash' : 'event-boom');
+        banner.innerHTML = `
+            <span class="event-arrow">${isCrash ? '📉' : '📈'}</span>
+            <div class="event-text">${isCrash ? 'КРАХ БИРЖИ! ДОХОД -20%' : 'РАСЦВЕТ БИРЖИ! ДОХОД +50%'}</div>
+        `;
+        document.getElementById('tap-zone').appendChild(banner);
+
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred(isCrash ? 'error' : 'success');
+
+        eventEndTimer = setTimeout(() => window.endEvent(), EVENT_DURATION_MS);
+    }
+
+    // DDoS-атака: спам фейковых окон ошибок + глюки экрана, клики по герою заблокированы
+    window.startDdosEvent = function() {
+        clearTimeout(eventEndTimer);
+        clearEventVisuals();
+        activeEvent = 'ddos';
+
+        document.body.classList.add('glitch-active');
+
+        const badge = document.createElement('div');
+        badge.id = 'ddos-lock-badge';
+        badge.className = 'ddos-lock-badge';
+        badge.innerHTML = '💀 DDOS-АТАКА! КЛИКИ ЗАБЛОКИРОВАНЫ';
+        document.getElementById('tap-zone').appendChild(badge);
+
+        spawnMatrixRain();
+        spawnFatalErrorWindow();
+        ddosSpawnInterval = setInterval(spawnFatalErrorWindow, 2200);
+
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+
+        eventEndTimer = setTimeout(() => window.endEvent(), EVENT_DURATION_MS);
+    }
+
+    function spawnFatalErrorWindow() {
+        const shell = document.querySelector('.app-shell');
+        if (!shell) return;
+        const win = document.createElement('div');
+        win.className = 'fatal-error-window';
+        // Появляется ближе к центру экрана с небольшим случайным смещением
+        const offsetX = (Math.random() - 0.5) * 140;
+        const offsetY = (Math.random() - 0.5) * 220;
+        win.style.left = `calc(50% + ${offsetX}px)`;
+        win.style.top = `calc(50% + ${offsetY}px)`;
+        win.innerHTML = `
+            <div class="fe-titlebar">
+                <span>Fatal Error</span>
+                <span class="fe-close">✕</span>
+            </div>
+            <div class="fe-body">
+                <div class="fe-icon">❌</div>
+                <button class="fe-ok">OK</button>
+            </div>
+        `;
+        // Клик в любом месте окна закрывает его
+        win.addEventListener('click', () => win.remove());
+        shell.appendChild(win);
+
+        // Если не кликнули - окно само исчезнет, чтобы не заваливало весь экран
+        setTimeout(() => win.remove(), 6000);
+    }
+
+    function spawnMatrixRain() {
+        const shell = document.querySelector('.app-shell');
+        if (!shell) return;
+        const colsPerSide = 3;
+        const total = colsPerSide * 2;
+        for (let i = 0; i < total; i++) {
+            const col = document.createElement('div');
+            const pink = i % 2 === 0;
+            col.className = 'matrix-col' + (pink ? ' pink' : '');
+            const onLeft = i < colsPerSide;
+            const edgeIndex = onLeft ? i : (i - colsPerSide);
+            if (onLeft) {
+                col.style.left = (edgeIndex * 16) + 'px';
+            } else {
+                col.style.right = (edgeIndex * 16) + 'px';
+            }
+            col.style.animationDuration = (1.8 + Math.random() * 1.4) + 's';
+            col.style.animationDelay = (Math.random() * 1.5) + 's';
+            col.dataset.digits = '1';
+            shell.appendChild(col);
+        }
+        fillMatrixColumns();
+        matrixRainInterval = setInterval(fillMatrixColumns, 1200);
+    }
+
+    function fillMatrixColumns() {
+        document.querySelectorAll('.matrix-col').forEach(col => {
+            let str = '';
+            for (let j = 0; j < 50; j++) str += (Math.random() > 0.5 ? '1' : '0') + '<br>';
+            col.innerHTML = str;
+        });
+    }
+
+    // Тестовый запуск события по коду из dev-панели
+    window.runDevCode = function() {
+        const input = document.getElementById('dev-code-input');
+        const val = (input.value || '').trim().toLowerCase();
+        if (val === 'crash') { window.startMarketEvent('crash'); }
+        else if (val === 'boom') { window.startMarketEvent('boom'); }
+        else if (val === 'ddos') { window.startDdosEvent(); }
+        else if (val === 'stop' || val === 'end') { window.endEvent(); }
+        else { alert('Неизвестный код. Доступные коды: crash, boom, ddos, stop'); return; }
+        input.value = '';
+        closeAllPanels();
+    }
+    // ==================== /СЛУЧАЙНЫЕ СОБЫТИЯ ====================
+
     function handleTapLogic(x, y, pointerId, isTrusted) {
+        // Во время DDoS-атаки клики полностью заблокированы - заработать нельзя
+        if (activeEvent === 'ddos') {
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+            return;
+        }
+
         const currentHero = heroes.find(h => h.id === state.activeHeroId) || heroes[0];
 
         if (checkAutoclicker(pointerId, isTrusted)) {
@@ -594,7 +880,7 @@ function startLoops() {
 
         if (state.energy >= tapCost) {
             state.energy -= tapCost;
-            const earned = state.clickPower * currentHero.x;
+            const earned = Math.max(1, Math.floor(state.clickPower * currentHero.x * eventIncomeMultiplier));
             state.points += earned;
 
             const img = document.getElementById('hero-img');
