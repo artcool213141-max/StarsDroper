@@ -181,6 +181,7 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
         
 # --- 1. STARS PAYMENT ---
+# --- 1. STARS PAYMENT ---
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
     data = request.get_json() or {}
