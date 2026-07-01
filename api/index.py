@@ -1,15 +1,11 @@
 import os
 import random
 import requests
-import bot
-import asyncio
-import threading
-from waitress import serve
 from flask import Flask, request, jsonify
 from supabase import create_client
- 
+
 app = Flask(__name__)
- 
+
 # Инициализация
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 SUPABASE_URL = os.environ.get("SUPABASE_URL")
@@ -17,9 +13,8 @@ SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 CRYPTO_TOKEN = os.environ.get("CRYPTO_PAY_TOKEN")
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL else None
 
-# Таймаут для всех внешних HTTP-запросов (сек), чтобы сервер никогда не вис бесконечно
 HTTP_TIMEOUT = 10
- 
+
 # База данных подарков для крафта
 giftDatabase = {
     "1may.jpg": {"price": 100}, "1may.png": {"price": 100}, "chassiki.png": {"price": 4700}, 
@@ -45,24 +40,14 @@ giftDatabase = {
     "gribb.PNG": {"price": 600}, "zirka.PNG": {"price": 800}, "cvetk.PNG": {"price": 900}, 
     "sshapka.PNG": {"price": 2300}, "tyfli.PNG": {"price": 1800}
 }
- 
-# Настройка CORS глобально для всех ответов Flask
+
 @app.after_request
 def add_cors_headers(response):
     response.headers['Access-Control-Allow-Origin'] = '*'
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     return response
- 
-def run_bot():
-    print("--- ЗАПУСК ФУНКЦИИ BOT.MAIN ---")
-    try:
-        import bot
-        asyncio.run(bot.main())
-    except Exception as e:
-        print(f"--- ОШИБКА В ПОТОКЕ БОТА: {e} ---")
- 
-# --- ПОЛУЧЕНИЕ ИНВЕНТАРЯ (СТРОГИЙ СТРИНГ-РЕЖИМ) ---
+
 @app.route('/api/get_inventory', methods=['GET', 'OPTIONS'])
 def get_inventory():
     if request.method == 'OPTIONS':
@@ -71,14 +56,14 @@ def get_inventory():
     user_id = request.args.get('user_id')
     if not user_id:
         return jsonify({"error": "No user_id provided"}), 400
- 
+
     try:
         query_id = int(user_id) if user_id.isdigit() else user_id
         res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
         
         if not res.data:
             res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
- 
+
         if res.data:
             raw_inventory = res.data[0].get("inventory", [])
             if not isinstance(raw_inventory, list):
@@ -86,7 +71,7 @@ def get_inventory():
             
             cleaned_string_inventory = []
             has_bad_data = False
- 
+
             for item in raw_inventory:
                 if isinstance(item, str):
                     clean_name = item.replace("img/", "")
@@ -96,20 +81,19 @@ def get_inventory():
                     clean_name = img_path.replace("img/", "")
                     cleaned_string_inventory.append(clean_name)
                     has_bad_data = True
- 
+
             if has_bad_data:
                 try:
                     supabase.table("users").update({"inventory": cleaned_string_inventory}).eq("user_id", query_id).execute()
                 except Exception:
                     pass
- 
+
             return jsonify({"success": True, "inventory": cleaned_string_inventory}), 200
             
         return jsonify({"success": True, "inventory": []}), 200
     except Exception as e:
         return jsonify({"error": "Server error", "details": str(e)}), 500
- 
-# --- КРАФТ ПОДАРКА (БЕЗ ЖЕСТКОЙ БЛОКИРОВКИ ПОВТОРОВ) ---
+
 @app.route('/api/craft_gift', methods=['POST', 'OPTIONS'])
 def craft_gift():
     if request.method == 'OPTIONS':
@@ -118,10 +102,10 @@ def craft_gift():
     data = request.get_json() or {}
     user_id = data.get('user_id')
     gift_keys = data.get('gift_keys', [])
- 
+
     if not user_id or not gift_keys or len(gift_keys) != 5:
         return jsonify({"error": "Передайте ровно 5 предметов."}), 400
- 
+
     try:
         total_price = 0
         for key in gift_keys:
@@ -129,7 +113,7 @@ def craft_gift():
             if clean_key not in giftDatabase:
                 return jsonify({"error": f"Предмет {clean_key} не найден."}), 400
             total_price += giftDatabase[clean_key]["price"]
- 
+
         query_id = int(user_id) if str(user_id).isdigit() else user_id
         res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
         
@@ -138,13 +122,13 @@ def craft_gift():
             
         if not res.data:
             return jsonify({"error": "Пользователь не найден."}), 404
- 
+
         current_inventory = res.data[0].get("inventory", [])
         if not isinstance(current_inventory, list):
             current_inventory = []
- 
+
         current_inventory = [item.replace("img/", "") if isinstance(item, str) else item for item in current_inventory]
- 
+
         for key in gift_keys:
             clean_key = key.replace("img/", "")
             if clean_key in current_inventory:
@@ -152,51 +136,34 @@ def craft_gift():
         
         rand = random.random() * 100
         pool = []
- 
+
         if rand <= 30:
             pool = [k for k, v in giftDatabase.items() if total_price * 0.1 <= v["price"] <= total_price * 0.6]
         elif rand <= 70:
             pool = [k for k, v in giftDatabase.items() if total_price * 0.8 <= v["price"] <= total_price * 1.2]
         else:
             pool = [k for k, v in giftDatabase.items() if total_price * 1.3 <= v["price"] <= total_price * 2.5]
- 
+
         if not pool:
             pool = list(giftDatabase.keys())
- 
+
         win_key = random.choice(pool)
         current_inventory.append(win_key)
- 
+
         supabase.table("users").update({"inventory": current_inventory}).eq("user_id", query_id).execute()
         return jsonify({"success": True, "new_gift_key": win_key}), 200
- 
+
     except Exception as e:
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
- 
-# ================================================================
-# ============  STARS: create_stars_pay + webhook    ============
-# ================================================================
-#
-# ВАЖНО: теперь есть ДВА типа "звёздных" платежей, и они различаются
-# префиксом в invoice_payload:
-#   - "stars_topup_{uid}_{amount}"  -> обычное пополнение баланса звёзд
-#   - "stars_verify_{uid}_{amount}" -> оплата верификации аккаунта
-#     (первый вывод). После неё нужно:
-#       1) НЕ зачислять оплаченные звёзды на баланс (это плата за услугу)
-#       2) выставить is_paid_75 = True
-#       3) создать заявку на вывод из pending_item (если он есть)
-#
-# Раньше оба случая обрабатывались одинаково — просто зачислялись звёзды,
-# из-за чего верификация "съедала" деньги, но ничего не разблокировала.
- 
-# --- 1. STARS PAYMENT ---
+
 @app.route('/api/create_stars_pay', methods=['POST', 'OPTIONS'])
 def create_stars_pay():
     if request.method == 'OPTIONS':
         return '', 200
- 
+
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
-    purpose = data.get('purpose', 'topup')  # 'topup' или 'verify'
+    purpose = data.get('purpose', 'topup')
     if purpose not in ('topup', 'verify'):
         purpose = 'topup'
 
@@ -204,14 +171,13 @@ def create_stars_pay():
         amount = int(data.get('amount', 0))
     except (TypeError, ValueError):
         amount = 0
- 
+
     if not uid or uid == '0' or amount < 1:
         return jsonify({"error": "Некорректный user_id или amount"}), 400
 
     if not BOT_TOKEN:
-        print("--- ERROR: BOT_TOKEN не задан в переменных окружения ---")
         return jsonify({"error": "Сервер не настроен (нет BOT_TOKEN)"}), 500
- 
+
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
     payload_prefix = "stars_verify" if purpose == 'verify' else "stars_topup"
     title = "Верификация аккаунта" if purpose == 'verify' else "Stars Topup"
@@ -229,20 +195,18 @@ def create_stars_pay():
         r = requests.post(url, json=tg_payload, timeout=HTTP_TIMEOUT)
         resp = r.json()
     except requests.exceptions.RequestException as e:
-        print(f"--- ERROR create_stars_pay (network): {e} ---")
         return jsonify({"error": "Telegram API недоступен", "details": str(e)}), 502
 
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']}), 200
 
-    print(f"--- ERROR create_stars_pay (telegram response): {resp} ---")
     return jsonify(resp), 400
- 
-@app.route('/api/webhook', methods=['POST'])
+
+# Изменили маршрут на /webhook, чтобы соответствовать setWebhook
+@app.route('/webhook', methods=['POST'])
 def webhook():
-    update = request.get_json()
- 
-    # 1. Подтверждение pre_checkout
+    update = request.get_json() or {}
+
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         try:
@@ -254,18 +218,14 @@ def webhook():
         except requests.exceptions.RequestException as e:
             print(f"--- ERROR answerPreCheckoutQuery: {e} ---")
         return "OK", 200
- 
-    # 2. Обработка УСПЕШНОЙ ОПЛАТЫ ЗВЁЗДАМИ
+
     if 'message' in update and 'successful_payment' in update['message']:
         payment_info = update['message']['successful_payment']
         invoice_payload = payment_info.get('invoice_payload', '')
         user_id = str(update['message']['from']['id'])
         paid_amount = int(payment_info.get('total_amount', 0))
 
-        print(f"--- WEBHOOK START: User {user_id}, payload='{invoice_payload}', amount={paid_amount} ---")
-
         if paid_amount <= 0:
-            print("ERROR: total_amount <= 0, пропускаем")
             return "OK", 200
 
         def get_user_row(uid):
@@ -274,18 +234,13 @@ def webhook():
                 res = supabase.table("users").select("*").eq("user_id", int(uid) if uid.isdigit() else uid).execute()
             return res.data[0] if res.data else None
 
-        # ---------- Ветка А: верификация (первый вывод) ----------
         if invoice_payload.startswith('stars_verify_'):
             try:
                 user_row = get_user_row(user_id)
                 if not user_row:
-                    print(f"ERROR: Пользователь {user_id} не найден в базе (verify)")
                     return "OK", 200
 
-                update_data = {"is_paid_75": True}
-
-                supabase.table("users").update(update_data).eq("user_id", user_id).execute()
-                print(f"SUCCESS: is_paid_75 = True для {user_id}")
+                supabase.table("users").update({"is_paid_75": True}).eq("user_id", user_id).execute()
 
                 pending_item = user_row.get("pending_item")
                 if pending_item:
@@ -294,9 +249,6 @@ def webhook():
                         inv = []
 
                     item_file = str(pending_item).split('/')[-1]
-                    info = giftDatabase.get(item_file, {"price": 0})
-
-                    # Убираем предмет из инвентаря (он выводится) и заявку в orders
                     new_inv = [it for it in inv if (it if isinstance(it, str) else it.get('img', '')).split('/')[-1] != item_file]
 
                     supabase.table("users").update({
@@ -310,48 +262,32 @@ def webhook():
                         "item_img": pending_item,
                         "status": "pending"
                     }).execute()
-                    print(f"SUCCESS: заявка на вывод {item_file} создана после верификации")
-                else:
-                    print(f"WARNING: pending_item пуст у {user_id}, заявка не создана")
-
             except Exception as e:
-                print(f"CRITICAL ERROR (verify branch): {str(e)}")
-
+                print(f"Error in verify: {e}")
             return "OK", 200
 
-        # ---------- Ветка Б: обычное пополнение баланса звёзд ----------
         if invoice_payload.startswith('stars_topup_'):
             try:
                 user_row = get_user_row(user_id)
                 if not user_row:
-                    print(f"ERROR: Пользователь {user_id} не найден в базе (topup)")
                     return "OK", 200
 
                 current_stars = user_row.get('stars') or 0
                 new_stars = current_stars + paid_amount
 
-                supabase.table("users").update({
-                    "stars": new_stars
-                }).eq("user_id", user_id).execute()
-                print(f"SUCCESS: Баланс звёзд обновлён: {current_stars} -> {new_stars}")
+                supabase.table("users").update({"stars": new_stars}).eq("user_id", user_id).execute()
 
                 supabase.table("orders").insert({
                     "user_id": user_id,
                     "item_name": f"Stars Topup ({paid_amount})",
                     "status": "completed"
                 }).execute()
-                print("SUCCESS: Запись в orders создана")
-
             except Exception as e:
-                print(f"CRITICAL ERROR (topup branch): {str(e)}")
-
+                print(f"Error in topup: {e}")
             return "OK", 200
 
-        print(f"--- WEBHOOK: неизвестный payload '{invoice_payload}', пропускаем ---")
-        return "OK", 200
- 
     return "OK", 200
- 
+
 @app.route('/api/create_order', methods=['POST'])
 def create_order():
     data = request.get_json()
@@ -366,11 +302,7 @@ def create_order():
         return jsonify({"status": "ok"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
- 
-# ================================================================
-# ==============  TON (CRYPTOBOT)  ================
-# ================================================================
- 
+
 @app.route('/api/create_crypto_pay', methods=['POST'])
 def create_crypto_pay():
     data = request.get_json() or {}
@@ -382,22 +314,21 @@ def create_crypto_pay():
         r = requests.post("https://pay.crypt.bot/api/createInvoice", json=payload, headers=headers, timeout=HTTP_TIMEOUT)
         resp = r.json()
     except requests.exceptions.RequestException as e:
-        print(f"--- ERROR create_crypto_pay: {e} ---")
         return jsonify({"error": "CryptoBot API недоступен", "details": str(e)}), 502
 
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']['pay_url']}), 200
     return jsonify(resp), 400
- 
+
 @app.route('/api/crypto-webhook', methods=['POST', 'GET'])
 def crypto_webhook():
     if request.method == 'GET':
         return "Webhook is active!", 200
- 
+
     data = request.get_json()
     if data.get('update_type') != 'invoice_paid':
         return "OK", 200
- 
+
     try:
         payload = data.get('payload', {})
         user_id = str(payload.get('payload'))
@@ -417,17 +348,6 @@ def crypto_webhook():
     except Exception as e:
         print(f"CRITICAL ERROR: {str(e)}") 
         return "OK", 200
- 
-async def run_everything():
-    def start_flask():
-        port = int(os.environ.get("PORT", 10000))
-        serve(app, host="0.0.0.0", port=port)
-    
-    threading.Thread(target=start_flask, daemon=True).start()
-    print("--- FLASK СЕРВЕР ЗАПУЩЕН ---")
- 
-    print("--- ЗАПУСК БОТА В ГЛАВНОМ ПОТОКЕ ---")
-    await bot.main()
- 
+
 if __name__ == "__main__":
-    asyncio.run(run_everything())
+    app.run(host="0.0.0.0", port=5000)
