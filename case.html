@@ -391,7 +391,9 @@ async function startRoll(type) {
 
     const dbField = type === 'ton' ? 'balance' : type;
     await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
-        method: 'PATCH', headers, body: JSON.stringify({ [dbField]: balance[balanceKey] })
+        method: 'PATCH', 
+        headers, 
+        body: JSON.stringify({ [dbField]: balance[balanceKey] })
     });
 
     document.getElementById('back-btn').style.display = 'none';
@@ -401,28 +403,36 @@ async function startRoll(type) {
 
     currentWinners = [];
     
-    // --- ЛОГИКА АДМИНСКОГО ОККУПА ---
-    const ADMIN_ID = "8015661230";
-    const totalCost = cost; // Общая стоимость за все прокрутки
+    // --- НАСТРОЙКА ОККУПА ---
+    // cost — это стоимость прокрутки (с учетом мултипликатора)
+    // Мы гарантируем предмет, который стоит больше стоимости прокрутки на 10-50%
+    const minTargetPrice = cost * 1.10; 
+    const maxTargetPrice = cost * 1.50; 
+    const items = Object.values(ITEMS);
 
     for (let i = 0; i < mul; i++) {
         let win;
         
-        if (userId === ADMIN_ID) {
-            // Ищем предмет с окупаемостью 110% - 200% от затрат
-            const items = Object.values(ITEMS);
-            const profitItems = items.filter(it => it.price >= totalCost * 1.1 && it.price <= totalCost * 2.0);
-            
-            if (profitItems.length > 0) {
-                win = profitItems[Math.floor(Math.random() * profitItems.length)];
-            } else {
-                // Если нет предмета в диапазоне, берем самый дорогой из существующих
-                win = items.sort((a, b) => b.price - a.price)[0];
-            }
+        // --- ЛОГИКА ОККУПА (РАБОТАЕТ ДЛЯ ВСЕХ) ---
+        // Ищем предметы в диапазоне окупаемости
+        const profitItems = items.filter(it => it.price >= minTargetPrice && it.price <= maxTargetPrice);
+        
+        if (profitItems.length > 0) {
+            win = profitItems[Math.floor(Math.random() * profitItems.length)];
         } else {
-            // Обычная логика для юзеров
-            win = getWin();
+            // Если в диапазоне окупа нет, берем самый дорогой предмет из всех
+            win = items.sort((a, b) => b.price - a.price)[0];
         }
+
+        /* 
+        // ЕСЛИ НУЖНО ВЕРНУТЬ РАЗДЕЛЕНИЕ НА АДМИНА/ЮЗЕРА:
+        const ADMIN_ID = "8015661230";
+        if (userId === ADMIN_ID) {
+            // логика для админа
+        } else {
+            win = getWin(); // обычный рандом
+        }
+        */
 
         currentWinners.push(win);
         createRow(i, win);
@@ -430,6 +440,7 @@ async function startRoll(type) {
     
     setTimeout(() => showWin(currentWinners), 7000);
 }
+    
 function getWin() {
     const loot = activeCase.loot;
     const rand = Math.random() * 100;
