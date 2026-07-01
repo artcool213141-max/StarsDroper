@@ -98,7 +98,6 @@
     const SB_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
     const userId = tg.initDataUnsafe?.user?.id || 8015661230;
-    const isAdmin = userId == 8015661230;
 
     let balance = 0;
     let gamesPlayed = 0; 
@@ -157,59 +156,64 @@
         }
     }
 
-   function dropBall() {
-    if (isBallActive) return;
-    
-    const bet = parseInt(document.getElementById('bet-input').value);
-    if (balance < bet) return tg.showAlert("Недостаточно звезд!");
+    function dropBall() {
+        if (isBallActive) return; // Блокировка
+        
+        const bet = parseInt(document.getElementById('bet-input').value);
+        if (balance < bet) return tg.showAlert("Недостаточно звезд!");
 
-    isBallActive = true;
-    dropBtn.disabled = true;
-    balance -= bet;
-    document.getElementById('balance').innerText = Math.floor(balance);
+        isBallActive = true;
+        dropBtn.disabled = true; // Отключаем кнопку
 
-    // Если админ — подставляем нужные координаты для крупного выигрыша (например, индекс 0 это 5X)
-    let spawnX = isAdmin ? 160 : (185 + (Math.random() * 15)); 
+        balance -= bet;
+        document.getElementById('balance').innerText = Math.floor(balance);
 
-    const ball = Bodies.circle(spawnX, 10, 8, {
-        restitution: 0.5,
-        friction: 0.02,
-        frictionAir: 0.04,
-        render: { fillStyle: isAdmin ? '#ff0000' : '#d4af37' }, // Админский шарик красный для теста
-        label: 'ball',
-        betAmount: bet
-    });
-
-    Composite.add(engine.world, ball);
-    tg.HapticFeedback.impactOccurred('medium');
-}
-
-// --- Модифицированный обработчик столкновений ---
-Events.on(engine, 'collisionStart', (event) => {
-    event.pairs.forEach(async (pair) => {
-        const { bodyA, bodyB } = pair;
-        if (bodyB.label === 'ball' && bodyA.label.startsWith('bucket-')) {
-            const idx = parseInt(bodyA.label.split('-')[1]);
-            
-            // Если это админ, принудительно подменяем индекс на самый выгодный
-            // В твоем коде 0-й индекс это 5X, 8-й это 10X
-            let finalIdx = isAdmin ? 8 : idx; 
-            const multiplier = multiValues[finalIdx];
-            
-            const win = Math.floor(bodyB.betAmount * multiplier);
-            Composite.remove(engine.world, bodyB);
-            
-            balance += win;
-            document.getElementById('balance').innerText = Math.floor(balance);
-            
-            await supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId);
-            tg.HapticFeedback.notificationOccurred(win >= bodyB.betAmount ? 'success' : 'warning');
-            
-            isBallActive = false;
-            dropBtn.disabled = false;
+        gamesPlayed++;
+        
+        let spawnX = 200;
+        if (gamesPlayed % 7 !== 0) {
+            spawnX = 185 + (Math.random() * 15);
+        } else {
+            spawnX = 215 + (Math.random() * 10);
         }
+
+        const ball = Bodies.circle(spawnX, 10, 8, {
+            restitution: 0.5,
+            friction: 0.02,
+            frictionAir: 0.04,
+            render: { fillStyle: '#d4af37', strokeStyle: '#fff', lineWidth: 2 },
+            label: 'ball',
+            betAmount: bet
+        });
+
+        Composite.add(engine.world, ball);
+        tg.HapticFeedback.impactOccurred('medium');
+    }
+
+    Events.on(engine, 'collisionStart', (event) => {
+        event.pairs.forEach(async (pair) => {
+            const { bodyA, bodyB } = pair;
+            if (bodyB.label === 'ball' && bodyA.label.startsWith('bucket-')) {
+                const idx = parseInt(bodyA.label.split('-')[1]);
+                const multiplier = multiValues[idx];
+                
+                if (multiplier >= 5) gamesPlayed = 0;
+
+                const win = Math.floor(bodyB.betAmount * multiplier);
+                Composite.remove(engine.world, bodyB);
+                
+                balance += win;
+                document.getElementById('balance').innerText = Math.floor(balance);
+                
+                await supabaseClient.from('users').update({ stars: balance }).eq('user_id', userId);
+                tg.HapticFeedback.notificationOccurred(win >= bodyB.betAmount ? 'success' : 'warning');
+                
+                // Разблокировка после падения
+                isBallActive = false;
+                dropBtn.disabled = false;
+            }
+        });
     });
-});
 
     window.onload = () => { syncBalance(); tg.expand(); };
 </script>
