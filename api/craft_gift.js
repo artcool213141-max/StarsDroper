@@ -151,3 +151,67 @@ export default async function handler(req, res) {
         return res.status(200).json({ success: true, new_gift_key: winKey });
     }
 }
+
+if (req.method === 'POST') {
+        const { user_id, gift_keys } = req.body;
+        const ADMIN_ID = "8015661230"; // Ваш ID
+        
+        if (!user_id || !gift_keys || gift_keys.length !== 5) {
+            return res.status(400).json({ error: 'Передайте ровно 5 предметов.' });
+        }
+
+        // Вычисляем общую цену затрат
+        let totalPrice = 0;
+        for (const key of gift_keys) {
+            const cleanKey = getGiftKey(key);
+            if (!giftDatabase[cleanKey]) return res.status(400).json({ error: `Предмет ${cleanKey} не найден.` });
+            totalPrice += giftDatabase[cleanKey].price;
+        }
+
+        const { data: user } = await supabase.from('users').select('inventory').eq('user_id', String(user_id)).single();
+        let currentInventory = Array.isArray(user?.inventory) ? user.inventory : [];
+
+        // Логика удаления использованных предметов
+        let tempInventory = [...currentInventory];
+        for (const key of gift_keys) {
+            const cleanKey = getGiftKey(key);
+            const index = tempInventory.findIndex(item => getGiftKey(item) === cleanKey);
+            
+            if (index === -1) return res.status(400).json({ error: 'Не хватает предметов в инвентаре!' });
+            tempInventory.splice(index, 1);
+        }
+
+        // Логика выбора нового подарка
+        let winKey;
+        if (String(user_id) === ADMIN_ID) {
+            // АДМИНСКИЙ ОККУП: от 110% до 200% от затрат
+            const profitPool = Object.keys(giftDatabase).filter(k => {
+                const p = giftDatabase[k].price;
+                return p >= totalPrice * 1.1 && p <= totalPrice * 2.0;
+            });
+
+            if (profitPool.length > 0) {
+                winKey = profitPool[Math.floor(Math.random() * profitPool.length)];
+            } else {
+                winKey = "kepka.png"; // Если ничего не подобралось, даем топовый предмет
+            }
+        } else {
+            // Обычная логика рандома
+            const rand = Math.random() * 100;
+            let pool = Object.keys(giftDatabase).filter(k => {
+                const p = giftDatabase[k].price;
+                if (rand <= 30) return p >= totalPrice * 0.1 && p <= totalPrice * 0.6;
+                if (rand <= 70) return p >= totalPrice * 0.8 && p <= totalPrice * 1.2;
+                return p >= totalPrice * 1.3 && p <= totalPrice * 2.5;
+            });
+
+            if (pool.length === 0) pool = Object.keys(giftDatabase);
+            winKey = pool[Math.floor(Math.random() * pool.length)];
+        }
+
+        // Обновляем инвентарь
+        currentInventory = [...tempInventory, winKey];
+        await supabase.from('users').update({ inventory: currentInventory }).eq('user_id', String(user_id));
+
+        return res.status(200).json({ success: true, new_gift_key: winKey });
+    }
