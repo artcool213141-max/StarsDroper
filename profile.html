@@ -475,11 +475,15 @@ async function withdrawToBot() {
 
             try {
                 // Запрос к Flask на Vercel для генерации ссылки на оплату
-                const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, { // <-- Тут добавлен BACKEND_URL
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 1, purpose: 'verify' })
-                });
+const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+        user_id: userId, 
+        amount: 1, 
+        gift_name: fileName // ПЕРЕДАЕМ ИМЯ!
+    })
+});
                 const data = await response.json();
 
                 if (data.pay_url) {
