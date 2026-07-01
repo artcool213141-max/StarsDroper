@@ -219,98 +219,64 @@ def create_stars_pay():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
-    print(f"DEBUG: Received update: {update}") # ЭТО ПОКАЖЕТ ЛОГИ В VERCEL
+    print(f"DEBUG: Received update: {update}") 
 
+    # 1. Обработка PreCheckout (подтверждение возможности оплаты)
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         try:
-            # Важно: используй правильный url для ответа
             url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
-            payload = {"pre_checkout_query_id": query_id, "ok": True}
-            
-            r = requests.post(url, json=payload, timeout=5)
-            print(f"DEBUG: AnswerPreCheckoutQuery response: {r.status_code} {r.text}")
-            
-            if r.status_code != 200:
-                return "Error", 500
+            requests.post(url, json={"pre_checkout_query_id": query_id, "ok": True}, timeout=5)
+            print(f"DEBUG: PreCheckout подтвержден для {query_id}")
         except Exception as e:
-            print(f"--- CRITICAL ERROR: {e} ---")
-            return "Error", 500
+            print(f"--- CRITICAL ERROR in PreCheckout: {e} ---")
         return "OK", 200
- 
+
+    # 2. Обработка успешного платежа
     if 'message' in update and 'successful_payment' in update['message']:
+        print("DEBUG: Получен successful_payment")
         payment_info = update['message']['successful_payment']
         invoice_payload = payment_info.get('invoice_payload', '')
         paid_amount = int(payment_info.get('total_amount', 0))
- 
-        if paid_amount <= 0:
-            return "OK", 200
- 
-        # Надежно вытаскиваем user_id прямо из инвойса, чтобы избежать несовпадения типов данных
+        
+        print(f"DEBUG: Payload: {invoice_payload}, Amount: {paid_amount}")
+
         try:
+            # Парсим user_id из payload (ожидаем формат: stars_topup_USERID_amount)
             parts = invoice_payload.split('_')
-            user_id = parts[2]  # stars_verify_USERID_amount -> USERID
-        except Exception:
-            user_id = str(update['message']['from']['id'])
- 
-        def get_user_row(uid):
-            res = supabase.table("users").select("*").eq("user_id", uid).execute()
+            user_id = parts[2] 
+            print(f"DEBUG: Extracted user_id: {user_id}")
+            
+            # Получаем текущие звезды пользователя
+            res = supabase.table("users").select("stars").eq("user_id", str(user_id)).execute()
+            
             if not res.data:
-                res = supabase.table("users").select("*").eq("user_id", int(uid) if uid.isdigit() else uid).execute()
-            return res.data[0] if res.data else None
- 
-        if invoice_payload.startswith('stars_verify_'):
-            try:
-                user_row = get_user_row(user_id)
-                if not user_row:
-                    return "OK", 200
- 
-                supabase.table("users").update({"is_paid_75": True}).eq("user_id", user_id).execute()
- 
-                pending_item = user_row.get("pending_item")
-                if pending_item:
-                    inv = user_row.get("inventory") or []
-                    if not isinstance(inv, list):
-                        inv = []
- 
-                    item_file = str(pending_item).split('/')[-1]
-                    new_inv = [it for it in inv if (it if isinstance(it, str) else it.get('img', '')).split('/')[-1] != item_file]
- 
-                    supabase.table("users").update({
-                        "inventory": new_inv,
-                        "pending_item": None
-                    }).eq("user_id", user_id).execute()
- 
-                    supabase.table("orders").insert({
-                        "user_id": user_id,
-                        "item_name": item_file,
-                        "item_img": pending_item,
-                        "status": "pending"
-                    }).execute()
-            except Exception as e:
-                print(f"Error in verify: {e}")
-            return "OK", 200
- 
-        if invoice_payload.startswith('stars_topup_'):
-            try:
-                user_row = get_user_row(user_id)
-                if not user_row:
-                    return "OK", 200
- 
-                current_stars = user_row.get('stars') or 0
-                new_stars = current_stars + paid_amount
- 
-                supabase.table("users").update({"stars": new_stars}).eq("user_id", user_id).execute()
- 
-                supabase.table("orders").insert({
-                    "user_id": user_id,
-                    "item_name": f"Stars Topup ({paid_amount})",
-                    "status": "completed"
-                }).execute()
-            except Exception as e:
-                print(f"Error in topup: {e}")
-            return "OK", 200
- 
+                print(f"DEBUG: Пользователь {user_id} не найден в БД!")
+                return "OK", 200
+            
+            current_stars = res.data[0].get('stars') or 0
+            new_stars = current_stars + paid_amount
+            
+            print(f"DEBUG: Обновляю баланс с {current_stars} до {new_stars}")
+            
+            # Обновляем баланс
+            supabase.table("users").update({"stars": new_stars}).eq("user_id", str(user_id)).execute()
+            
+            # Логируем заказ
+            supabase.table("orders").insert({
+                "user_id": user_id,
+                "item_name": f"Stars Topup ({paid_amount})",
+                "status": "completed"
+            }).execute()
+            
+            print("DEBUG: Баланс успешно обновлен!")
+            
+        except Exception as e:
+            print(f"CRITICAL ERROR in successful_payment: {str(e)}")
+            return "Error", 500
+        
+        return "OK", 200
+
     return "OK", 200
  
  
