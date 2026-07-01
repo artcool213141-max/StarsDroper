@@ -221,7 +221,7 @@
                  style="right:-5px; top:50%; transform:translateY(-50%); height:145px; width:auto;">
             <div class="card-stripe" style="background:linear-gradient(180deg,#d4af37,#b8860b)"></div>
             <div class="card-body">
-                <div class="card-tag" style="color:#d4af37">100 ⭐ вход</div>
+                <div class="card-tag" style="color:#d4af37">25 ⭐ вход</div>
                 <div class="card-title">Catcher</div>
                 <div class="card-desc">Лови подарки и TON</div>
             </div>
@@ -248,8 +248,8 @@
         if (!userId) { alert("Ошибка авторизации"); return; }
         try {
             const { data } = await SB.from('users').select('stars').eq('user_id', userId).single();
-            if ((data?.stars || 0) < 100) { alert("Недостаточно звезд! Нужно 100."); return; }
-            if (confirm("Вход в игру стоит 100 звезд. Продолжить?")) {
+            if ((data?.stars || 0) < 25) { alert("Недостаточно звезд! Нужно 25."); return; }
+            if (confirm("Вход в игру стоит 25 звезд. Продолжить?")) {
                 await SB.from('users').update({ stars: data.stars - 100 }).eq('user_id', userId);
                 window.location.replace("./" + file);
             }
