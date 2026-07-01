@@ -209,27 +209,33 @@ def webhook():
                           json={"pre_checkout_query_id": query_id, "ok": True}, timeout=HTTP_TIMEOUT)
             return "OK", 200
 
-        # 2. Успешный платеж
+# 2. Успешный платеж
         if 'message' in update and 'successful_payment' in update['message']:
             payment_info = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
-            paid_amount = int(payment_info.get('total_amount', 0))
             
-            print(f"--- WEBHOOK START: User {user_id} оплатил {paid_amount} звезд ---")
+            # --- ВАЛИДАЦИЯ СУММЫ ИЗ PAYLOAD ---
+            payload = payment_info.get('invoice_payload', "")
+            # Разбираем строку формата "stars_USERID_AMOUNT"
+            try:
+                # Берем последнюю часть строки после последнего подчеркивания
+                expected_amount = int(payload.split('_')[-1])
+            except:
+                expected_amount = int(payment_info.get('total_amount', 0))
+            
+            print(f"--- WEBHOOK: User {user_id} оплатил {expected_amount} звезд (по payload) ---")
             
             uid_int = int(user_id)
-            # Ищем юзера
             res = supabase.table("users").select("stars").eq("user_id", uid_int).execute()
             
             if not res.data:
-                print(f"ERROR: User {user_id} not in DB")
                 return "OK", 200
             
             current_stars = float(res.data[0].get('stars') or 0)
             
-            # Обновляем только таблицу users
+            # Начисляем именно expected_amount (из payload), а не total_amount
             supabase.table("users").update({
-                "stars": current_stars + paid_amount, 
+                "stars": current_stars + expected_amount, 
                 "is_paid_75": True
             }).eq("user_id", uid_int).execute()
             
