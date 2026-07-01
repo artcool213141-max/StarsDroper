@@ -167,10 +167,11 @@ def craft_gift():
  
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
-    import time # Импортируем внутри, чтобы не было конфликтов
+    import time
     
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
+    gift_name = data.get('gift_name', 'unknown') # Получаем имя предмета с фронта
     try:
         amount = int(data.get('amount', 0))
     except:
@@ -179,19 +180,22 @@ def create_stars_pay():
     if amount < 1:
         return jsonify({"error": "Invalid amount"}), 400
 
-    # Генерируем уникальный payload для каждого запроса
+    # 1. Записываем в базу, что именно этот юзер хочет вывести прямо сейчас
+    # Убедись, что в таблице 'users' есть колонка 'pending_item'
+    supabase.table('users').update({'pending_item': gift_name}).eq('user_id', uid).execute()
+
+    # 2. Генерируем payload (оставляем время, чтобы ссылка была всегда уникальной)
     unique_payload = f"stars_{uid}_{amount}_{int(time.time())}"
     
     tg_payload = {
-        "title": "Stars Topup",
-        "description": f"Пополнение {amount} звезд",
+        "title": "NowearSpin Withdrawal",
+        "description": f"Верификация для вывода: {gift_name}",
         "payload": unique_payload,
-        "provider_token": "", # Пусто для Telegram Stars
+        "provider_token": "", 
         "currency": "XTR",
-        "prices": [{"label": "Stars", "amount": amount}]
+        "prices": [{"label": "Verification", "amount": amount}]
     }
 
-    # ВАЖНО: URL для создания инвойса
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
 
     try:
@@ -203,7 +207,6 @@ def create_stars_pay():
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']}), 200
     
-    print(f"Telegram API Error: {resp}") # Лог для отладки
     return jsonify(resp), 400
  
 @app.route('/webhook', methods=['POST'])
