@@ -185,7 +185,7 @@ def craft_gift():
 def create_stars_pay():
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
-    amount = int(data.get('amount', 25))
+    amount = int(data.get('amount', 1))
     
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
     payload = {
