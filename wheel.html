@@ -201,12 +201,20 @@ async function startSpin() {
     document.getElementById('spin-btn').disabled = true;
     currentWins = [];
 
+    // --- ЛОГИКА АДМИНА ---
+    const isAdmin = (user.user_id == 8015661230);
+
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        // Выбираем ключ корректно
-        let winKey = isFree ? "star" : (Math.random() < 0.95 ? "raketa.png" : "2025.jpg");
+        let winKey;
+        if (isAdmin) {
+            // Админу всегда выпадает топовый предмет (например, "kepka.png")
+            winKey = "kepka.png";
+        } else {
+            winKey = isFree ? "star" : (Math.random() < 0.95 ? "raketa.png" : "2025.jpg");
+        }
+        
         currentWins.push(ALL_ITEMS[winKey]);
 
-        // Исправляем: берем безопасный индекс (например, 100-й вместо 130-го)
         const line = document.getElementById(`line-${i}`);
         const imgs = line.querySelectorAll('img');
         if (imgs[100]) {
@@ -214,19 +222,16 @@ async function startSpin() {
         }
     }
 
-    // Обновление баланса
     const upd = isFree ? { last_free_spin: new Date().toISOString() } : { stars: user.stars - cost };
     await SB.from('users').update(upd).eq('user_id', user.user_id);
     
-    // Анимация
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         const line = document.getElementById(`line-${i}`);
         line.style.transition = `transform 5s cubic-bezier(0.1, 0, 0, 1)`;
-        // Расчет сдвига (100 элементов по 88px)
         line.style.transform = `translateX(-${(100 * 88) - (window.innerWidth / 2) + 40}px)`;
     }
     
-    setTimeout(showModal, 5500); // Таймер должен быть чуть меньше времени анимации
+    setTimeout(showModal, 5500);
 }
 
     function showModal() {
