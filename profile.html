@@ -445,7 +445,7 @@ async function withdrawToBot() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
     const isPaid = user.is_paid_75 === true;
-    const price = isPaid ? 50 : 45; 
+    const price = isPaid ? 50 : 1; 
     const currentStars = user.stars || 0;
     
     const it = user.inventory[selectedIdx];
