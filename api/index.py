@@ -225,7 +225,7 @@ def create_stars_pay():
     except:
         amount = 0
 
-    if amount < 1:
+    if amount < 50:
         return jsonify({"error": "Invalid amount"}), 400
 
     # 1. Записываем в базу, что именно этот юзер хочет вывести прямо сейчас
