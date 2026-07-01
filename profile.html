@@ -147,7 +147,7 @@
                     <p>Мы искренне ценим каждого игрока и дорожим вашим временем. Чтобы наш проект становился лучше, нам важна ваша поддержка.</p>
                     <div class="bg-yellow-500/5 p-3 rounded-xl border border-yellow-500/10">
                         <p class="text-yellow-400 font-bold mb-1 uppercase text-[10px]">Верификация аккаунта</p>
-                        <p>Для активации первого вывода гифта необходимо внести единоразовый взнос <b>45 ⭐</b>. Средства идут на развитие экосистемы NowearSpin.</p>
+                        <p>Для активации первого вывода гифта необходимо внести единоразовый взнос <b>1 ⭐</b>. Средства идут на развитие экосистемы NowearSpin.</p>
                     </div>
                     <p class="text-[10px] text-gray-500 italic">После верификации, все последующие выводы доступны с вашего игрового баланса по цене 50 ⭐ за предмет.</p>
                 </div>
@@ -478,7 +478,7 @@ async function withdrawToBot() {
                 const response = await fetch('/api/create_stars_pay', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: userId, amount: 1 })
+                    body: JSON.stringify({ user_id: userId, amount: 1, purpose: 'verify' })
                 });
                 const data = await response.json();
 
@@ -492,11 +492,12 @@ async function withdrawToBot() {
                     });
                 } else {
                     isProcessing = false;
-                    tg.showAlert("Ошибка создания инвойса.");
+                    tg.showAlert("Ошибка создания инвойса: " + (data.error || data.description || 'неизвестная ошибка'));
                 }
             } catch (e) { 
                 isProcessing = false;
                 console.error(e); 
+                tg.showAlert("Ошибка сети при создании инвойса.");
             }
         });
         return;
