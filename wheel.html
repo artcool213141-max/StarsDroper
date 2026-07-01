@@ -206,7 +206,7 @@ async function startSpin() {
     let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
     if (isAdmin) {
-        // ЛОГИКА АДМИНА: 2025 (49%), Ракетка (50%), Мишка (1%), Машин НЕТ
+        // АДМИНСКАЯ ЛОГИКА: 2025 (49%), Ракетка (50%), Мишка (1%), Машин НЕТ
         for(let i = 0; i < (isFree ? 1 : multi); i++) {
             const rand = Math.random() * 100;
             let winKey;
@@ -223,10 +223,10 @@ async function startSpin() {
             }
         }
     } else {
-        // ЛОГИКА ИГРОКОВ: 5% на подарок 500, остальное - мусор (звезда 5 / ракетка 50)
+        // ЛОГИКА ИГРОКОВ: 1% на 2025 (редкий дроп), остальное - мусор (звезда 5 / ракетка 50)
         for(let i = 0; i < (isFree ? 1 : multi); i++) {
             let winKey;
-            if (Math.random() < 0.05) {
+            if (Math.random() < 0.01) { // Теперь 1% шанс
                 winKey = "2025.jpg";
             } else {
                 winKey = Math.random() < 0.5 ? "star" : "raketa.png";
