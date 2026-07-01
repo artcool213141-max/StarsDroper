@@ -64,10 +64,24 @@
         .dock-btn svg { width: 26px; height: 26px; transition: transform 0.2s ease; fill: currentColor; }
         .dock-btn:active svg { transform: scale(0.9); }
         .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); }
+
+        /* Экран ошибки, если Telegram так и не отдал данные юзера */
+        #tg-error-screen {
+            position: fixed; inset: 0; z-index: 10001; display: none;
+            flex-direction: column; align-items: center; justify-content: center;
+            background: var(--bg-dark); text-align: center; padding: 40px 24px;
+        }
+        #tg-error-screen h2 { color: #f5b025; font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 12px; }
+        #tg-error-screen p { color: #b8ac8e; font-size: 13px; line-height: 1.6; max-width: 320px; }
     </style>
 </head>
 <body>
     <canvas id="stars-canvas"></canvas>
+
+    <div id="tg-error-screen">
+        <h2>Не удалось загрузить профиль</h2>
+        <p>Похоже, приложение открыто не через Telegram. Пожалуйста, откройте NowearSpin через кнопку в боте или меню чата.</p>
+    </div>
 
     <div class="main-wrapper">
         <header class="flex flex-col items-center mt-4 mb-8">
@@ -91,7 +105,7 @@
                     <span id="u-tickets" class="text-xs font-black text-yellow-600">0</span>
                 </div>
             </div>
-            <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: 00000000</div>
+            <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: ЗАГРУЗКА...</div>
             <button onclick="showHelp()" class="fixed top-4 right-4 bg-yellow-500/20 p-2 rounded-full border border-yellow-500/50">
                 <span class="text-yellow-500 font-bold">?</span>
             </button>
@@ -175,7 +189,33 @@
 
 <script>
 const tg = window.Telegram.WebApp;
-const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
+
+// Вызываем ready() СРАЗУ, до чтения любых данных
+tg.ready();
+
+// --- Надёжное ожидание данных юзера от Telegram (защита от гонки загрузки) ---
+function waitForTelegramUser(maxAttempts = 30, interval = 100) {
+    return new Promise((resolve) => {
+        let attempts = 0;
+        const check = () => {
+            const u = tg.initDataUnsafe?.user;
+            if (u && u.id) {
+                resolve(u);
+                return;
+            }
+            attempts++;
+            if (attempts >= maxAttempts) {
+                resolve(null); // так и не дождались — НЕ подставляем фейковый ID
+                return;
+            }
+            setTimeout(check, interval);
+        };
+        check();
+    });
+}
+
+// userId больше не константа — заполняется только реальными данными
+let userId = null;
 
 const BOT_TOKEN = '8877027563:AAER5zuqzfpzHZESBvj_Qd44sUkSCQT4kjI';
 const ADMIN_ID = '8015661230';
@@ -190,13 +230,22 @@ let isProcessing = false;
 
 async function loadUser() {
     try {
-        tg.ready();
-        const firstName = tg.initDataUnsafe?.user?.first_name || "ИГРОК";
+        const tgUser = await waitForTelegramUser();
+
+        if (!tgUser) {
+            // Так и не получили данные от Telegram — показываем понятный экран
+            document.getElementById('tg-error-screen').style.display = 'flex';
+            return;
+        }
+
+        userId = String(tgUser.id);
+
+        const firstName = tgUser.first_name || "ИГРОК";
         document.getElementById('u-name').innerText = firstName.toUpperCase();
-        
-        const photoUrl = tg.initDataUnsafe?.user?.photo_url;
-        if(document.getElementById('u-avatar')) {
-            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${firstName}&background=513e11&color=fff`;
+
+        const photoUrl = tgUser.photo_url;
+        if (document.getElementById('u-avatar')) {
+            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=513e11&color=fff`;
         }
 
         const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
@@ -218,6 +267,7 @@ async function loadUser() {
         } else {
             console.warn("Пользователь не найден в базе данных");
             document.getElementById('u-name').innerText = "ПОЛЬЗОВАТЕЛЬ НЕ НАЙДЕН";
+            document.getElementById('u-id-label').innerText = `ID: ${userId}`;
         }
     } catch (e) { 
         console.error("Критическая ошибка:", e); 
@@ -294,9 +344,10 @@ function renderGifts() {
 }
 
 async function handlePromo() {
+    if (!user || !userId) return tg.showAlert('Профиль ещё не загружен, подождите');
     const input = document.getElementById('promo-input');
     const codeText = input.value.trim().toUpperCase();
-    if (!codeText || !user) return;
+    if (!codeText) return;
 
     // ---------- 1. Обычные промокоды (promo_codes) — многоразовые, но не более 1 раза на юзера ----------
     const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
@@ -391,7 +442,7 @@ async function handlePromo() {
 }
 
 async function withdrawToBot() {
-    if (!user || selectedIdx === -1 || isProcessing) return;
+    if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
     const isPaid = user.is_paid_75 === true;
     const price = isPaid ? 50 : 45; 
@@ -490,7 +541,7 @@ async function withdrawToBot() {
 }
 
 async function sellItem() {
-    if (!user || selectedIdx === -1 || isProcessing) return;
+    if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
     const it = user.inventory[selectedIdx];
     const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
@@ -568,10 +619,10 @@ function closeModal() {
 }
 
 window.onload = () => { 
-    loadUser(); 
     if (window.Telegram && window.Telegram.WebApp) {
         tg.expand();
     }
+    loadUser();
 };
 
 function showHelp() {
