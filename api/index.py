@@ -219,17 +219,23 @@ def create_stars_pay():
 @app.route('/webhook', methods=['POST'])
 def webhook():
     update = request.get_json() or {}
- 
+    print(f"DEBUG: Received update: {update}") # ЭТО ПОКАЖЕТ ЛОГИ В VERCEL
+
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         try:
-            requests.post(
-                f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery",
-                json={"pre_checkout_query_id": query_id, "ok": True},
-                timeout=HTTP_TIMEOUT
-            )
-        except requests.exceptions.RequestException as e:
-            print(f"--- ERROR answerPreCheckoutQuery: {e} ---")
+            # Важно: используй правильный url для ответа
+            url = f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery"
+            payload = {"pre_checkout_query_id": query_id, "ok": True}
+            
+            r = requests.post(url, json=payload, timeout=5)
+            print(f"DEBUG: AnswerPreCheckoutQuery response: {r.status_code} {r.text}")
+            
+            if r.status_code != 200:
+                return "Error", 500
+        except Exception as e:
+            print(f"--- CRITICAL ERROR: {e} ---")
+            return "Error", 500
         return "OK", 200
  
     if 'message' in update and 'successful_payment' in update['message']:
