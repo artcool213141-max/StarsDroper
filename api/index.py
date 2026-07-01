@@ -181,7 +181,6 @@ def craft_gift():
         return jsonify({"error": "Ошибка сервера при крафте", "details": str(e)}), 500
         
 # --- 1. STARS PAYMENT ---
-# --- 1. STARS PAYMENT ---
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
     data = request.get_json() or {}
@@ -206,34 +205,42 @@ def create_stars_pay():
 def webhook():
     update = request.get_json()
     
+    # 1. Обработка pre_checkout_query (оставляем)
     if 'pre_checkout_query' in update:
         query_id = update['pre_checkout_query']['id']
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery", 
                       json={"pre_checkout_query_id": query_id, "ok": True})
         return "OK", 200
 
+    # 2. Обработка УСПЕШНОЙ ОПЛАТЫ
     if 'message' in update and 'successful_payment' in update['message']:
         user_id = str(update['message']['from']['id'])
+        
+        # ДИАГНОСТИКА: Печатаем прямо в логи
         print(f"--- WEBHOOK START: User {user_id} ---")
         
-        query_id = int(user_id) if user_id.isdigit() else user_id
-        res = supabase.table("users").select("*").eq("user_id", query_id).execute()
+        # Получаем данные
+        res = supabase.table("users").select("*").eq("user_id", user_id).execute()
         
         if not res.data:
             print(f"ERROR: Пользователь {user_id} не найден в базе!")
             return "OK", 200
         
         user_data = res.data[0]
+        print(f"DEBUG: Пользователь найден. Stars: {user_data.get('stars')}, Pending: {user_data.get('pending_item')}")
         
+        # ВЫПОЛНЯЕМ ОБНОВЛЕНИЕ
         try:
+            # Обновляем пользователя
             supabase.table("users").update({
                 "is_paid_75": True,
-                "stars": (user_data.get('stars') or 0) + 1,
+                "stars": (user_data.get('stars') or 0) + 1, # пример
                 "pending_item": None,
-                "inventory": []
-            }).eq("user_id", query_id).execute()
+                "inventory": [] # Проверим, удалится ли хотя бы это
+            }).eq("user_id", user_id).execute()
             print("SUCCESS: Пользователь обновлен")
 
+            # Вставляем в orders (принудительно)
             supabase.table("orders").insert({
                 "user_id": user_id,
                 "item_name": "Gift",
