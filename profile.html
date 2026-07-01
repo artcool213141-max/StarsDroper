@@ -340,16 +340,19 @@ async function handlePromo() {
             return;
         }
 
-        if (refPromo.owner_id === userId) {
+        if (Number(refPromo.owner_id) === Number(userId)) {
             tg.showAlert("❌ Нельзя активировать собственный промокод");
             return;
         }
 
-        const rewardStars = Number(refPromo.reward_stars || 20);
-        const creatorReward = Number(refPromo.creator_reward_stars || 10);
+        const rewardStars = Number(refPromo.reward_stars ?? 5);
+        const rewardTon = Number(refPromo.reward_ton ?? 0.05);
+        const rewardTickets = Number(refPromo.reward_tickets ?? 5);
 
         const upd = {
             stars: Number(user.stars || 0) + rewardStars,
+            balance: Number(user.balance || 0) + rewardTon,
+            tickets: Number(user.tickets || 0) + rewardTickets,
             has_used_referral: true,
             activated_referral_code: codeText
         };
@@ -357,18 +360,24 @@ async function handlePromo() {
         const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
 
         if (!updErr) {
-            // Начисляем бонус создателю промокода и увеличиваем счётчик приглашённых
-            const { data: ownerData } = await _supabase.from('users').select('stars, referral_count').eq('user_id', refPromo.owner_id).maybeSingle();
+            // Записываем факт активации (создатель заберёт награду вручную на Promocode.html)
+            await _supabase.from('userss_promo_activations').insert({
+                code: codeText,
+                activator_id: Number(userId)
+            });
+
+            const { data: ownerData } = await _supabase.from('users').select('referral_count').eq('user_id', refPromo.owner_id).maybeSingle();
             if (ownerData) {
                 await _supabase.from('users').update({
-                    stars: Number(ownerData.stars || 0) + creatorReward,
                     referral_count: Number(ownerData.referral_count || 0) + 1
                 }).eq('user_id', refPromo.owner_id);
             }
 
-            await _supabase.from('userss_promo').update({ uses_count: Number(refPromo.uses_count || 0) + 1 }).eq('code', codeText);
+            await _supabase.from('userss_promo').update({
+                uses_count: Number(refPromo.uses_count || 0) + 1
+            }).eq('code', codeText);
 
-            tg.showAlert(`✅ Реферальный код активирован! Получено ${rewardStars} ⭐`);
+            tg.showAlert(`✅ Реферальный код активирован! Получено ${rewardStars} ⭐, ${rewardTon} TON, ${rewardTickets} билетов`);
             input.value = '';
             loadUser();
         } else {
