@@ -369,6 +369,36 @@
         } catch(e) {}
     }
 
+    // Читает текущее значение колонки и записывает currentValue + delta.
+    // delta отрицательный при списании ставки, положительный при выплате выигрыша.
+    async function adjustBalance(delta) {
+        const col = cur === 'stars' ? 'stars' : 'balance';
+        try {
+            const { data, error: selErr } = await SB
+                .from('users')
+                .select(col)
+                .eq('user_id', currentUser.user_id)
+                .single();
+            if (selErr) { console.error('select error', selErr); return false; }
+
+            const currentVal = Number(data?.[col] || 0);
+            const newVal = currentVal + delta;
+            if (newVal < 0) return false; // защита от ухода в минус на клиенте
+
+            const { error: updErr } = await SB
+                .from('users')
+                .update({ [col]: newVal })
+                .eq('user_id', currentUser.user_id);
+            if (updErr) { console.error('update error', updErr); return false; }
+
+            syncBalances();
+            return true;
+        } catch(e) {
+            console.error('adjustBalance failed', e);
+            return false;
+        }
+    }
+
     function generateCrashPoint() {
         const r = Math.random();
         return r > 0.93 ? (2 + Math.random() * 10).toFixed(2) : (1.01 + Math.random() * 1.5).toFixed(2);
