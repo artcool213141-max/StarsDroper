@@ -24,6 +24,8 @@
             --danger: #ff5a5a;
             --success: #43d9a3;
             --text-dim: #8f8672;
+            --grey-1: #4a463c;
+            --grey-2: #2a271f;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -126,6 +128,7 @@
             padding: 5px 14px;
             border-radius: 999px;
             backdrop-filter: blur(6px);
+            transition: color 0.2s, border-color 0.2s;
         }
         .status-strip.is-live { color: var(--accent); border-color: var(--border-gold-strong); }
         .status-strip.is-crash { color: var(--danger); border-color: rgba(255,90,90,0.4); }
@@ -147,9 +150,11 @@
             to { left: 50%; bottom: 54%; transform: translate(-50%, 50%); }
         }
 
+        /* Правка 3: множитель поднят примерно на 1.5см (~60px), чтобы ракета
+           при подлёте его не перекрывала */
         #multiplier {
             position: absolute; left: 50%;
-            top: 40%;
+            top: calc(40% - 60px);
             transform: translate(-50%, -50%);
             font-size: clamp(3rem, 15vw, 4.6rem);
             font-weight: 800; z-index: 20;
@@ -220,6 +225,7 @@
             border-radius: 12px;
             padding: 8px 12px;
             display: flex; flex-direction: column; justify-content: center;
+            transition: border-color 0.2s, opacity 0.2s;
         }
         .bet-input-wrap .label {
             font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
@@ -230,21 +236,24 @@
             color: var(--accent); font-weight: 800; font-size: 1.4rem;
             width: 100%; padding: 0;
         }
+        .bet-input-wrap.locked { opacity: 0.45; border-color: #241c0c; }
 
         .stepper { display: flex; gap: 6px; }
         .step-btn {
             width: 34px; background: #1a140a; border: 1px solid #362a10; border-radius: 8px;
             color: #cbbf9c; font-weight: 800; font-size: 1rem;
             display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.2s;
         }
         .step-btn:active { background: #2a2210; }
 
-        .quick-bets { display: flex; gap: 6px; }
+        .quick-bets { display: flex; gap: 6px; transition: opacity 0.2s; }
         .quick-btn {
             flex: 1; background: #14100a; border: 1px solid #2a210e; border-radius: 8px;
             color: #a99c78; font-size: 11px; font-weight: 700; padding: 6px 0;
         }
         .quick-btn:active { background: #241c0c; color: var(--accent); }
+        .quick-bets.locked, .stepper.locked { opacity: 0.35; pointer-events: none; }
 
         .btn-main {
             background: linear-gradient(180deg, #f3d97e 0%, var(--accent) 45%, var(--accent-deep) 100%);
@@ -259,12 +268,32 @@
             text-transform: uppercase;
             transition: all 0.15s;
             box-shadow: 0 6px 18px rgba(233, 199, 96, 0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .btn-main:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(233,199,96,0.25); }
         .btn-main:disabled { filter: grayscale(0.7); opacity: 0.35; box-shadow: none; }
         .btn-main.is-live-cashout {
             background: linear-gradient(180deg, #6fe8bf 0%, var(--success) 55%, #23a97c 100%);
             box-shadow: 0 6px 18px rgba(67, 217, 163, 0.35), inset 0 1px 0 rgba(255,255,255,0.4);
+        }
+
+        /* Правка 2: аккуратное серое состояние "ставка сделана" вместо блёклой
+           золотой кнопки с надписью "Готово" */
+        .btn-main.is-bet-placed {
+            background: linear-gradient(180deg, var(--grey-1) 0%, var(--grey-2) 100%);
+            color: #cfc9b8;
+            filter: none;
+            opacity: 1;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.15);
+            animation: betPlacedPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes betPlacedPulse {
+            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.15); }
+            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.4); }
+        }
+        .btn-main.is-bet-placed .check-ico {
+            width: 16px; height: 16px; flex: 0 0 auto;
+            color: var(--accent);
         }
     </style>
 </head>
@@ -295,7 +324,7 @@
 
     <div id="main-scene" class="game-container">
         <div id="live-drop" class="live-drop"></div>
-        <div id="status-strip" class="status-strip">Взлёт через 6с</div>
+        <div id="status-strip" class="status-strip">Взлёт через 10с</div>
         <div id="multiplier" class="num">1.00x</div>
         <div id="rocket-wrap"><img id="rocket-img" src="crusher.png"></div>
     </div>
@@ -311,17 +340,17 @@
         </div>
 
         <div class="bet-row">
-            <div class="bet-input-wrap">
+            <div class="bet-input-wrap" id="bet-input-wrap">
                 <span class="label">Ставка</span>
                 <input type="number" id="input-bet" class="num" value="10">
             </div>
-            <div class="stepper">
+            <div class="stepper" id="stepper">
                 <div class="step-btn" onclick="stepBet(-1)">−</div>
                 <div class="step-btn" onclick="stepBet(1)">+</div>
             </div>
         </div>
 
-        <div class="quick-bets">
+        <div class="quick-bets" id="quick-bets">
             <div class="quick-btn" onclick="setBet(10)">10</div>
             <div class="quick-btn" onclick="setBet(50)">50</div>
             <div class="quick-btn" onclick="setBet(100)">100</div>
@@ -339,11 +368,38 @@
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo";
     const SB = supabase.createClient(SB_URL, SB_KEY);
 
+    // ---- Тайминги раунда (Правка 1) ----
+    // Раньше всё было завязано на фиксированный 20-секундный цикл по модулю
+    // системного времени. Так как теперь "взрыв" должен длиться РОВНО 3 секунды,
+    // а окно ставок — РОВНО 10 секунд, длительность полёта стала переменной
+    // (зависит от crashPoint), поэтому весь раунд больше не укладывается в
+    // фиксированный цикл. Вместо этого используется небольшая машина состояний
+    // на реальных временных метках (Date.now()), которая сама планирует
+    // следующую фазу через setTimeout.
+    const BET_WINDOW_MS = 10000;   // окно на ставки
+    const CRASH_DISPLAY_MS = 3000; // "взрыв" держится ровно 3с
+
     let currentUser = null, cur = 'stars', state = 'wait', mult = 1.00;
     let betQueued = false, betVal = 0, isCashedOut = false;
     let crashPoint = 2.00;
-    let currentRoundId = null;
+    let currentRoundId = Math.floor(Date.now() / 1000);
     let historyLogged = false;
+
+    let phaseStart = Date.now(); // момент начала текущей фазы (wait / fly / crash)
+    let roundTimer = null;       // ссылка на setTimeout текущей фазы
+
+    // Кэш DOM-элементов
+    const el = {
+        mult: document.getElementById('multiplier'),
+        rocketWrap: document.getElementById('rocket-wrap'),
+        rocketImg: document.getElementById('rocket-img'),
+        scene: document.getElementById('main-scene'),
+        btn: document.getElementById('btn-main'),
+        strip: document.getElementById('status-strip'),
+        betWrap: document.getElementById('bet-input-wrap'),
+        stepper: document.getElementById('stepper'),
+        quickBets: document.getElementById('quick-bets'),
+    };
 
     async function checkAuth() {
         const saved = localStorage.getItem('nowearspin_user');
@@ -408,9 +464,6 @@
     }
 
     // Простой детерминированный генератор (mulberry32), сидируется номером раунда.
-    // Это нужно, чтобы ВСЕ открытые у игроков клиенты в один и тот же 20-секундный
-    // цикл получили ОДИНАКОВЫЙ crashPoint — иначе история в базе была бы бессвязной
-    // мешаниной случайных чисел с разных телефонов.
     // ВАЖНО: это НЕ защита от читерства — число всё ещё считается в браузере,
     // и его можно вычислить через консоль разработчика. Для игры на реальные деньги
     // такой расчёт должен идти на сервере (Supabase Edge Function), а не на клиенте.
@@ -427,86 +480,105 @@
         return r > 0.93 ? (2 + r2 * 10).toFixed(2) : (1.01 + r2 * 1.5).toFixed(2);
     }
 
-    function tick() {
-        const now = Date.now();
-        const cycleTime = 20000;
-        const elapsed = now % cycleTime;
-        const roundId = Math.floor(now / cycleTime);
+    // ---- Фаза 1: окно ставок (10с) ----
+    function startWaitPhase() {
+        clearTimeout(roundTimer);
+        state = 'wait';
+        isCashedOut = false;
+        betQueued = false;
+        currentRoundId += 1;
+        crashPoint = generateCrashPoint(currentRoundId);
+        historyLogged = false;
+        phaseStart = Date.now();
 
-        const mDisp = document.getElementById('multiplier');
-        const rWrap = document.getElementById('rocket-wrap');
-        const rImg = document.getElementById('rocket-img');
-        const scene = document.getElementById('main-scene');
-        const btn = document.getElementById('btn-main');
-        const strip = document.getElementById('status-strip');
+        el.rocketWrap.classList.remove('flying', 'paused');
+        el.rocketWrap.style.opacity = "0";
+        el.rocketImg.src = "crusher.png";
+        el.rocketImg.classList.remove('engine-active');
+        el.scene.classList.remove('grid-moving');
+        el.mult.classList.remove('crashed');
+        el.mult.innerText = "1.00x";
+        el.strip.classList.remove('is-live', 'is-crash');
+        el.btn.classList.remove('is-live-cashout', 'is-bet-placed');
+        el.btn.innerHTML = "Ставка";
+        el.btn.disabled = false;
+        el.betWrap.classList.remove('locked');
+        el.stepper.classList.remove('locked');
+        el.quickBets.classList.remove('locked');
 
-        if (elapsed < 6000) {
-            if (state !== 'wait') {
-                state = 'wait'; isCashedOut = false;
-                currentRoundId = roundId;
-                crashPoint = generateCrashPoint(currentRoundId);
-                historyLogged = false;
-                rWrap.classList.remove('flying', 'paused');
-                rWrap.style.opacity = "0";
-                rImg.src = "crusher.png";
-                scene.classList.remove('grid-moving');
-                mDisp.classList.remove('crashed');
-                btn.classList.remove('is-live-cashout');
-                fetchHistory();
-                syncBalances();
-            }
-            const secs = Math.ceil((6000 - elapsed) / 1000);
-            mDisp.innerText = "1.00x";
-            strip.innerText = `Взлёт через ${secs}с`;
-            strip.classList.remove('is-live', 'is-crash');
-            if (!betQueued) { btn.innerText = "Ставка"; btn.disabled = false; }
-        } else {
-            let flightTime = (elapsed - 6000) / 1000;
-            if (state !== 'fly' && state !== 'crash') {
-                state = 'fly';
-                rWrap.classList.add('flying');
-                rImg.classList.add('engine-active');
-                scene.classList.add('grid-moving');
-                strip.innerText = 'В полёте';
-                strip.classList.add('is-live');
-            }
+        fetchHistory();
+        syncBalances();
 
-            mult = Math.pow(1.10, flightTime);
-
-            if (mult >= crashPoint) {
-                if (state !== 'crash') doCrash(crashPoint);
-            } else if (state === 'fly') {
-                mDisp.innerText = mult.toFixed(2) + "x";
-                if (betQueued && !isCashedOut) {
-                    btn.innerText = `Забрать ${(betVal * mult).toFixed(1)}`;
-                    btn.classList.add('is-live-cashout');
-                }
-            }
-        }
+        roundTimer = setTimeout(startFlightPhase, BET_WINDOW_MS);
     }
 
+    // ---- Фаза 2: полёт (переменная длительность до crashPoint) ----
+    function startFlightPhase() {
+        clearTimeout(roundTimer);
+        state = 'fly';
+        phaseStart = Date.now();
+
+        el.rocketWrap.classList.add('flying');
+        el.rocketImg.classList.add('engine-active');
+        el.scene.classList.add('grid-moving');
+        el.strip.innerText = 'В полёте';
+        el.strip.classList.add('is-live');
+        el.betWrap.classList.add('locked');
+        el.stepper.classList.add('locked');
+        el.quickBets.classList.add('locked');
+
+        // сколько секунд лететь до заданного crashPoint при формуле mult = 1.10^t
+        const flightSeconds = Math.log(crashPoint) / Math.log(1.10);
+        roundTimer = setTimeout(() => doCrash(crashPoint), flightSeconds * 1000);
+    }
+
+    // ---- Фаза 3: взрыв (ровно 3с), затем новый раунд ----
     function doCrash(val) {
+        clearTimeout(roundTimer);
         state = 'crash';
-        const rWrap = document.getElementById('rocket-wrap');
-        rWrap.classList.add('paused');
-        document.getElementById('rocket-img').src = "bomb.png";
-        document.getElementById('main-scene').classList.remove('grid-moving');
-        const mDisp = document.getElementById('multiplier');
-        mDisp.innerText = val + "x";
-        mDisp.classList.add('crashed');
-        const strip = document.getElementById('status-strip');
-        strip.innerText = 'Крах';
-        strip.classList.remove('is-live');
-        strip.classList.add('is-crash');
-        const btn = document.getElementById('btn-main');
-        btn.classList.remove('is-live-cashout');
-        btn.innerText = "Крах!"; btn.disabled = true;
+        phaseStart = Date.now();
+
+        el.rocketWrap.classList.add('paused');
+        el.rocketImg.src = "bomb.png";
+        el.rocketImg.classList.remove('engine-active');
+        el.scene.classList.remove('grid-moving');
+        el.mult.innerText = val + "x";
+        el.mult.classList.add('crashed');
+        el.strip.innerText = 'Крах';
+        el.strip.classList.remove('is-live');
+        el.strip.classList.add('is-crash');
+        el.btn.classList.remove('is-live-cashout', 'is-bet-placed');
+        el.btn.innerText = "Крах!";
+        el.btn.disabled = true;
         betQueued = false;
 
         if (!historyLogged) {
             historyLogged = true;
             logCrashHistory(val);
         }
+
+        roundTimer = setTimeout(startWaitPhase, CRASH_DISPLAY_MS);
+    }
+
+    // tick() теперь только обновляет "живые" цифры (обратный отсчёт, множитель),
+    // а переключение фаз делает setTimeout-цепочка выше — так тайминги 10с/3с
+    // соблюдаются точно, а не зависят от округления модуля времени.
+    function tick() {
+        const elapsed = Date.now() - phaseStart;
+
+        if (state === 'wait') {
+            const secs = Math.max(0, Math.ceil((BET_WINDOW_MS - elapsed) / 1000));
+            el.strip.innerText = `Взлёт через ${secs}с`;
+        } else if (state === 'fly') {
+            const flightTime = elapsed / 1000;
+            mult = Math.pow(1.10, flightTime);
+            el.mult.innerText = mult.toFixed(2) + "x";
+            if (betQueued && !isCashedOut) {
+                el.btn.innerText = `Забрать ${(betVal * mult).toFixed(1)}`;
+                el.btn.classList.add('is-live-cashout');
+            }
+        }
+        // фаза 'crash' ничего не обновляет — просто ждёт свой setTimeout
     }
 
     async function onAction() {
@@ -514,15 +586,14 @@
             const amount = Number(document.getElementById('input-bet').value);
             if (!amount || amount <= 0) return;
 
-            const btn = document.getElementById('btn-main');
-            btn.disabled = true;
-            btn.innerText = "...";
+            el.btn.disabled = true;
+            el.btn.innerText = "...";
 
             const ok = await adjustBalance(-amount);
 
             if (!ok) {
-                btn.disabled = false;
-                btn.innerText = "Ставка";
+                el.btn.disabled = false;
+                el.btn.innerText = "Ставка";
                 tg.HapticFeedback?.notificationOccurred('error');
                 alert('Недостаточно средств');
                 return;
@@ -530,18 +601,26 @@
 
             betVal = amount;
             betQueued = true;
-            btn.disabled = false;
-            btn.innerText = "Готово";
+            el.btn.disabled = false;
+
+            // Правка 2: серая кнопка "Ставка сделана" вместо обычной "Готово"
+            el.btn.classList.add('is-bet-placed');
+            el.btn.innerHTML =
+                '<svg class="check-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Ставка сделана';
+
+            el.betWrap.classList.add('locked');
+            el.stepper.classList.add('locked');
+            el.quickBets.classList.add('locked');
+
             tg.HapticFeedback?.impactOccurred('medium');
         } else if (state === 'fly' && betQueued && !isCashedOut) {
             isCashedOut = true;
             betQueued = false;
             const win = betVal * mult;
 
-            const btn = document.getElementById('btn-main');
-            btn.classList.remove('is-live-cashout');
-            btn.innerText = "Взято!";
-            btn.disabled = true;
+            el.btn.classList.remove('is-live-cashout');
+            el.btn.innerText = "Взято!";
+            el.btn.disabled = true;
             tg.HapticFeedback?.notificationOccurred('success');
 
             await adjustBalance(win);
@@ -575,11 +654,11 @@
             const container = document.getElementById('live-drop');
             container.innerHTML = '';
             data.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'drop-item num';
-                el.style.color = item.multiplier > 1.5 ? 'var(--accent)' : 'var(--danger)';
-                el.innerText = item.multiplier + 'x';
-                container.appendChild(el);
+                const item_el = document.createElement('div');
+                item_el.className = 'drop-item num';
+                item_el.style.color = item.multiplier > 1.5 ? 'var(--accent)' : 'var(--danger)';
+                item_el.innerText = item.multiplier + 'x';
+                container.appendChild(item_el);
             });
         }
     }
@@ -593,6 +672,7 @@
     }
 
     checkAuth();
+    startWaitPhase();
     setInterval(tick, 100);
 </script>
 </body>
