@@ -433,6 +433,8 @@ async function withdrawToBot() {
 
     if (giftName === 'star.png') return;
 
+    const idxToRemove = selectedIdx; // фиксируем индекс до закрытия модалки
+
     tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 1 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
         if (!ok) return;
 
@@ -455,9 +457,20 @@ async function withdrawToBot() {
             if (result.pay_url) {
                 tg.openInvoice(result.pay_url, (status) => {
                     isProcessing = false;
+
                     if (status === 'paid') {
+                        // --- ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ: убираем предмет сразу, не дожидаясь вебхука ---
+                        if (user && Array.isArray(user.inventory)) {
+                            user.inventory.splice(idxToRemove, 1);
+                            renderGrid();
+                        }
+
                         tg.showAlert("✅ Заявка на вывод создана!");
-                        loadUser();
+
+                        // Подстраховка: подтягиваем актуальные данные из БД
+                        // с задержкой, чтобы вебхук успел отработать
+                        setTimeout(() => loadUser(), 2000);
+
                     } else if (status === 'failed') {
                         tg.showAlert("🛑 Оплата не прошла.");
                     } else if (status === 'cancelled') {
