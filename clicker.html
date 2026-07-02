@@ -460,6 +460,12 @@ body.glitch-active {
 .pet-card .pet-rarity { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: var(--rarity-color, #888); }
 .pet-card .pet-bonus { font-size: 10px; opacity: 0.7; margin-top: 4px; }
 .pet-summary { font-size: 12px; text-align: center; opacity: 0.85; margin-bottom: 14px; font-weight: 700; color: var(--neon); }
+.pet-info-box {
+    flex-direction: column; gap: 10px;
+    background: rgba(250, 204, 21, 0.05); border: 1px solid var(--border);
+    border-radius: 16px; padding: 14px; margin-bottom: 14px;
+    font-size: 11px; line-height: 1.5; opacity: 0.9;
+}
 
 /* ==================== ТАБЫ КАТЕГОРИЙ МАГАЗИНА ==================== */
 .market-tabs {
@@ -547,7 +553,7 @@ body.glitch-active {
     </div>
 
     <div class="drawer-wardrobe" id="market-panel">
-        <div class="drawer-header"><h3>УСИЛЕНИЯ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <div class="drawer-header"><h3>МАРКЕТ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
         <div class="market-tabs" id="market-tabs"></div>
         <div class="scroll-area" id="market-list"></div>
     </div>
@@ -572,7 +578,19 @@ body.glitch-active {
     </div>
 
     <div class="drawer-wardrobe" id="pet-panel">
-        <div class="drawer-header"><h3>ПИТОМЦЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <div class="drawer-header">
+            <h3>ПИТОМЦЫ</h3>
+            <div style="display:flex; gap:8px;">
+                <div class="close-btn" onclick="togglePetInfo()">?</div>
+                <div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div>
+            </div>
+        </div>
+        <div class="pet-info-box" id="pet-info-box" style="display:none;">
+            <div>🦴 Раз в 35–60 сек рядом с героем пролетает косточка — успей поймать её тапом.</div>
+            <div>🎲 С шансом 25% косточка принесёт нового питомца в коллекцию, иначе — немного очков.</div>
+            <div>♾️ Каждый пойманный питомец даёт ПЕРМАНЕНТНЫЙ бонус к общему доходу (клик + заводы). Бонусы суммируются и не сбрасываются при ребёртхе.</div>
+            <div>⭐ Чем выше редкость — тем больше бонус: обычный +1%, редкий +2%, эпический +5%, легендарный +10%.</div>
+        </div>
         <div class="pet-summary" id="pet-summary-text"></div>
         <div class="scroll-area" id="pet-list"></div>
     </div>
@@ -652,17 +670,18 @@ const heroes = [
         { id: 18, name: "Квантовый процессор", baseAdd: 175000, basePrice: 1200000, icon: "⚛️", type: "click", unlockRebirth: 3 },
         { id: 19, name: "Мастер-нода Nova", baseAdd: 400000, basePrice: 2500000, icon: "👑", type: "click", unlockRebirth: 5 },
 
-        // --- КОМПОНЕНТЫ: 0 к клику, но нужны как рецепт для заводов (см. factoriesData) ---
-        { id: 4, name: "Блокчейн-узел", baseAdd: 0, basePrice: 350, icon: "⛓️", type: "part", unlockRebirth: 0 },
-        { id: 8, name: "Серверная стойка", baseAdd: 0, basePrice: 3000, icon: "🗄️", type: "part", unlockRebirth: 0 },
-        { id: 9, name: "Холодный кошелек", baseAdd: 0, basePrice: 5000, icon: "🔐", type: "part", unlockRebirth: 1 },
-        { id: 10, name: "Ликвидный пул", baseAdd: 0, basePrice: 8500, icon: "💧", type: "part", unlockRebirth: 1 },
-        { id: 11, name: "DAO-голосование", baseAdd: 0, basePrice: 14000, icon: "🗳️", type: "part", unlockRebirth: 3 },
-        { id: 13, name: "Виртуальный офис", baseAdd: 0, basePrice: 45000, icon: "🏢", type: "part", unlockRebirth: 3 },
-        { id: 14, name: "Биржевой терминал", baseAdd: 0, basePrice: 80000, icon: "🖥️", type: "part", unlockRebirth: 3 },
-        { id: 15, name: "Кибер-защита", baseAdd: 0, basePrice: 150000, icon: "🛡️", type: "part", unlockRebirth: 5 },
-        { id: 16, name: "Облачный кластер", baseAdd: 0, basePrice: 300000, icon: "☁️", type: "part", unlockRebirth: 5 },
-        { id: 17, name: "NFT-Маркетплейс", baseAdd: 0, basePrice: 600000, icon: "🖼️", type: "part", unlockRebirth: 5 },
+        // --- КОМПОНЕНТЫ: небольшая прибавка к клику (заметно меньше выделенных карточек СИЛЫ КЛИКА)
+        // + служат рецептом для заводов (см. factoriesData) ---
+        { id: 4, name: "Блокчейн-узел", baseAdd: 3, basePrice: 350, icon: "⛓️", type: "part", unlockRebirth: 0 },
+        { id: 8, name: "Серверная стойка", baseAdd: 40, basePrice: 3000, icon: "🗄️", type: "part", unlockRebirth: 0 },
+        { id: 9, name: "Холодный кошелек", baseAdd: 60, basePrice: 5000, icon: "🔐", type: "part", unlockRebirth: 1 },
+        { id: 10, name: "Ликвидный пул", baseAdd: 100, basePrice: 8500, icon: "💧", type: "part", unlockRebirth: 1 },
+        { id: 11, name: "DAO-голосование", baseAdd: 150, basePrice: 14000, icon: "🗳️", type: "part", unlockRebirth: 3 },
+        { id: 13, name: "Виртуальный офис", baseAdd: 500, basePrice: 45000, icon: "🏢", type: "part", unlockRebirth: 3 },
+        { id: 14, name: "Биржевой терминал", baseAdd: 900, basePrice: 80000, icon: "🖥️", type: "part", unlockRebirth: 3 },
+        { id: 15, name: "Кибер-защита", baseAdd: 1700, basePrice: 150000, icon: "🛡️", type: "part", unlockRebirth: 5 },
+        { id: 16, name: "Облачный кластер", baseAdd: 3500, basePrice: 300000, icon: "☁️", type: "part", unlockRebirth: 5 },
+        { id: 17, name: "NFT-Маркетплейс", baseAdd: 7000, basePrice: 600000, icon: "🖼️", type: "part", unlockRebirth: 5 },
 
         // --- МУЛЬТИПЛИКАТОРЫ: % к суммарному клику, само-ограничивается лучше флэта ---
         { id: 22, name: "ASIC-ферма", baseAdd: 3, basePrice: 20000, icon: "⚙️", type: "mult", unlockRebirth: 1, maxLvl: 10 },
@@ -1342,6 +1361,13 @@ function startLoops() {
         if (activeBoneEl) { window.catchBone(); return; }
         window.openPanel('pet-panel');
     }
+
+    // Показываем/скрываем объяснение механики питомцев по кнопке "?"
+    window.togglePetInfo = function() {
+        const box = document.getElementById('pet-info-box');
+        if (!box) return;
+        box.style.display = box.style.display === 'none' ? 'flex' : 'none';
+    }
     // ==================== /ПИТОМЕЦ ====================
 
     function handleTapLogic(x, y, pointerId, isTrusted) {
@@ -1401,7 +1427,7 @@ function showPop(x, y, val) {
         { type: 'click', title: '⚡ СИЛА КЛИКА' },
         { type: 'mult', title: '📈 МУЛЬТИПЛИКАТОРЫ' },
         { type: 'part', title: '⚙️ КОМПОНЕНТЫ ДЛЯ ЗАВОДОВ' },
-        { type: 'util', title: '🔋 ПРОЧЕЕ' }
+        { type: 'util', title: '🔋 ЭНЕРГИЯ' }
     ];
 
     let activeMarketTab = 'click';
@@ -1455,7 +1481,7 @@ function showPop(x, y, val) {
             if (item.type === 'click') {
                 bonusText = '+' + (item.baseAdd * (lvl + 1)) + ' к клику';
             } else if (item.type === 'part') {
-                bonusText = 'Компонент для завода (ур. ' + lvl + ')';
+                bonusText = '+' + (item.baseAdd * (lvl + 1)) + ' к клику · компонент завода (ур. ' + lvl + ')';
             } else if (item.type === 'mult') {
                 bonusText = '+' + (item.baseAdd * (lvl + 1)) + '% к общему доходу';
             } else if (item.type === 'energy') {
@@ -1558,6 +1584,7 @@ function showPop(x, y, val) {
                     state.maxEnergy += item.baseAdd;
                     state.energy += item.baseAdd; 
                 } else if (item.type === 'part') {
+                    state.clickPower += item.baseAdd; // компонент тоже немного усиливает клик
                     applyFactoryProgress(id);
                 }
             }
