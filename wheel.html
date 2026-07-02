@@ -128,7 +128,7 @@ const ALL_ITEMS = {
         "star": { price: 5, img: "star.png", rarity: 0 },
         "raketa.png": { price: 50, img: "raketa.png", rarity: 0 },
         "2025.jpg": { price: 500, img: "2025.jpg", rarity: 1 },
-        "bear.png": { price: 3500, img: "bear.png", rarity: 1 },
+        "bear.png": { price: 3500, img: "bear.png", rarity: 15 },
         "car.png": { price: 5000, img: "car.png", rarity: 1 },
         "helmet.png": { price: 25000, img: "helmet.png", rarity: 1 },
         "kepka.png": { price: 100000, img: "kepka.png", rarity: 1 }
@@ -212,8 +212,8 @@ async function startSpin() {
             let winKey;
             
             if (rand < 49) winKey = "2025.jpg";      // 49%
-            else if (rand < 99) winKey = "raketa.png"; // 50%
-            else winKey = "bear.png";                  // 1%
+            else if (rand < 99) winKey = "bear.png"; // 50%
+            else winKey = "raketa.png";                  // 1%
             
             currentWins.push(ALL_ITEMS[winKey]);
             const line = document.getElementById(`line-${i}`);
