@@ -219,27 +219,26 @@ def create_stars_pay():
     
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
-    gift_name = data.get('gift_name', 'unknown') # Получаем имя предмета с фронта
+    gift_name = data.get('gift_name', 'unknown')
     try:
         amount = int(data.get('amount', 0))
     except:
         amount = 0
 
-    if amount < 50:
+    # раньше было amount < 50 — блокировало верификационный платёж в 1 звезду
+    if amount < 1:
         return jsonify({"error": "Invalid amount"}), 400
 
-    # 1. Записываем в базу, что именно этот юзер хочет вывести прямо сейчас
-    # Убедись, что в таблице 'users' есть колонка 'pending_item'
+    # запоминаем, какой именно предмет юзер сейчас пытается вывести
     supabase.table('users').update({'pending_item': gift_name}).eq('user_id', uid).execute()
 
-    # 2. Генерируем payload (оставляем время, чтобы ссылка была всегда уникальной)
     unique_payload = f"stars_{uid}_{amount}_{int(time.time())}"
     
     tg_payload = {
         "title": "NowearSpin Withdrawal",
         "description": f"Верификация для вывода: {gift_name}",
         "payload": unique_payload,
-        "provider_token": "", 
+        "provider_token": "",
         "currency": "XTR",
         "prices": [{"label": "Verification", "amount": amount}]
     }
@@ -269,65 +268,57 @@ def webhook():
                           json={"pre_checkout_query_id": query_id, "ok": True}, timeout=10)
             return "OK", 200
 
-        # 2. Успешный платеж
-        if 'message' in update and 'successful_payment' in update['message']:
+if 'message' in update and 'successful_payment' in update['message']:
             payment = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
             payload = payment.get('invoice_payload', "")
             
-            # Парсинг: stars_uid_amount_time_giftname
             parts = payload.split('_')
             uid_str = parts[1]
             amount = int(parts[2])
             
-            # Получаем данные пользователя
-            user_response = supabase.table("users").select("stars, inventory").eq("user_id", uid_str).execute()
+            user_response = supabase.table("users").select("stars, inventory, pending_item").eq("user_id", uid_str).execute()
             user_data = user_response.data[0] if user_response.data else None
             
             if not user_data:
                 return "OK", 200
-            
-            # ОБНОВЛЕНИЕ БАЛАНСА (для всех платежей)
-            supabase.table("users").update({
-                "stars": float(user_data.get('stars', 0)) + amount,
-                "is_paid_75": True
-            }).eq("user_id", uid_str).execute()
 
-            # ЛОГИКА ВЫВОДА (если это верификация за 1 звезду)
-            if amount == 1 and len(parts) > 4:
-                gift_name = parts[4]
-                
-                # Создаем заказ
-                supabase.table("orders").insert({
-                    "user_id": uid_str,
-                    "item_name": gift_name,
-                    "item_img": f"{gift_name}.png", # Убедись, что имя файла совпадает
-                    "status": "pending"
-                }).execute()
-                
-                # УДАЛЕНИЕ ИЗ ИНВЕНТАРЯ (более безопасный поиск)
-                inv = user_data.get('inventory', [])
-                if isinstance(inv, list):
-                    # Ищем предмет, который заканчивается на gift_name, чтобы избежать проблем с путями
+            if amount == 1:
+                # это верификационный платёж за вывод подарка (1 ⭐ с телеграм-аккаунта)
+                pending_item = user_data.get('pending_item')
+                inv = user_data.get('inventory', []) or []
+
+                if pending_item and isinstance(inv, list):
                     new_inv = []
                     removed = False
                     for item in inv:
-                        # Если item - строка с путем или просто имя
-                        if not removed and gift_name in item:
+                        if not removed and pending_item in item:
                             removed = True
                             continue
                         new_inv.append(item)
-                    
+
                     if removed:
-                        supabase.table("users").update({"inventory": new_inv}).eq("user_id", uid_str).execute()
+                        supabase.table("orders").insert({
+                            "user_id": uid_str,
+                            "item_name": pending_item,
+                            "item_img": f"{pending_item}",
+                            "status": "pending"
+                        }).execute()
+
+                        supabase.table("users").update({
+                            "inventory": new_inv,
+                            "pending_item": None
+                        }).eq("user_id", uid_str).execute()
+            else:
+                # обычное пополнение внутреннего баланса звёзд
+                supabase.table("users").update({
+                    "stars": float(user_data.get('stars', 0)) + amount,
+                    "is_paid_75": True
+                }).eq("user_id", uid_str).execute()
 
             print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
             return "OK", 200
             
-        return "OK", 200
-    except Exception as e:
-        print(f"CRITICAL WEBHOOK ERROR: {str(e)}")
-        # Возвращаем 200, иначе Телеграм завалит повторами
         return "OK", 200
      
  
