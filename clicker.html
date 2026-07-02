@@ -511,28 +511,23 @@ body.glitch-active {
     </div>
 
 <div class="drawer-wardrobe" id="info-panel">
-    <div class="drawer-header">
-        <h3>ИНФОРМАЦИЯ</h3>
-        <div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div>
-    </div>
+    <div class="drawer-header"><h3>ИНФОРМАЦИЯ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
     
-    <div class="info-content">
-        <img src="img/star.png" class="info-star-img" alt="Star">
+    <!-- Добавляем inline-стиль для фиксации размера и запрета прокрутки -->
+    <div class="info-content" style="overflow: hidden; max-height: 400px; display: flex; flex-direction: column; gap: 10px;">
+        <img src="img/star.png" class="info-star-img" alt="Star" style="width: 50px; margin: 0 auto;">
         
-        <div class="info-title">Ежемесячные награды</div>
-        <p class="info-text">
-            Каждое <b>29–31 число месяца</b> мы подводим итоги сезона и награждаем лучших игроков! <br><br>
-            
-            Топ-5 лидеров нашего кликера получают эксклюзивные выплаты в <b>Stars и TON</b>. Свое текущее место в рейтинге вы всегда можете проверить во вкладке <b>«Топ»</b>.
+        <div class="info-title" style="font-size: 1.1em;">Ежемесячные награды</div>
+        <p class="info-text" style="margin: 0; font-size: 0.95em; line-height: 1.3;">
+            С <b>29 по 31 число</b> каждого месяца мы награждаем <b>Топ-5 игроков</b> кликера выплатами в <b>Stars и TON</b>. Свое место можно проверить во вкладке «Топ».
         </p>
 
-        <div class="info-title" style="margin-top: 20px;">Где искать результаты?</div>
-        <p class="info-text">
-            Мы публикуем отчеты о начислениях и списки победителей в нашем официальном канале. Не пропустите свой шанс оказаться в числе лучших!
+        <p class="info-text" style="margin: 0; font-size: 0.95em; line-height: 1.3;">
+            Результаты и списки победителей публикуем в нашем канале:
         </p>
 
-        <a href="https://t.me/nowear_free" target="_blank" class="btn-telegram">
-            ПОДПИСАТЬСЯ НА NOWEARFREE
+        <a href="https://t.me/nowear_free" target="_blank" class="btn-telegram" style="margin-top: 5px;">
+            НАШ КАНАЛ
         </a>
     </div>
 </div>
