@@ -125,10 +125,11 @@
 
     // rarity: 0 - нищий дроп (1, 15, 50), 1 - ценный
 const ALL_ITEMS = {
+        "star_cheap": { price: 1, img: "star.png", rarity: 0 }, // Исправил ключ
         "star": { price: 5, img: "star.png", rarity: 0 },
         "raketa.png": { price: 50, img: "raketa.png", rarity: 0 },
         "2025.jpg": { price: 500, img: "2025.jpg", rarity: 1 },
-        "bear.png": { price: 3500, img: "bear.png", rarity: 15 },
+        "bear.png": { price: 3500, img: "bear.png", rarity: 1 },
         "car.png": { price: 5000, img: "car.png", rarity: 1 },
         "helmet.png": { price: 25000, img: "helmet.png", rarity: 1 },
         "kepka.png": { price: 100000, img: "kepka.png", rarity: 1 }
@@ -188,58 +189,46 @@ const ALL_ITEMS = {
     }
 
 async function startSpin() {
-    await syncBalance();
-    if (isSpinning || !user) return;
-    
-    const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
-    const isFree = (Date.now() - lastFree) > 86400000;
-    const cost = isFree ? 0 : 100 * multi;
-
-    if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
-
-    isSpinning = true;
-    document.getElementById('spin-btn').disabled = true;
-    currentWins = [];
-
-    // ВСЕГДА ВЫПАДАЕТ РАКЕТКА
-    const winKey = "raketa.png";
-    let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
-
-    // Заполняем результат для всех линий (в зависимости от множителя X1-X5)
-    for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        currentWins.push(ALL_ITEMS[winKey]);
+        await syncBalance();
+        if (isSpinning || !user) return;
         
-        const line = document.getElementById(`line-${i}`);
-        if (line) {
-            const imgs = line.querySelectorAll('img');
-            // Подменяем 100-ю картинку в ленте на ракетку, чтобы она выпала на указателе
-            if (imgs[100]) {
-                imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+        const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+        const isFree = (Date.now() - lastFree) > 86400000;
+        const cost = isFree ? 0 : 100 * multi;
+
+        if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
+
+        isSpinning = true;
+        document.getElementById('spin-btn').disabled = true;
+        currentWins = [];
+
+        // ЛОГИКА ШАНСОВ
+        for(let i=0; i<(isFree ? 1 : multi); i++) {
+            let winKey;
+            if (isFree) {
+                // Всегда выпадает "star" (которая стоит 5)
+                winKey = "star"; 
+            } else {
+                // Всегда выпадает "raketa.png"
+                winKey = "raketa.png";
             }
+            
+            currentWins.push(ALL_ITEMS[winKey]);
+            
+            // Установка финальной картинки на барабане
+            document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
+
+        const upd = isFree ? { last_free_spin: new Date().toISOString() } : { stars: user.stars - cost };
+        await SB.from('users').update(upd).eq('user_id', user.user_id);
+        
+        for(let i=0; i<(isFree ? 1 : multi); i++) {
+            document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
+            document.getElementById(`line-${i}`).style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
+        }
+        setTimeout(showModal, 8000);
     }
 
-    // Обновляем данные пользователя в БД
-    const upd = isFree ? 
-        { last_free_spin: new Date().toISOString(), spin_count: newSpinCount } : 
-        { stars: user.stars - cost, spin_count: newSpinCount };
-        
-    await SB.from('users').update(upd).eq('user_id', user.user_id);
-    user.spin_count = newSpinCount;
-    
-    // Запускаем визуальную анимацию вращения
-    for(let i = 0; i < (isFree ? 1 : multi); i++) {
-        const line = document.getElementById(`line-${i}`);
-        if (line) {
-            line.style.transition = `transform 5s cubic-bezier(0.1, 0, 0, 1)`;
-            // Расчет позиции для остановки на 100-й картинке
-            line.style.transform = `translateX(-${(100 * 88) - (window.innerWidth / 2) + 40}px)`;
-        }
-    }
-    
-    setTimeout(showModal, 5500);
-}
-    
     function showModal() {
         const container = document.getElementById('win-items-container');
         container.innerHTML = '';
