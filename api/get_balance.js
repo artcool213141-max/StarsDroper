@@ -42,7 +42,13 @@ export default async function handler(req, res) {
                 click_power: 1,
                 active_hero_id: 0,
                 owned_heroes: [0],
-                market_levels: {}
+                market_levels: {},
+                last_charge_unix: 0,
+                click_mult_percent: 0,
+                factory_pph: {},
+                built_factories: [],
+                owned_pets: [0],
+                active_pet_id: 0
             });
         }
 
