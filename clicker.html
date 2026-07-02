@@ -572,7 +572,7 @@ body.glitch-active {
     <div class="drawer-wardrobe" id="factory-panel">
         <div class="drawer-header"><h3>ЗАВОДЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
         <p style="font-size: 11px; opacity: 0.6; margin: 0 0 15px; line-height: 1.5;">
-            Заводы дают пассивный доход в час. Чтобы построить завод, прокачайте нужные карточки-компоненты в МАРКЕТЕ до нужного уровня. Доход завода растёт навсегда и не сбрасывается при ребёртхе.
+            Заводы дают пассивный доход в час. Чтобы построить завод, прокачайте нужные карточки-компоненты в МАРКЕТЕ до нужного уровня. Доход завода растёт навсегда и не сбрасывается при ребитхе.
         </p>
         <div class="scroll-area" id="factory-list" style="grid-template-columns: 1fr;"></div>
     </div>
@@ -588,7 +588,7 @@ body.glitch-active {
         <div class="pet-info-box" id="pet-info-box" style="display:none;">
             <div>🦴 Раз в 35–60 сек рядом с героем пролетает косточка — успей поймать её тапом.</div>
             <div>🎲 С шансом 25% косточка принесёт нового питомца в коллекцию, иначе — немного очков.</div>
-            <div>♾️ Каждый пойманный питомец даёт ПЕРМАНЕНТНЫЙ бонус к общему доходу (клик + заводы). Бонусы суммируются и не сбрасываются при ребёртхе.</div>
+            <div>♾️ Каждый пойманный питомец даёт ПЕРМАНЕНТНЫЙ бонус к общему доходу (клик + заводы). Бонусы суммируются и не сбрасываются при ребитхе.</div>
             <div>⭐ Чем выше редкость — тем больше бонус: обычный +1%, редкий +2%, эпический +5%, легендарный +10%.</div>
         </div>
         <div class="pet-summary" id="pet-summary-text"></div>
@@ -696,7 +696,7 @@ const heroes = [
     // Заводы: пассивный доход (очки/час). "Строятся" когда все компоненты-ингредиенты
     // прокачаны хотя бы до reqLvl. После постройки КАЖДЫЙ следующий уровень любого
     // ингредиента навсегда добавляет coefPerLevel к доходу завода — этот доход
-    // НЕ сбрасывается при ребёртхе, в отличие от уровней карточек в магазине.
+    // НЕ сбрасывается при ребитхе, в отличие от уровней карточек в магазине.
     const factoriesData = [
         { id: 0, name: "Майнинг-ферма", icon: "⛏️", unlockRebirth: 0, reqLvl: 3, coefPerLevel: 50,
           ingredients: [4, 8] },
@@ -1220,7 +1220,7 @@ function startLoops() {
     // ==================== /СЛУЧАЙНЫЕ СОБЫТИЯ ====================
 
     // Питомцы: постоянная коллекция. У каждого владения даёт перманентный
-    // % к общему доходу (клик + заводы), суммируется, НЕ сбрасывается при ребёртхе.
+    // % к общему доходу (клик + заводы), суммируется, НЕ сбрасывается при ребитхе.
     const petsData = [
         { id: 0, name: "Дворняга", icon: "🐶", rarity: "common", rarityColor: "#9ca3af", bonus: 1 },
         { id: 1, name: "Кот-хакер", icon: "🐱", rarity: "common", rarityColor: "#9ca3af", bonus: 1 },
@@ -1507,7 +1507,7 @@ function showPop(x, y, val) {
             }
 
             const isLocked = rebirthCount < (item.unlockRebirth || 0);
-            const lockText = isLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребёртхе` : '';
+            const lockText = isLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребитхе` : '';
             
             grid.innerHTML += `
                 <div class="card-item ${isLocked ? 'locked' : ''}">
@@ -1526,8 +1526,8 @@ function showPop(x, y, val) {
 
     // При покупке уровня "part"-компонента навсегда добавляет доход заводам,
     // которые используют этот компонент как ингредиент (если завод уже разблокирован
-    // по числу ребёртхов). Это НЕ зависит от текущего уровня карточки в этом цикле -
-    // накопленный factoryPph переживает сброс marketLevels при ребёртхе.
+    // по числу ребитхов). Это НЕ зависит от текущего уровня карточки в этом цикле -
+    // накопленный factoryPph переживает сброс marketLevels при ребитхе.
     function applyFactoryProgress(itemId) {
         const rebirthCount = getRebirthCount();
         factoriesData.forEach(f => {
@@ -1547,7 +1547,7 @@ function showPop(x, y, val) {
         const lvl = state.marketLevels[item.id] || 0;
         const rebirthCount = getRebirthCount();
 
-        if (rebirthCount < (item.unlockRebirth || 0)) return; // закрыто по числу ребёртхов
+        if (rebirthCount < (item.unlockRebirth || 0)) return; // закрыто по числу ребитхов
 
         let maxLvl = 15;
         if (item.type === 'energy') maxLvl = 5;
@@ -1617,7 +1617,7 @@ function renderFactories() {
                     <span class="factory-icon">${f.icon}</span>
                     <span class="factory-name">${isLocked ? '???' : f.name}</span>
                 </div>
-                ${isLocked ? `<div class="factory-ingredients">🔒 Откроется на ${f.unlockRebirth}-м ребёртхе</div>` : `
+                ${isLocked ? `<div class="factory-ingredients">🔒 Откроется на ${f.unlockRebirth}-м ребитхе</div>` : `
                     <div class="factory-pph">${isBuilt ? '✅ Построен' : '🔧 Не построен'} · доход: ${formatNumber(pph)}/час</div>
                     <div class="factory-ingredients">${ingHtml}</div>
                 `}
@@ -1688,7 +1688,7 @@ window.handleHero = function(id) {
                     state.maxEnergy = 1000;  // Сбрасываем бак до базы
                     state.energy = 1000;     // Заливаем фулл
                     // ЗАВОДЫ (factoryPph/builtFactories) и ПИТОМЕЦ намеренно НЕ сбрасываются -
-                    // это перманентная прогрессия, которая переживает ребёртх
+                    // это перманентная прогрессия, которая переживает ребитх
                     
                     state.ownedHeroes.push(id);
                     state.activeHeroId = id;
