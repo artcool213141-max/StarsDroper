@@ -379,14 +379,77 @@ body.glitch-active {
     color: white; font-weight: 700; margin-bottom: 15px; font-size: 14px;
 }
 .dev-quick-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 5px; }
+
+/* ==================== ДОХОД/ЧАС ==================== */
+.pph-text {
+    font-size: 11px; font-weight: 800; margin-top: 8px; text-align: center;
+    color: #8bf7ae; opacity: 0.85; letter-spacing: 0.3px;
+}
+
+/* ==================== ЗАВОДЫ ==================== */
+.factory-card {
+    background: rgba(250, 204, 21, 0.03); border-radius: 20px; padding: 16px;
+    border: 1px solid var(--border); margin-bottom: 12px;
+}
+.factory-card.built { border-color: #2ecc71; background: rgba(46,204,113,0.05); }
+.factory-card.locked { filter: grayscale(1) brightness(0.5); opacity: 0.6; }
+.factory-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.factory-icon { font-size: 28px; }
+.factory-name { font-weight: 900; font-size: 14px; }
+.factory-pph { font-size: 12px; color: #8bf7ae; font-weight: 800; margin-bottom: 6px; }
+.factory-ingredients { font-size: 11px; opacity: 0.7; line-height: 1.6; }
+.factory-ing-ok { color: #8bf7ae; }
+.factory-ing-bad { color: #ff8080; }
+
+/* ==================== ПИТОМЕЦ / КОСТОЧКА ==================== */
+#pet-icon {
+    position: absolute; bottom: 6%; right: 6%; font-size: 42px; z-index: 30;
+    filter: drop-shadow(0 0 10px rgba(250, 204, 21, 0.4));
+    animation: pet-idle 2.2s ease-in-out infinite;
+}
+@keyframes pet-idle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+.bone-fly {
+    position: absolute; font-size: 34px; z-index: 55; cursor: pointer;
+    animation: bone-pop 0.3s ease-out; filter: drop-shadow(0 0 8px rgba(250,204,21,0.6));
+}
+@keyframes bone-pop { 0% { transform: scale(0.3); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+.pet-eat-anim { animation: pet-eat 0.4s ease-in-out; }
+@keyframes pet-eat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+
+/* ==================== ЭКРАН ПАРОЛЯ ==================== */
+#password-gate {
+    position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #050505; z-index: 9999;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 20px; box-sizing: border-box;
+}
+.pw-title { font-weight: 900; font-size: 18px; color: var(--neon); letter-spacing: 1px; }
+.pw-input {
+    width: 220px; max-width: 80vw; padding: 16px; border-radius: 16px;
+    border: 1.5px solid var(--border); background: rgba(255,255,255,0.05);
+    color: white; font-weight: 800; font-size: 20px; text-align: center;
+    letter-spacing: 4px; box-sizing: border-box;
+}
+.pw-btn {
+    width: 220px; max-width: 80vw; padding: 14px; border-radius: 16px; border: none;
+    background: var(--neon); color: black; font-weight: 900; text-transform: uppercase;
+    cursor: pointer; font-size: 13px;
+}
+.pw-error { color: #ff6666; font-size: 12px; font-weight: 700; min-height: 16px; }
     </style>
 </head>
 <body>
 
+<div id="password-gate">
+    <div class="pw-title">🔒 ДОСТУП ЗАКРЫТ</div>
+    <input type="password" id="pw-input" class="pw-input" placeholder="Пароль" inputmode="numeric" autocomplete="off">
+    <button class="pw-btn" onclick="checkPassword()">ВОЙТИ</button>
+    <div class="pw-error" id="pw-error"></div>
+</div>
 
 <div id="main-bg"></div>
 
-<div class="app-shell">
+<div class="app-shell" id="app-shell-root" style="display:none;">
     <div class="top-nav">
  <div onclick="goBackWithSave()" class="btn-back">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
@@ -408,6 +471,7 @@ body.glitch-active {
             <h1 id="balance-num">0</h1>
             <img id="virus-icon" src="img/virus.png" class="virus-icon" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2913/2913976.png'">
         </div>
+        <div class="pph-text" id="pph-text" style="display:none;">💰 <span id="pph-val">0</span>/час</div>
         <div class="energy-container">
             <div class="energy-bar-bg"><div id="energy-fill"></div></div>
             <div class="energy-text">⚡ <span id="energy-val">1000</span> / <span id="max-energy-val">1000</span></div>
@@ -418,6 +482,7 @@ body.glitch-active {
         <div id="overheat-msg">⚠️ БАТАРЕЯ ПЕРЕГРЕТА! ⚠️</div>
         <div class="hero-platform"></div>
         <img src="pepe1.png" id="hero-img" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1144/1144760.png'">
+        <div id="pet-icon" onclick="feedPetManually()">🐶</div>
     </div>
 
     <div class="drawer-wardrobe" id="info-panel">
@@ -448,6 +513,14 @@ body.glitch-active {
             </div>
         </div>
         <div class="scroll-area" id="leaderboard-list" style="display: flex; flex-direction: column; gap: 0;"></div>
+    </div>
+
+    <div class="drawer-wardrobe" id="factory-panel">
+        <div class="drawer-header"><h3>ЗАВОДЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <p style="font-size: 11px; opacity: 0.6; margin: 0 0 15px; line-height: 1.5;">
+            Заводы дают пассивный доход в час. Чтобы построить завод, прокачайте нужные карточки-компоненты в МАРКЕТЕ до нужного уровня. Доход завода растёт навсегда и не сбрасывается при ребёртхе.
+        </p>
+        <div class="scroll-area" id="factory-list" style="grid-template-columns: 1fr;"></div>
     </div>
 
     <div class="drawer-wardrobe" id="wardrobe-panel">
@@ -483,6 +556,10 @@ body.glitch-active {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
             <div>ГЛАВНАЯ</div>
         </div>
+        <div class="nav-item" onclick="openPanel('factory-panel', this)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 22V9l6-4v4l6-4v4l6-4v17H2z"/><path d="M6 22v-4M12 22v-4M18 22v-4"/></svg>
+            <div>ЗАВОДЫ</div>
+        </div>
         <div class="nav-item" onclick="openPanel('leaderboard-panel', this)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
             <div>ТОП</div>
@@ -510,28 +587,52 @@ const heroes = [
 ];
 
     const marketData = [
-        { id: 0, name: "Курсор", baseAdd: 1, basePrice: 50, icon: "🖱️", type: "click" },
-        { id: 1, name: "Клик-бот", baseAdd: 2, basePrice: 80, icon: "🤖", type: "click" },
-        { id: 2, name: "Прокси-сервер", baseAdd: 5, basePrice: 120, icon: "📡", type: "click" },
-        { id: 3, name: "SSD-накопитель", baseAdd: 10, basePrice: 200, icon: "💾", type: "click" },
-        { id: 4, name: "Блокчейн-узел", baseAdd: 20, basePrice: 350, icon: "⛓️", type: "click" },
-        { id: 5, name: "Смарт-контракт", baseAdd: 40, basePrice: 600, icon: "📜", type: "click" },
-        { id: 6, name: "Батарейка", baseAdd: 500, basePrice: 1000, icon: "🔋", type: "energy" },
-        { id: 7, name: "Видеокарта RTX", baseAdd: 150, basePrice: 1800, icon: "🎮", type: "click" },
-        { id: 8, name: "Серверная стойка", baseAdd: 300, basePrice: 3000, icon: "🗄️", type: "click" },
-        { id: 9, name: "Холодный кошелек", baseAdd: 600, basePrice: 5000, icon: "🔐", type: "click" },
-        { id: 10, name: "Ликвидный пул", baseAdd: 1200, basePrice: 8500, icon: "💧", type: "click" },
-        { id: 11, name: "DAO-голосование", baseAdd: 2500, basePrice: 14000, icon: "🗳️", type: "click" },
-        { id: 12, name: "Трейдинг-бот", baseAdd: 5000, basePrice: 25000, icon: "📈", type: "click" },
-        { id: 13, name: "Виртуальный офис", baseAdd: 10000, basePrice: 45000, icon: "🏢", type: "click" },
-        { id: 14, name: "Биржевой терминал", baseAdd: 20000, basePrice: 80000, icon: "🖥️", type: "click" },
-        { id: 15, name: "Кибер-защита", baseAdd: 40000, basePrice: 150000, icon: "🛡️", type: "click" },
-        { id: 16, name: "Облачный кластер", baseAdd: 80000, basePrice: 300000, icon: "☁️", type: "click" },
-        { id: 17, name: "NFT-Маркетплейс", baseAdd: 160000, basePrice: 600000, icon: "🖼️", type: "click" },
-        { id: 18, name: "Квантовый процессор", baseAdd: 350000, basePrice: 1200000, icon: "⚛️", type: "click" },
-        { id: 19, name: "Мастер-нода Nova", baseAdd: 800000, basePrice: 2500000, icon: "👑", type: "click" },
-        { id: 20, name: "Турбо-зарядка", baseAdd: 1, basePrice: 5000, icon: "⚡", type: "regen" }, 
-        { id: 21, name: "Полный бак", baseAdd: 0, basePrice: 10000000, icon: "🔋", type: "full_charge" }
+        // --- КЛИК: прямая прибавка к силе клика (уменьшено ~вдвое, часть силы ушла в мультипликаторы и заводы) ---
+        { id: 0, name: "Курсор", baseAdd: 1, basePrice: 50, icon: "🖱️", type: "click", unlockRebirth: 0 },
+        { id: 1, name: "Клик-бот", baseAdd: 2, basePrice: 80, icon: "🤖", type: "click", unlockRebirth: 0 },
+        { id: 2, name: "Прокси-сервер", baseAdd: 4, basePrice: 120, icon: "📡", type: "click", unlockRebirth: 0 },
+        { id: 3, name: "SSD-накопитель", baseAdd: 8, basePrice: 200, icon: "💾", type: "click", unlockRebirth: 0 },
+        { id: 5, name: "Смарт-контракт", baseAdd: 20, basePrice: 600, icon: "📜", type: "click", unlockRebirth: 0 },
+        { id: 7, name: "Видеокарта RTX", baseAdd: 75, basePrice: 1800, icon: "🎮", type: "click", unlockRebirth: 0 },
+        { id: 12, name: "Трейдинг-бот", baseAdd: 2500, basePrice: 25000, icon: "📈", type: "click", unlockRebirth: 1 },
+        { id: 18, name: "Квантовый процессор", baseAdd: 175000, basePrice: 1200000, icon: "⚛️", type: "click", unlockRebirth: 3 },
+        { id: 19, name: "Мастер-нода Nova", baseAdd: 400000, basePrice: 2500000, icon: "👑", type: "click", unlockRebirth: 5 },
+
+        // --- КОМПОНЕНТЫ: 0 к клику, но нужны как рецепт для заводов (см. factoriesData) ---
+        { id: 4, name: "Блокчейн-узел", baseAdd: 0, basePrice: 350, icon: "⛓️", type: "part", unlockRebirth: 0 },
+        { id: 8, name: "Серверная стойка", baseAdd: 0, basePrice: 3000, icon: "🗄️", type: "part", unlockRebirth: 0 },
+        { id: 9, name: "Холодный кошелек", baseAdd: 0, basePrice: 5000, icon: "🔐", type: "part", unlockRebirth: 1 },
+        { id: 10, name: "Ликвидный пул", baseAdd: 0, basePrice: 8500, icon: "💧", type: "part", unlockRebirth: 1 },
+        { id: 11, name: "DAO-голосование", baseAdd: 0, basePrice: 14000, icon: "🗳️", type: "part", unlockRebirth: 3 },
+        { id: 13, name: "Виртуальный офис", baseAdd: 0, basePrice: 45000, icon: "🏢", type: "part", unlockRebirth: 3 },
+        { id: 14, name: "Биржевой терминал", baseAdd: 0, basePrice: 80000, icon: "🖥️", type: "part", unlockRebirth: 3 },
+        { id: 15, name: "Кибер-защита", baseAdd: 0, basePrice: 150000, icon: "🛡️", type: "part", unlockRebirth: 5 },
+        { id: 16, name: "Облачный кластер", baseAdd: 0, basePrice: 300000, icon: "☁️", type: "part", unlockRebirth: 5 },
+        { id: 17, name: "NFT-Маркетплейс", baseAdd: 0, basePrice: 600000, icon: "🖼️", type: "part", unlockRebirth: 5 },
+
+        // --- МУЛЬТИПЛИКАТОРЫ: % к суммарному клику, само-ограничивается лучше флэта ---
+        { id: 22, name: "ASIC-ферма", baseAdd: 3, basePrice: 20000, icon: "⚙️", type: "mult", unlockRebirth: 1, maxLvl: 10 },
+        { id: 23, name: "Институциональный инвестор", baseAdd: 5, basePrice: 400000, icon: "💼", type: "mult", unlockRebirth: 2, maxLvl: 5 },
+
+        // --- УТИЛИТИ: не про доход, про условия игры ---
+        { id: 6, name: "Батарейка", baseAdd: 500, basePrice: 1000, icon: "🔋", type: "energy", unlockRebirth: 0 },
+        { id: 20, name: "Турбо-зарядка", baseAdd: 1, basePrice: 5000, icon: "⚡", type: "regen", unlockRebirth: 0 },
+        { id: 21, name: "Полный бак", baseAdd: 0, basePrice: 10000000, icon: "🔋", type: "full_charge", unlockRebirth: 0 }
+    ];
+
+    // Заводы: пассивный доход (очки/час). "Строятся" когда все компоненты-ингредиенты
+    // прокачаны хотя бы до reqLvl. После постройки КАЖДЫЙ следующий уровень любого
+    // ингредиента навсегда добавляет coefPerLevel к доходу завода — этот доход
+    // НЕ сбрасывается при ребёртхе, в отличие от уровней карточек в магазине.
+    const factoriesData = [
+        { id: 0, name: "Майнинг-ферма", icon: "⛏️", unlockRebirth: 0, reqLvl: 3, coefPerLevel: 50,
+          ingredients: [4, 8] },
+        { id: 1, name: "Крипто-хранилище", icon: "🏦", unlockRebirth: 1, reqLvl: 3, coefPerLevel: 400,
+          ingredients: [9, 10] },
+        { id: 2, name: "DAO-корпорация", icon: "🏛️", unlockRebirth: 3, reqLvl: 3, coefPerLevel: 5000,
+          ingredients: [11, 13, 14] },
+        { id: 3, name: "Облачный дата-центр", icon: "☁️", unlockRebirth: 5, reqLvl: 3, coefPerLevel: 60000,
+          ingredients: [15, 16, 17] }
     ];
 
     let state = {
@@ -541,10 +642,21 @@ const heroes = [
         ownedHeroes: [0],
         activeHeroId: 0,
         clickPower: 1,
+        clickMultPercent: 0,
         marketLevels: {},
+        factoryPph: {},      // id завода -> накопленный доход/час (перманентный, не сбрасывается)
+        builtFactories: [],  // id заводов, которые уже построены
         lastUnix: Date.now(),
         lastChargeUnix: 0
     };
+
+    function getRebirthCount() {
+        return Math.max(0, (state.ownedHeroes ? state.ownedHeroes.length : 1) - 1);
+    }
+
+    function totalPphPerHour() {
+        return Object.values(state.factoryPph || {}).reduce((a, b) => a + b, 0);
+    }
 
     function updateUI() {
         document.getElementById('balance-num').innerText = formatNumber(state.points);
@@ -552,6 +664,15 @@ const heroes = [
         document.getElementById('max-energy-val').innerText = state.maxEnergy;
         const perc = (state.energy / state.maxEnergy) * 100;
         document.getElementById('energy-fill').style.width = perc + '%';
+
+        const pph = totalPphPerHour();
+        const pphText = document.getElementById('pph-text');
+        if (pph > 0) {
+            pphText.style.display = 'block';
+            document.getElementById('pph-val').innerText = formatNumber(pph);
+        } else {
+            pphText.style.display = 'none';
+        }
     }
 
     function applyHeroVisuals() {
@@ -580,6 +701,9 @@ const heroes = [
                 state.ownedHeroes = Array.isArray(data.owned_heroes) ? data.owned_heroes : [0];
                 state.marketLevels = data.market_levels || {};
                 state.lastChargeUnix = parseInt(data.last_charge_unix || 0);
+                if (data.click_mult_percent !== undefined) state.clickMultPercent = parseFloat(data.click_mult_percent) || 0;
+                if (data.factory_pph) state.factoryPph = data.factory_pph;
+                if (data.built_factories) state.builtFactories = data.built_factories;
                 
                 updateUI();
                 applyHeroVisuals();
@@ -608,7 +732,10 @@ const heroes = [
                     active_hero_id: state.activeHeroId,
                     owned_heroes: state.ownedHeroes,  
                     market_levels: state.marketLevels,
-                    last_charge_unix: state.lastChargeUnix
+                    last_charge_unix: state.lastChargeUnix,
+                    click_mult_percent: state.clickMultPercent || 0,
+                    factory_pph: state.factoryPph || {},
+                    built_factories: state.builtFactories || []
                 })
             });
         } catch (e) { 
@@ -677,6 +804,18 @@ function startLoops() {
             else window.startDdosEvent();
         }
     }, 20000);
+
+    // Пассивный доход от заводов (тикает каждую секунду, идёт даже в фоне)
+    setInterval(() => {
+        const pph = totalPphPerHour();
+        if (pph > 0) {
+            state.points += pph / 3600;
+            updateUI();
+        }
+    }, 1000);
+
+    // Питомец: случайное появление косточки
+    scheduleBone();
 }
 
     const tapZone = document.getElementById('tap-zone');
@@ -992,6 +1131,83 @@ function startLoops() {
     }
     // ==================== /СЛУЧАЙНЫЕ СОБЫТИЯ ====================
 
+    // ==================== ПИТОМЕЦ / КОСТОЧКА ====================
+    let earnLog = []; // временный лог заработка за последние 10 сек (не сохраняется)
+    const BONE_MIN_INTERVAL_MS = 35000;
+    const BONE_MAX_INTERVAL_MS = 60000;
+    const BONE_LIFETIME_MS = 4000;
+    let activeBoneEl = null;
+
+    function recentEarnings() {
+        const now = Date.now();
+        earnLog = earnLog.filter(e => now - e.t < 10000);
+        return earnLog.reduce((a, e) => a + e.amt, 0);
+    }
+
+    function scheduleBone() {
+        const delay = BONE_MIN_INTERVAL_MS + Math.random() * (BONE_MAX_INTERVAL_MS - BONE_MIN_INTERVAL_MS);
+        setTimeout(() => {
+            spawnBone();
+            scheduleBone();
+        }, delay);
+    }
+
+    function spawnBone() {
+        if (activeBoneEl || activeEvent === 'ddos') return; // не мешаем DDoS-механике
+        const zone = document.getElementById('tap-zone');
+        if (!zone) return;
+        const rect = zone.getBoundingClientRect();
+        const x = 40 + Math.random() * Math.max(40, rect.width - 80);
+        const y = 40 + Math.random() * Math.max(40, rect.height - 80);
+
+        const bone = document.createElement('div');
+        bone.className = 'bone-fly';
+        bone.innerText = '🦴';
+        bone.style.left = x + 'px';
+        bone.style.top = y + 'px';
+        bone.onclick = (e) => { e.stopPropagation(); catchBone(); };
+        zone.appendChild(bone);
+        activeBoneEl = bone;
+
+        setTimeout(() => {
+            if (activeBoneEl === bone) {
+                bone.remove();
+                activeBoneEl = null;
+            }
+        }, BONE_LIFETIME_MS);
+    }
+
+    window.catchBone = function() {
+        if (!activeBoneEl) return;
+        activeBoneEl.remove();
+        activeBoneEl = null;
+
+        const reward = Math.max(5, Math.floor(recentEarnings() * 0.5));
+        state.points += reward;
+
+        const pet = document.getElementById('pet-icon');
+        if (pet) {
+            pet.classList.add('pet-eat-anim');
+            setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
+            const rect = pet.getBoundingClientRect();
+            showPop(rect.left + rect.width / 2, rect.top, reward);
+        }
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        updateUI();
+        triggerSaveProcess();
+    }
+
+    // Ручное нажатие на питомца без косточки - просто небольшая подсказка/анимация
+    window.feedPetManually = function() {
+        if (activeBoneEl) { window.catchBone(); return; }
+        const pet = document.getElementById('pet-icon');
+        if (pet) {
+            pet.classList.add('pet-eat-anim');
+            setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
+        }
+    }
+    // ==================== /ПИТОМЕЦ ====================
+
     function handleTapLogic(x, y, pointerId, isTrusted) {
         // Во время DDoS-атаки клики полностью заблокированы - заработать нельзя
         if (activeEvent === 'ddos') {
@@ -1009,8 +1225,10 @@ function startLoops() {
 
         if (state.energy >= tapCost) {
             state.energy -= tapCost;
-            const earned = Math.max(1, Math.floor(state.clickPower * currentHero.x * eventIncomeMultiplier));
+            const multFactor = 1 + (state.clickMultPercent || 0) / 100;
+            const earned = Math.max(1, Math.floor(state.clickPower * multFactor * currentHero.x * eventIncomeMultiplier));
             state.points += earned;
+            earnLog.push({ t: Date.now(), amt: earned });
 
             const img = document.getElementById('hero-img');
             img.classList.add('tap-anim');
@@ -1036,13 +1254,15 @@ function showPop(x, y, val) {
     function renderMarket() {
         const container = document.getElementById('market-list');
         container.innerHTML = '';
+        const rebirthCount = getRebirthCount();
         
-        marketData.forEach((item, index) => {
+        marketData.forEach((item) => {
             const lvl = state.marketLevels[item.id] || 0;
             
             let maxLvl = 15;
             if (item.type === 'energy') maxLvl = 5;
             if (item.type === 'regen') maxLvl = 10; 
+            if (item.type === 'mult') maxLvl = item.maxLvl || 10;
             if (item.type === 'full_charge') maxLvl = 999999; 
             
             const isMax = lvl >= maxLvl;
@@ -1053,32 +1273,40 @@ function showPop(x, y, val) {
 
             if (item.type === 'click') {
                 bonusText = '+' + (item.baseAdd * (lvl + 1)) + ' к клику';
+            } else if (item.type === 'part') {
+                bonusText = 'Компонент для завода (ур. ' + lvl + ')';
+            } else if (item.type === 'mult') {
+                bonusText = '+' + (item.baseAdd * (lvl + 1)) + '% к общему доходу';
             } else if (item.type === 'energy') {
                 bonusText = '+' + item.baseAdd + ' к макс. энергии';
             } else if (item.type === 'regen') {
                 bonusText = `+${1 + lvl + 1} ед/сек (Сейчас: +${1 + lvl})`;
             } else if (item.type === 'full_charge') {
-                const now = Date.now();
-                const msPassed = now - state.lastChargeUnix;
-                const hourInMs = 60 * 60 * 1000;
-
-                if (msPassed < hourInMs) {
-                    const timeLeft = Math.ceil((hourInMs - msPassed) / 1000 / 60);
-                    bonusText = `Доступно через ${timeLeft} мин.`;
-                    isDisabled = true; 
+                if (state.builtFactories.length === 0) {
+                    bonusText = 'Нужен хотя бы 1 построенный завод';
+                    isDisabled = true;
                 } else {
-                    bonusText = 'Мгновенно восстановит 100% энергии';
+                    const now = Date.now();
+                    const msPassed = now - state.lastChargeUnix;
+                    const hourInMs = 60 * 60 * 1000;
+                    if (msPassed < hourInMs) {
+                        const timeLeft = Math.ceil((hourInMs - msPassed) / 1000 / 60);
+                        bonusText = `Доступно через ${timeLeft} мин.`;
+                        isDisabled = true; 
+                    } else {
+                        bonusText = 'Мгновенно восстановит 100% энергии';
+                    }
                 }
             }
 
-// ... (оставляем логику как есть до самого конца функции
-            const isLocked = index > 0 && (state.marketLevels[marketData[index - 1].id] || 0) === 0;
+            const isLocked = rebirthCount < (item.unlockRebirth || 0);
+            const lockText = isLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребёртхе` : '';
             
             container.innerHTML += `
                 <div class="card-item ${isLocked ? 'locked' : ''}">
                     <span class="card-icon">${item.icon}</span>
                     <div class="card-title">${isLocked ? '???' : item.name}</div>
-                    <div class="card-desc">${isLocked ? '????' : (isMax ? 'УРОВЕНЬ МАКСИМАЛЕН' : bonusText)}</div>
+                    <div class="card-desc">${isLocked ? lockText : (isMax ? 'УРОВЕНЬ МАКСИМАЛЕН' : bonusText)}</div>
                     <button class="btn-action btn-buy" 
                         ${(isLocked || isDisabled) ? 'disabled' : ''} 
                         onclick="buyMarketItem(${item.id})">
@@ -1088,13 +1316,35 @@ function showPop(x, y, val) {
         });
     }
 
+    // При покупке уровня "part"-компонента навсегда добавляет доход заводам,
+    // которые используют этот компонент как ингредиент (если завод уже разблокирован
+    // по числу ребёртхов). Это НЕ зависит от текущего уровня карточки в этом цикле -
+    // накопленный factoryPph переживает сброс marketLevels при ребёртхе.
+    function applyFactoryProgress(itemId) {
+        const rebirthCount = getRebirthCount();
+        factoriesData.forEach(f => {
+            if (rebirthCount < f.unlockRebirth) return;
+            if (!f.ingredients.includes(itemId)) return;
+            state.factoryPph[f.id] = (state.factoryPph[f.id] || 0) + f.coefPerLevel;
+            if (!state.builtFactories.includes(f.id)) {
+                // Завод считается построенным, когда все ингредиенты набрали reqLvl
+                const allReady = f.ingredients.every(ingId => (state.marketLevels[ingId] || 0) >= f.reqLvl);
+                if (allReady) state.builtFactories.push(f.id);
+            }
+        });
+    }
+
     window.buyMarketItem = function(id) {
         const item = marketData.find(i => i.id === id);
         const lvl = state.marketLevels[item.id] || 0;
-        
+        const rebirthCount = getRebirthCount();
+
+        if (rebirthCount < (item.unlockRebirth || 0)) return; // закрыто по числу ребёртхов
+
         let maxLvl = 15;
         if (item.type === 'energy') maxLvl = 5;
         if (item.type === 'regen') maxLvl = 10;
+        if (item.type === 'mult') maxLvl = item.maxLvl || 10;
         if (item.type === 'full_charge') maxLvl = 999999;
         
         if (lvl >= maxLvl) return;
@@ -1102,6 +1352,10 @@ function showPop(x, y, val) {
         
         if (state.points >= price) {
             if (item.type === 'full_charge') {
+                if (state.builtFactories.length === 0) {
+                    alert("Сначала постройте хотя бы один завод!");
+                    return;
+                }
                 const now = Date.now();
                 if (now - state.lastChargeUnix < 60 * 60 * 1000) {
                     alert("Эту карточку можно покупать только раз в час!");
@@ -1116,9 +1370,13 @@ function showPop(x, y, val) {
                 
                 if (item.type === 'click') {
                     state.clickPower += item.baseAdd;
+                } else if (item.type === 'mult') {
+                    state.clickMultPercent = (state.clickMultPercent || 0) + item.baseAdd;
                 } else if (item.type === 'energy') {
                     state.maxEnergy += item.baseAdd;
                     state.energy += item.baseAdd; 
+                } else if (item.type === 'part') {
+                    applyFactoryProgress(id);
                 }
             }
             renderMarket(); 
@@ -1126,6 +1384,37 @@ function showPop(x, y, val) {
             triggerSaveProcess(); 
         }
     }
+
+function renderFactories() {
+    const container = document.getElementById('factory-list');
+    container.innerHTML = '';
+    const rebirthCount = getRebirthCount();
+
+    factoriesData.forEach(f => {
+        const isLocked = rebirthCount < f.unlockRebirth;
+        const isBuilt = state.builtFactories.includes(f.id);
+        const pph = state.factoryPph[f.id] || 0;
+
+        const ingHtml = f.ingredients.map(ingId => {
+            const ingItem = marketData.find(m => m.id === ingId);
+            const ingLvl = state.marketLevels[ingId] || 0;
+            const ok = ingLvl >= f.reqLvl;
+            return `<div class="${ok ? 'factory-ing-ok' : 'factory-ing-bad'}">${ingItem.icon} ${ingItem.name}: ${ingLvl}/${f.reqLvl}</div>`;
+        }).join('');
+
+        container.innerHTML += `
+            <div class="factory-card ${isLocked ? 'locked' : (isBuilt ? 'built' : '')}">
+                <div class="factory-head">
+                    <span class="factory-icon">${f.icon}</span>
+                    <span class="factory-name">${isLocked ? '???' : f.name}</span>
+                </div>
+                ${isLocked ? `<div class="factory-ingredients">🔒 Откроется на ${f.unlockRebirth}-м ребёртхе</div>` : `
+                    <div class="factory-pph">${isBuilt ? '✅ Построен' : '🔧 Не построен'} · доход: ${formatNumber(pph)}/час</div>
+                    <div class="factory-ingredients">${ingHtml}</div>
+                `}
+            </div>`;
+    });
+}
 
 function renderSkins() {
         const container = document.getElementById('skin-list');
@@ -1186,8 +1475,11 @@ window.handleHero = function(id) {
                     state.points = 0;
                     state.marketLevels = {}; 
                     state.clickPower = 1;    
+                    state.clickMultPercent = 0; // мультипликаторы тоже часть цикла - сбрасываются
                     state.maxEnergy = 1000;  // Сбрасываем бак до базы
                     state.energy = 1000;     // Заливаем фулл
+                    // ЗАВОДЫ (factoryPph/builtFactories) и ПИТОМЕЦ намеренно НЕ сбрасываются -
+                    // это перманентная прогрессия, которая переживает ребёртх
                     
                     state.ownedHeroes.push(id);
                     state.activeHeroId = id;
@@ -1223,6 +1515,7 @@ window.handleHero = function(id) {
         if (id === 'market-panel') renderMarket();
         if (id === 'wardrobe-panel') renderSkins();
         if (id === 'leaderboard-panel') fetchLeaderboard();
+        if (id === 'factory-panel') renderFactories();
     }
 
     window.closeAllPanels = function() {
@@ -1238,6 +1531,11 @@ window.handleHero = function(id) {
             state = { ...state, ...parsed };
             const elapsed = Math.floor((Date.now() - state.lastUnix) / 1000);
             state.energy = Math.min(state.maxEnergy, state.energy + elapsed);
+
+            const pph = totalPphPerHour();
+            if (pph > 0 && elapsed > 0) {
+                state.points += (pph / 3600) * elapsed;
+            }
         }
         
         const heroImgEl = document.getElementById('hero-img');
@@ -1252,7 +1550,33 @@ window.handleHero = function(id) {
         startLoops();
     }
 
-    window.onload = init;
+    window.onload = function() {
+        if (localStorage.getItem('nova_pw_ok') === '1') {
+            unlockApp();
+        } else {
+            document.getElementById('pw-input').focus();
+            document.getElementById('pw-input').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') window.checkPassword();
+            });
+        }
+    };
+
+    window.checkPassword = function() {
+        const val = document.getElementById('pw-input').value.trim();
+        if (val === '3330') {
+            localStorage.setItem('nova_pw_ok', '1');
+            unlockApp();
+        } else {
+            document.getElementById('pw-error').innerText = 'Неверный пароль';
+            document.getElementById('pw-input').value = '';
+        }
+    }
+
+    function unlockApp() {
+        document.getElementById('password-gate').style.display = 'none';
+        document.getElementById('app-shell-root').style.display = 'flex';
+        init();
+    }
 </script>
 </body>
 </html>
