@@ -201,46 +201,25 @@ async function startSpin() {
     document.getElementById('spin-btn').disabled = true;
     currentWins = [];
 
-    const MY_ID = 8015661230; 
-    const isAdmin = (Number(user.user_id) === MY_ID);
+    // ВСЕГДА ВЫПАДАЕТ РАКЕТКА
+    const winKey = "raketa.png";
     let newSpinCount = (user.spin_count || 0) + (isFree ? 1 : multi);
 
-    if (isAdmin) {
-        // АДМИНСКАЯ ЛОГИКА: 2025 (49%), Ракетка (50%), Мишка (1%), Машин НЕТ
-        for(let i = 0; i < (isFree ? 1 : multi); i++) {
-            const rand = Math.random() * 100;
-            let winKey;
-            
-            if (rand < 49) winKey = "2025.jpg";      // 49%
-            else if (rand < 99) winKey = "bear.png"; // 50%
-            else winKey = "raketa.png";                  // 1%
-            
-            currentWins.push(ALL_ITEMS[winKey]);
-            const line = document.getElementById(`line-${i}`);
-            if (line) {
-                const imgs = line.querySelectorAll('img');
-                if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
-            }
-        }
-    } else {
-        // ЛОГИКА ИГРОКОВ: 1% на 2025 (редкий дроп), остальное - мусор (звезда 5 / ракетка 50)
-        for(let i = 0; i < (isFree ? 1 : multi); i++) {
-            let winKey;
-            if (Math.random() < 0.01) { // Теперь 1% шанс
-                winKey = "2025.jpg";
-            } else {
-                winKey = Math.random() < 0.5 ? "star" : "raketa.png";
-            }
-            
-            currentWins.push(ALL_ITEMS[winKey]);
-            const line = document.getElementById(`line-${i}`);
-            if (line) {
-                const imgs = line.querySelectorAll('img');
-                if (imgs[100]) imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
+    // Заполняем результат для всех линий (в зависимости от множителя X1-X5)
+    for(let i = 0; i < (isFree ? 1 : multi); i++) {
+        currentWins.push(ALL_ITEMS[winKey]);
+        
+        const line = document.getElementById(`line-${i}`);
+        if (line) {
+            const imgs = line.querySelectorAll('img');
+            // Подменяем 100-ю картинку в ленте на ракетку, чтобы она выпала на указателе
+            if (imgs[100]) {
+                imgs[100].src = `img/${ALL_ITEMS[winKey].img}`;
             }
         }
     }
 
+    // Обновляем данные пользователя в БД
     const upd = isFree ? 
         { last_free_spin: new Date().toISOString(), spin_count: newSpinCount } : 
         { stars: user.stars - cost, spin_count: newSpinCount };
@@ -248,10 +227,12 @@ async function startSpin() {
     await SB.from('users').update(upd).eq('user_id', user.user_id);
     user.spin_count = newSpinCount;
     
+    // Запускаем визуальную анимацию вращения
     for(let i = 0; i < (isFree ? 1 : multi); i++) {
         const line = document.getElementById(`line-${i}`);
         if (line) {
             line.style.transition = `transform 5s cubic-bezier(0.1, 0, 0, 1)`;
+            // Расчет позиции для остановки на 100-й картинке
             line.style.transform = `translateX(-${(100 * 88) - (window.innerWidth / 2) + 40}px)`;
         }
     }
