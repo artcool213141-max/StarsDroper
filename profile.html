@@ -427,46 +427,54 @@ async function handlePromo() {
 async function withdrawToBot() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
-    // Теперь цена всегда 75 звезд
-    const price = 75; 
-    const currentStars = user.stars || 0;
+    const it = user.inventory[selectedIdx];
+    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+    const giftName = imgPath.split('/').pop();
 
-    if (currentStars < price) {
-        tg.showAlert(`🛑 Недостаточно звезд! Нужно ${price} ⭐.`);
-        return;
-    }
+    if (giftName === 'star.png') return;
 
-    tg.showConfirm(`Вывести предмет? Спишется ${price} ⭐.`, async (ok) => {
+    tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 1 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
         if (!ok) return;
 
         isProcessing = true;
         closeModal();
 
         try {
-            // Отправляем запрос на наш бэкенд (создай такой эндпоинт в Flask)
-            const response = await fetch(`${BACKEND_URL}/api/process_withdrawal`, {
+            const response = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    user_id: userId, 
-                    item_name: user.inventory[selectedIdx] // Передаем, что именно выводим
+                body: JSON.stringify({
+                    user_id: userId,
+                    gift_name: giftName,
+                    amount: 1
                 })
             });
 
             const result = await response.json();
-            if (result.success) {
-                tg.showAlert("✅ Заявка на вывод создана!");
-                loadUser(); // Перезагружаем интерфейс
+
+            if (result.pay_url) {
+                tg.openInvoice(result.pay_url, (status) => {
+                    isProcessing = false;
+                    if (status === 'paid') {
+                        tg.showAlert("✅ Заявка на вывод создана!");
+                        loadUser();
+                    } else if (status === 'failed') {
+                        tg.showAlert("🛑 Оплата не прошла.");
+                    } else if (status === 'cancelled') {
+                        tg.showAlert("Оплата отменена.");
+                    }
+                });
             } else {
-                tg.showAlert("Ошибка: " + result.error);
+                isProcessing = false;
+                tg.showAlert("Ошибка: " + (result.error || "не удалось создать счёт"));
             }
-        } catch(e) {
-            tg.showAlert("Ошибка сети.");
-        } finally {
+        } catch (e) {
             isProcessing = false;
+            tg.showAlert("Ошибка сети.");
         }
     });
 }
+    
 async function sellItem() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
@@ -525,24 +533,13 @@ function openItem(i) {
     
     const withdrawBtn = document.getElementById('withdraw-btn');
 
-    // star.png нельзя выводить — кнопка просто скрывается
     if (fileName === 'star.png') {
         withdrawBtn.style.display = "none";
     } else {
         withdrawBtn.style.display = "block";
         withdrawBtn.style.opacity = "1";
         withdrawBtn.style.pointerEvents = "auto";
-
-        const userStars = user.stars || 0;
-        const isPaid = user.is_paid_75 === true;
-
-        if (isPaid && userStars < 75) {
-            withdrawBtn.style.opacity = "0.4";
-            withdrawBtn.style.pointerEvents = "none";
-            withdrawBtn.innerText = "НУЖНО 75 ⭐ ДЛЯ ВЫВОДА";
-        } else {
-            withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (75 ⭐)" : "ВЫВЕСТИ В БОТ";
-        }
+        withdrawBtn.innerText = "ВЫВЕСТИ В БОТ (1 ⭐)";
     }
     
     document.getElementById('item-modal').style.display = 'flex';
