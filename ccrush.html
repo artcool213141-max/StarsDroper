@@ -49,7 +49,6 @@
 
         .num { font-family: 'Manrope', 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
 
-        /* ---------- HEADER ---------- */
         header {
             padding-top: calc(14px + var(--safe-top));
             padding-bottom: 14px;
@@ -92,7 +91,6 @@
         }
         .currency-logo { width: 18px; height: 18px; object-fit: contain; border-radius: 50%; }
 
-        /* ---------- GAME STAGE ---------- */
         .game-container {
             position: relative;
             flex: 1 1 auto;
@@ -176,7 +174,6 @@
             backdrop-filter: blur(4px);
         }
 
-        /* ---------- CONTROL PANEL ---------- */
         .ui-panel {
             flex: 0 0 auto;
             width: 100%;
@@ -345,6 +342,8 @@
     let currentUser = null, cur = 'stars', state = 'wait', mult = 1.00;
     let betQueued = false, betVal = 0, isCashedOut = false;
     let crashPoint = 2.00;
+    let currentRoundId = null;
+    let historyLogged = false;
 
     async function checkAuth() {
         const saved = localStorage.getItem('nowearspin_user');
@@ -399,15 +398,40 @@
         }
     }
 
-    function generateCrashPoint() {
-        const r = Math.random();
-        return r > 0.93 ? (2 + Math.random() * 10).toFixed(2) : (1.01 + Math.random() * 1.5).toFixed(2);
+    async function logCrashHistory(value) {
+        try {
+            await SB.from('crash_history').insert({ multiplier: Number(value) });
+            fetchHistory();
+        } catch(e) {
+            console.error('logCrashHistory failed', e);
+        }
+    }
+
+    // Простой детерминированный генератор (mulberry32), сидируется номером раунда.
+    // Это нужно, чтобы ВСЕ открытые у игроков клиенты в один и тот же 20-секундный
+    // цикл получили ОДИНАКОВЫЙ crashPoint — иначе история в базе была бы бессвязной
+    // мешаниной случайных чисел с разных телефонов.
+    // ВАЖНО: это НЕ защита от читерства — число всё ещё считается в браузере,
+    // и его можно вычислить через консоль разработчика. Для игры на реальные деньги
+    // такой расчёт должен идти на сервере (Supabase Edge Function), а не на клиенте.
+    function seededRandom(seed) {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+
+    function generateCrashPoint(roundId) {
+        const r = seededRandom(roundId);
+        const r2 = seededRandom(roundId + 1);
+        return r > 0.93 ? (2 + r2 * 10).toFixed(2) : (1.01 + r2 * 1.5).toFixed(2);
     }
 
     function tick() {
         const now = Date.now();
         const cycleTime = 20000;
         const elapsed = now % cycleTime;
+        const roundId = Math.floor(now / cycleTime);
 
         const mDisp = document.getElementById('multiplier');
         const rWrap = document.getElementById('rocket-wrap');
@@ -419,7 +443,9 @@
         if (elapsed < 6000) {
             if (state !== 'wait') {
                 state = 'wait'; isCashedOut = false;
-                crashPoint = generateCrashPoint();
+                currentRoundId = roundId;
+                crashPoint = generateCrashPoint(currentRoundId);
+                historyLogged = false;
                 rWrap.classList.remove('flying', 'paused');
                 rWrap.style.opacity = "0";
                 rImg.src = "crusher.png";
@@ -476,24 +502,49 @@
         btn.classList.remove('is-live-cashout');
         btn.innerText = "Крах!"; btn.disabled = true;
         betQueued = false;
+
+        if (!historyLogged) {
+            historyLogged = true;
+            logCrashHistory(val);
+        }
     }
 
     async function onAction() {
-        const col = cur === 'stars' ? 'stars' : 'balance';
         if (state === 'wait' && !betQueued) {
             const amount = Number(document.getElementById('input-bet').value);
+            if (!amount || amount <= 0) return;
+
+            const btn = document.getElementById('btn-main');
+            btn.disabled = true;
+            btn.innerText = "...";
+
+            const ok = await adjustBalance(-amount);
+
+            if (!ok) {
+                btn.disabled = false;
+                btn.innerText = "Ставка";
+                tg.HapticFeedback?.notificationOccurred('error');
+                alert('Недостаточно средств');
+                return;
+            }
+
             betVal = amount;
             betQueued = true;
-            document.getElementById('btn-main').innerText = "Готово";
-            tg.HapticFeedback.impactOccurred('medium');
+            btn.disabled = false;
+            btn.innerText = "Готово";
+            tg.HapticFeedback?.impactOccurred('medium');
         } else if (state === 'fly' && betQueued && !isCashedOut) {
             isCashedOut = true;
             betQueued = false;
+            const win = betVal * mult;
+
             const btn = document.getElementById('btn-main');
             btn.classList.remove('is-live-cashout');
             btn.innerText = "Взято!";
             btn.disabled = true;
-            tg.HapticFeedback.notificationOccurred('success');
+            tg.HapticFeedback?.notificationOccurred('success');
+
+            await adjustBalance(win);
         }
     }
 
