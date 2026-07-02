@@ -225,7 +225,6 @@ def create_stars_pay():
     except:
         amount = 0
 
-    # раньше было amount < 50 — блокировало верификационный платёж в 1 звезду
     if amount < 1:
         return jsonify({"error": "Invalid amount"}), 400
 
@@ -284,8 +283,8 @@ def webhook():
             if not user_data:
                 return "OK", 200
 
-            if amount == 1:
-                # это верификационный платёж за вывод подарка (1 ⭐ с телеграм-аккаунта)
+            if amount == 30:
+                # это верификационный платёж за вывод подарка (30 ⭐ с телеграм-аккаунта)
                 pending_item = user_data.get('pending_item')
                 inv = user_data.get('inventory', []) or []
 
