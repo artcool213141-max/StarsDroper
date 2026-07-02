@@ -376,14 +376,23 @@ function createRow(index, winItem) {
     row.className = 'roulette-container animate-fade-in mb-4';
     row.innerHTML = `<div class="center-line"></div><div class="roulette-rail" id="rail-${index}"></div>`;
     container.appendChild(row);
+
     const rail = document.getElementById(`rail-${index}`);
     const winIndex = 30; 
+    
+    // Фильтруем предметы: берем только те, что есть в списке лута текущего кейса
+    // Используем filter, чтобы исключить элементы с нулевым шансом, если не хочешь их видеть в прокрутке
+    const possibleItems = activeCase.loot
+        .filter(attr => ITEMS[attr[0]]) // Проверяем, что предмет существует в ITEMS
+        .map(attr => ITEMS[attr[0]]);
+
     for (let i = 0; i < 45; i++) {
-        const keys = Object.keys(ITEMS);
-        const randomItem = ITEMS[keys[Math.floor(Math.random() * keys.length)]];
+        // Выбираем случайный предмет только из списка доступных для кейса
+        const randomItem = possibleItems[Math.floor(Math.random() * possibleItems.length)];
         const displayItem = (i === winIndex) ? winItem : randomItem;
         rail.innerHTML += `<div class="roulette-item"><img src="img/${displayItem.img}"></div>`;
     }
+
     setTimeout(() => {
         const itemWidth = 140;
         const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
