@@ -433,9 +433,9 @@ async function withdrawToBot() {
 
     if (giftName === 'star.png') return;
 
-    const idxToRemove = selectedIdx; // фиксируем индекс до закрытия модалки
+    const idxToRemove = selectedIdx;
 
-    tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 1 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
+    tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 30 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
         if (!ok) return;
 
         isProcessing = true;
@@ -448,7 +448,7 @@ async function withdrawToBot() {
                 body: JSON.stringify({
                     user_id: userId,
                     gift_name: giftName,
-                    amount: 1
+                    amount: 30
                 })
             });
 
@@ -459,16 +459,12 @@ async function withdrawToBot() {
                     isProcessing = false;
 
                     if (status === 'paid') {
-                        // --- ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ: убираем предмет сразу, не дожидаясь вебхука ---
                         if (user && Array.isArray(user.inventory)) {
                             user.inventory.splice(idxToRemove, 1);
                             renderGrid();
                         }
 
                         tg.showAlert("✅ Заявка на вывод создана!");
-
-                        // Подстраховка: подтягиваем актуальные данные из БД
-                        // с задержкой, чтобы вебхук успел отработать
                         setTimeout(() => loadUser(), 2000);
 
                     } else if (status === 'failed') {
@@ -552,7 +548,7 @@ function openItem(i) {
         withdrawBtn.style.display = "block";
         withdrawBtn.style.opacity = "1";
         withdrawBtn.style.pointerEvents = "auto";
-        withdrawBtn.innerText = "ВЫВЕСТИ В БОТ (1 ⭐)";
+        withdrawBtn.innerText = "ВЫВЕСТИ В ПРОФИЛЬ (30 ⭐)";
     }
     
     document.getElementById('item-modal').style.display = 'flex';
