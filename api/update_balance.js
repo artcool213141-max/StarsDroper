@@ -18,7 +18,9 @@ export default async function handler(req, res) {
     try {
         const { 
             user_id, username, points, energy, max_energy, 
-            click_power, active_hero_id, owned_heroes, market_levels 
+            click_power, active_hero_id, owned_heroes, market_levels,
+            last_charge_unix, click_mult_percent, factory_pph,
+            built_factories, owned_pets, active_pet_id
         } = req.body;
 
         if (!user_id) {
@@ -38,6 +40,12 @@ export default async function handler(req, res) {
                 active_hero_id: Number(active_hero_id) || 0,
                 owned_heroes: owned_heroes || [0],
                 market_levels: market_levels || {},
+                last_charge_unix: Number(last_charge_unix) || 0,
+                click_mult_percent: Number(click_mult_percent) || 0,
+                factory_pph: factory_pph || {},
+                built_factories: built_factories || [],
+                owned_pets: owned_pets || [0],
+                active_pet_id: Number(active_pet_id) || 0,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'user_id' });
 
