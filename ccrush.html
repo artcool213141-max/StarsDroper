@@ -3,104 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>NowearSpin - Elite Engine</title>
+    <title>NowearSpin · Rocket</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        
-        :root { 
-            /* Золотая премиум палитра */
-            --bg: #0d0a05; 
-            --accent: #d4af37; 
-            --accent-glow: rgba(212, 175, 55, 0.4);
-            --panel-bg: #1a140a;
+        :root {
+            --bg: #0b0804;
+            --gold: #d4af37;
+            --gold-dim: rgba(212, 175, 55, 0.25);
+            --panel: #15100a;
             --border-gold: rgba(212, 175, 55, 0.3);
         }
-        
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
 
-        .game-container { 
-            position: relative; height: calc(100vh - 160px); width: 100%; overflow: hidden;
+        .game-scene {
+            position: relative;
+            height: calc(100vh - 160px);
+            width: 100%;
             background-image: 
-                linear-gradient(rgba(212, 175, 55, 0.08) 1.5px, transparent 1.5px),
-                linear-gradient(90deg, rgba(212, 175, 55, 0.08) 1.5px, transparent 1.5px);
-            background-size: 60px 60px;
+                linear-gradient(rgba(212, 175, 55, 0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.07) 1px, transparent 1px);
+            background-size: 50px 50px;
+            background-position: 0 0;
             z-index: 5;
+            overflow: hidden;
         }
-
-        .grid-moving { animation: scrollGrid 3s linear infinite; }
-        @keyframes scrollGrid { 
-            from { background-position: 0 0; } 
-            to { background-position: -120px 120px; } 
+        .grid-animate {
+            animation: driftGrid 2.5s linear infinite;
         }
-
-        /* Эффект легкого золотого свечения для сетки на заднем плане */
-        .game-container::after {
+        @keyframes driftGrid {
+            from { background-position: 0 0; }
+            to { background-position: -80px 80px; }
+        }
+        .game-scene::after {
             content: '';
             position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: radial-gradient(circle at 50% 50%, rgba(212, 175, 55, 0.05) 0%, transparent 70%);
+            inset: 0;
+            background: radial-gradient(circle at 50% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 70%);
             pointer-events: none;
             z-index: 1;
         }
 
-        #rocket-wrap {
-            position: absolute; left: -400px; bottom: -400px;
-            z-index: 10; opacity: 0;
-            transition: opacity 0.3s;
+        #rocket-wrapper {
+            position: absolute;
+            left: -300px;
+            bottom: -300px;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-        
-        #rocket-img { width: 220px; transform: rotate(-5deg); }
-        .engine-active { animation: vibration 0.1s infinite alternate; }
-        @keyframes vibration { from { transform: translate(0,0); } to { transform: translate(2px, 2px); } }
+        #rocket-img { width: 180px; transform: rotate(-8deg); filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.3)); }
+        .engine-fire { animation: shake 0.08s infinite alternate; }
+        @keyframes shake { from { transform: rotate(-8deg) translate(0,0); } to { transform: rotate(-8deg) translate(1px,2px); } }
 
-        .flying {
+        .fly-up {
             opacity: 1 !important;
-            animation: approach 12s cubic-bezier(0.1, 0.4, 0.2, 1) forwards;
+            animation: launch 12s cubic-bezier(0.08, 0.6, 0.2, 1) forwards;
+        }
+        .fly-pause { animation-play-state: paused !important; }
+        @keyframes launch {
+            from { left: -120px; bottom: -120px; }
+            to { left: 50%; bottom: 40%; transform: translate(-50%, 40%); }
         }
 
-        .paused { animation-play-state: paused !important; }
-
-        @keyframes approach {
-            from { left: -100px; bottom: -100px; }
-            to { left: 50%; bottom: 50%; transform: translate(-50%, 50%); }
-        }
-
-        #multiplier {
-            position: absolute; left: 50%; 
-            bottom: 15%; 
+        #multiplier-big {
+            position: absolute;
+            left: 50%;
+            bottom: 22%;
             transform: translateX(-50%);
-            font-size: 5rem; font-weight: 900; z-index: 20; 
-            text-shadow: 0 0 40px var(--accent-glow);
+            font-size: 4.8rem;
+            font-weight: 900;
+            z-index: 15;
+            text-shadow: 0 0 50px rgba(212, 175, 55, 0.3);
             color: #fff;
+            letter-spacing: -1px;
         }
 
-        .ui-panel {
-            position: fixed; bottom: 0; width: 100%; background: var(--panel-bg);
-            border-top: 2px solid var(--border-gold); padding: 20px;
-            display: grid; grid-template-columns: 160px 1fr 200px; gap: 15px; 
-            align-items: center; z-index: 100;
+        .bottom-panel {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            background: var(--panel);
+            border-top: 2px solid var(--border-gold);
+            padding: 16px 18px 20px;
+            display: grid;
+            grid-template-columns: 140px 1fr 160px;
+            gap: 12px;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
         }
 
-        .live-drop { position: absolute; left: 15px; top: 15px; width: 95px; z-index: 60; }
-        .drop-item { 
-            background: rgba(15, 12, 5, 0.9); border: 1px solid #4a3b14; 
-            padding: 8px; border-radius: 10px; text-align: center; 
-            font-weight: 900; font-size: 13px; border-left: 4px solid var(--accent); margin-bottom: 5px;
+        .live-history {
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            width: 90px;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .history-chip {
+            background: rgba(10, 8, 4, 0.85);
+            border: 1px solid #4a3d1a;
+            padding: 6px 6px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 900;
+            font-size: 13px;
+            border-left: 4px solid var(--gold);
+            color: #d4c29b;
+            backdrop-filter: blur(2px);
         }
 
-        .currency-btn { background: #21190a; padding: 12px; border: 1px solid #4a3b14; border-radius: 12px; cursor: pointer; text-align: center; font-size: 11px; font-weight: 900; color: #c5bfae; }
-        .currency-btn.active { border-color: var(--accent); background: #3d300f; color: #fff; box-shadow: 0 0 15px rgba(212, 175, 55, 0.2); }
-        
-        .btn-main { background: var(--accent); color: #0d0a05; font-weight: 900; height: 100%; border-radius: 12px; font-size: 1.2rem; text-transform: uppercase; transition: all 0.2s; box-shadow: 0 4px 15px rgba(212, 175, 55, 0.4); }
-        .btn-main:active { transform: scale(0.96); }
-        .btn-main:disabled { filter: grayscale(1); opacity: 0.3; box-shadow: none; }
+        .currency-toggle {
+            background: #1f180d;
+            padding: 10px 6px;
+            border: 1px solid #4a3d1a;
+            border-radius: 14px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 900;
+            color: #b8ae95;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .currency-toggle.active {
+            border-color: var(--gold);
+            background: #3d2f12;
+            color: #fff;
+            box-shadow: 0 0 18px rgba(212, 175, 55, 0.15);
+        }
 
-        input#input-bet { color: var(--accent); }
+        .bet-input-wrap {
+            background: #070502;
+            border: 1px solid #4a3d1a;
+            border-radius: 16px;
+            padding: 8px 0;
+        }
+        .bet-input-wrap input {
+            background: transparent;
+            width: 100%;
+            text-align: center;
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--gold);
+            outline: none;
+            border: none;
+            padding: 0;
+        }
 
-        /* Стили для иконок валют */
+        .btn-action {
+            background: var(--gold);
+            color: #0b0804;
+            font-weight: 900;
+            font-size: 1.1rem;
+            padding: 14px 0;
+            border-radius: 16px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.35);
+            transition: all 0.15s;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            line-height: 1.2;
+        }
+        .btn-action:active { transform: scale(0.95); }
+        .btn-action:disabled { filter: grayscale(0.6); opacity: 0.4; box-shadow: none; }
+
         .currency-logo {
             width: 20px;
             height: 20px;
@@ -108,182 +184,346 @@
             display: inline-block;
             vertical-align: middle;
         }
+
+        header .bal {
+            background: rgba(255,255,255,0.04);
+            padding: 6px 14px 6px 10px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .bottom-panel { grid-template-columns: 110px 1fr 120px; gap: 8px; padding: 12px 12px 18px; }
+            #multiplier-big { font-size: 3.8rem; bottom: 18%; }
+            #rocket-img { width: 140px; }
+            .bet-input-wrap input { font-size: 1.8rem; }
+            .btn-action { font-size: 0.9rem; padding: 12px 0; }
+        }
     </style>
 </head>
 <body>
 
-    <header class="flex justify-between items-center p-5 bg-[#0d0a05] border-b border-[#241d0b] relative z-[110]">
-        <div class="flex items-center gap-3">
-            <div onclick="location.href='games.html'" class="cursor-pointer text-[#d4af37] hover:text-white transition-colors flex items-center justify-center p-1">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
+    <header class="flex justify-between items-center px-5 py-3 bg-[#0b0804] border-b border-[#2f2612] z-[110] relative">
+        <div class="flex items-center gap-2">
+            <div onclick="location.href='games.html'" class="text-[#d4af37] hover:text-white transition p-1 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
                 </svg>
             </div>
-            <div class="font-black text-[#d4af37] text-2xl italic tracking-tighter cursor-pointer uppercase" onclick="location.href='games.html'">Nowear<span class="text-white">Spin</span></div>
+            <div class="font-black text-[#d4af37] text-xl italic tracking-tighter cursor-pointer uppercase" onclick="location.href='games.html'">Nowear<span class="text-white">Spin</span></div>
         </div>
-        <div class="flex gap-6 font-bold text-amber-100">
-            <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-                <span id="val-stars">0</span>
-                <img src="img/star.png" class="currency-logo" alt="star">
-            </div>
-            <div class="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-full border border-white/10">
-                <span id="val-ton">0.00</span>
-                <img src="img/ton.png" class="currency-logo" alt="ton">
-            </div>
+        <div class="flex gap-3">
+            <div class="bal"><span id="val-stars">0</span> <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='%23d4af37'%3E%3Cpolygon points='12,2 15,9 23,9 16.5,14 19,22 12,17 5,22 7.5,14 1,9 9,9'/%3E%3C/svg%3E" class="currency-logo" alt="★"></div>
+            <div class="bal"><span id="val-ton">0.00</span> <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='%23008ddb'%3E%3Ccircle cx='12' cy='12' r='10' stroke='white' stroke-width='1.5' fill='%23008ddb'/%3E%3Ctext x='12' y='16' text-anchor='middle' font-size='12' font-weight='900' fill='white'%3ET%3C/text%3E%3C/svg%3E" class="currency-logo" alt="⍌"></div>
         </div>
     </header>
 
-    <div id="main-scene" class="game-container">
-        <div id="live-drop" class="live-drop"></div>
-        <div id="multiplier">1.00x</div>
-        <div id="rocket-wrap"><img id="rocket-img" src="crusher.png"></div>
+    <div id="scene" class="game-scene">
+        <div id="live-history" class="live-history"></div>
+        <div id="multiplier-big">1.00x</div>
+        <div id="rocket-wrapper"><img id="rocket-img" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23d4af37'/%3E%3Cstop offset='100%25' stop-color='%23b38f2c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M90 10 L120 70 L170 80 L130 120 L140 170 L90 145 L40 170 L50 120 L10 80 L60 70 Z' fill='url(%23g)' stroke='%23fae37a' stroke-width='3'/%3E%3Ccircle cx='90' cy='90' r='20' fill='%23ffd966' stroke='%23b38f2c' stroke-width='3'/%3E%3Crect x='80' y='100' width='20' height='40' fill='%23b38f2c' rx='4'/%3E%3Cpath d='M70 140 L110 140 L100 160 L80 160 Z' fill='%23a67c1e'/%3E%3C/svg%3E" alt="rocket"></div>
     </div>
 
-    <div class="ui-panel">
+    <div class="bottom-panel">
         <div class="flex flex-col gap-2">
-            <div id="mode-stars" onclick="switchMode('stars')" class="currency-btn active">STARS</div>
-            <div id="mode-ton" onclick="switchMode('ton')" class="currency-btn">TON</div>
+            <div id="mode-stars" onclick="switchMode('stars')" class="currency-toggle active">⭐ STARS</div>
+            <div id="mode-ton" onclick="switchMode('ton')" class="currency-toggle">⍌ TON</div>
         </div>
-        <div class="bg-[#050402] border border-[#4a3b14] rounded-xl p-4">
-            <input type="number" id="input-bet" class="bg-transparent w-full text-center text-3xl font-black outline-none" value="10">
+        <div class="bet-input-wrap">
+            <input type="number" id="input-bet" value="10" step="1" min="1">
         </div>
-        <button id="btn-main" onclick="onAction()" class="btn-main">Ставка</button>
+        <button id="btn-main" class="btn-action">СТАВКА</button>
     </div>
 
-<script>
-    const tg = window.Telegram.WebApp;
-    const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co"; 
-    const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo"; 
-    const SB = supabase.createClient(SB_URL, SB_KEY);
+    <script>
+        // ============ SUPABASE ============
+        const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo";
+        const supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    let currentUser = null, cur = 'stars', state = 'wait', mult = 1.00;
-    let betQueued = false, betVal = 0, isCashedOut = false;
-    let crashPoint = 2.00;
+        const tg = window.Telegram.WebApp;
+        let userId = 12345;
+        if (tg.initDataUnsafe?.user) userId = tg.initDataUnsafe.user.id;
 
-    async function checkAuth() {
-        const saved = localStorage.getItem('nowearspin_user');
-        if (saved) {
-            currentUser = JSON.parse(saved);
-        } else if (tg.initDataUnsafe?.user) {
-            currentUser = { user_id: tg.initDataUnsafe.user.id };
-        } else {
-            currentUser = { user_id: 12345 }; 
-        }
-        syncBalances();
-        fetchHistory();
-    }
+        let balances = { stars: 0, ton: 0 };
+        let currency = 'stars';
+        let gameState = 'wait';
+        let betPlaced = false;
+        let cashedOut = false;
+        let betAmount = 10;
+        let currentMultiplier = 1.00;
+        let crashPoint = 2.00;
+        let startTime = 0;
 
-    async function syncBalances() {
-        try {
-            const { data } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
-            if (data) {
-                document.getElementById('val-stars').innerText = Math.floor(Number(data.stars || 0));
-                document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
-            }
-        } catch(e) {}
-    }
-
-    function generateCrashPoint() {
-        const r = Math.random();
-        return r > 0.93 ? (2 + Math.random() * 10).toFixed(2) : (1.01 + Math.random() * 1.5).toFixed(2);
-    }
-
-    function tick() {
-        const now = Date.now();
-        const cycleTime = 20000; 
-        const elapsed = now % cycleTime;
-
-        const mDisp = document.getElementById('multiplier');
-        const rWrap = document.getElementById('rocket-wrap');
-        const rImg = document.getElementById('rocket-img');
-        const scene = document.getElementById('main-scene');
+        const scene = document.getElementById('scene');
+        const rocketWrap = document.getElementById('rocket-wrapper');
+        const rocketImg = document.getElementById('rocket-img');
+        const multEl = document.getElementById('multiplier-big');
         const btn = document.getElementById('btn-main');
+        const inputBet = document.getElementById('input-bet');
+        const historyContainer = document.getElementById('live-history');
 
-        if (elapsed < 6000) { 
-            if (state !== 'wait') {
-                state = 'wait'; isCashedOut = false;
-                crashPoint = generateCrashPoint();
-                rWrap.classList.remove('flying', 'paused');
-                rWrap.style.opacity = "0";
-                rImg.src = "crusher.png";
-                scene.classList.remove('grid-moving');
-                mDisp.style.color = "white";
-                fetchHistory();
-                syncBalances();
+        // ============ ЗАГРУЗКА БАЛАНСА ============
+        async function loadBalances() {
+            try {
+                const { data, error } = await supabase
+                    .from('users')
+                    .select('stars, balance')
+                    .eq('user_id', userId)
+                    .single();
+
+                if (error) throw error;
+                if (data) {
+                    balances.stars = Number(data.stars) || 0;
+                    balances.ton = Number(data.balance) || 0;
+                } else {
+                    // если пользователя нет — создаём
+                    await supabase.from('users').insert([{ user_id: userId, stars: 1000, balance: 10 }]);
+                    balances.stars = 1000;
+                    balances.ton = 10;
+                }
+                updateBalancesUI();
+            } catch (e) {
+                console.warn('DB error, using local:', e);
+                balances.stars = 1000;
+                balances.ton = 10;
+                updateBalancesUI();
             }
-            mDisp.innerText = `ВЗЛЕТ: ${Math.ceil((6000 - elapsed) / 1000)}с`;
-            if (!betQueued) { btn.innerText = "СТАВКА"; btn.disabled = false; }
-        } else {
-            let flightTime = (elapsed - 6000) / 1000;
-            if (state !== 'fly' && state !== 'crash') {
-                state = 'fly';
-                rWrap.classList.add('flying');
-                rImg.classList.add('engine-active');
-                scene.classList.add('grid-moving');
+        }
+
+        // ============ СОХРАНЕНИЕ БАЛАНСА ============
+        async function saveBalances() {
+            try {
+                await supabase
+                    .from('users')
+                    .update({ 
+                        stars: Math.floor(balances.stars),
+                        balance: parseFloat(balances.ton.toFixed(2))
+                    })
+                    .eq('user_id', userId);
+            } catch (e) {
+                console.warn('Save error:', e);
             }
+        }
 
-            mult = Math.pow(1.10, flightTime); 
+        // ============ ИСТОРИЯ ============
+        async function loadHistory() {
+            try {
+                const { data } = await supabase
+                    .from('crash_history')
+                    .select('multiplier')
+                    .order('created_at', { ascending: false })
+                    .limit(6);
 
-            if (mult >= crashPoint) { 
-                if (state !== 'crash') doCrash(crashPoint);
-            } else if (state === 'fly') {
-                mDisp.innerText = mult.toFixed(2) + "x";
-                if (betQueued && !isCashedOut) {
-                    btn.innerText = `ВЗЯТЬ ${(betVal * mult).toFixed(1)}`;
+                if (data && data.length) {
+                    historyContainer.innerHTML = '';
+                    data.forEach(item => {
+                        const chip = document.createElement('div');
+                        chip.className = 'history-chip';
+                        const val = Number(item.multiplier).toFixed(2);
+                        chip.innerText = val + 'x';
+                        chip.style.borderLeftColor = (parseFloat(val) > 1.8) ? '#d4af37' : '#ff6b6b';
+                        historyContainer.appendChild(chip);
+                    });
+                }
+            } catch (e) {
+                console.warn('History error:', e);
+            }
+        }
+
+        async function addHistoryToDB(mult) {
+            try {
+                await supabase
+                    .from('crash_history')
+                    .insert([{ multiplier: parseFloat(mult) }]);
+            } catch (e) {}
+        }
+
+        // ============ UI ============
+        function updateBalancesUI() {
+            document.getElementById('val-stars').innerText = Math.floor(balances.stars);
+            document.getElementById('val-ton').innerText = balances.ton.toFixed(2);
+        }
+
+        function switchMode(m) {
+            if (gameState !== 'wait' || betPlaced) return;
+            currency = m;
+            document.querySelectorAll('.currency-toggle').forEach(el => el.classList.remove('active'));
+            document.getElementById('mode-' + m).classList.add('active');
+        }
+
+        // ============ ИГРОВАЯ ЛОГИКА ============
+        function generateCrash() {
+            const r = Math.random();
+            if (r < 0.3) return (1.01 + Math.random() * 0.8).toFixed(2);
+            if (r < 0.7) return (1.8 + Math.random() * 1.2).toFixed(2);
+            return (3.0 + Math.random() * 6).toFixed(2);
+        }
+
+        function resetGame() {
+            gameState = 'wait';
+            betPlaced = false;
+            cashedOut = false;
+            currentMultiplier = 1.00;
+            multEl.innerText = '1.00x';
+            multEl.style.color = 'white';
+            rocketWrap.classList.remove('fly-up', 'fly-pause');
+            rocketWrap.style.opacity = '0';
+            rocketImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%23d4af37'/%3E%3Cstop offset='100%25' stop-color='%23b38f2c'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M90 10 L120 70 L170 80 L130 120 L140 170 L90 145 L40 170 L50 120 L10 80 L60 70 Z' fill='url(%23g)' stroke='%23fae37a' stroke-width='3'/%3E%3Ccircle cx='90' cy='90' r='20' fill='%23ffd966' stroke='%23b38f2c' stroke-width='3'/%3E%3Crect x='80' y='100' width='20' height='40' fill='%23b38f2c' rx='4'/%3E%3Cpath d='M70 140 L110 140 L100 160 L80 160 Z' fill='%23a67c1e'/%3E%3C/svg%3E";
+            rocketImg.classList.remove('engine-fire');
+            scene.classList.remove('grid-animate');
+            btn.disabled = false;
+            btn.innerText = 'СТАВКА';
+            loadBalances();
+            loadHistory();
+        }
+
+        async function crashGame() {
+            if (gameState === 'crash') return;
+            gameState = 'crash';
+            rocketWrap.classList.add('fly-pause');
+            scene.classList.remove('grid-animate');
+            multEl.style.color = '#ff4d4d';
+            btn.innerText = 'КРАШ';
+            btn.disabled = true;
+            rocketImg.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Ccircle cx='90' cy='90' r='60' fill='%23ff4d4d' opacity='0.9'/%3E%3Ccircle cx='70' cy='70' r='20' fill='%23ffaa33'/%3E%3Ccircle cx='110' cy='100' r='18' fill='%23ffaa33'/%3E%3Ccircle cx='90' cy='120' r='15' fill='%23ffaa33'/%3E%3Ccircle cx='50' cy='110' r='12' fill='%23ffaa33'/%3E%3Ccircle cx='125' cy='65' r='14' fill='%23ffaa33'/%3E%3C/svg%3E";
+            rocketImg.classList.remove('engine-fire');
+            betPlaced = false;
+            
+            const finalMult = currentMultiplier.toFixed(2);
+            await addHistoryToDB(finalMult);
+            // добавить в историю на UI
+            const chip = document.createElement('div');
+            chip.className = 'history-chip';
+            chip.innerText = finalMult + 'x';
+            chip.style.borderLeftColor = (parseFloat(finalMult) > 1.8) ? '#d4af37' : '#ff6b6b';
+            historyContainer.prepend(chip);
+            if (historyContainer.children.length > 6) historyContainer.lastChild.remove();
+
+            setTimeout(() => resetGame(), 3000);
+        }
+
+        async function takeProfit() {
+            if (!betPlaced || cashedOut || gameState !== 'fly') return;
+            cashedOut = true;
+            const win = betAmount * currentMultiplier;
+            const col = currency === 'stars' ? 'stars' : 'ton';
+            balances[col] += win;
+            await saveBalances();
+            updateBalancesUI();
+            btn.innerText = `+${win.toFixed(1)}`;
+            btn.disabled = true;
+            betPlaced = false;
+            tg.HapticFeedback.notificationOccurred('success');
+            
+            const finalMult = currentMultiplier.toFixed(2);
+            await addHistoryToDB(finalMult);
+            const chip = document.createElement('div');
+            chip.className = 'history-chip';
+            chip.innerText = finalMult + 'x';
+            chip.style.borderLeftColor = (parseFloat(finalMult) > 1.8) ? '#d4af37' : '#ff6b6b';
+            historyContainer.prepend(chip);
+            if (historyContainer.children.length > 6) historyContainer.lastChild.remove();
+
+            setTimeout(() => resetGame(), 1500);
+        }
+
+        async function startBet() {
+            if (gameState !== 'wait' || betPlaced) return;
+            const amt = parseFloat(inputBet.value);
+            if (!amt || amt <= 0) return;
+            const col = currency === 'stars' ? 'stars' : 'ton';
+            if (balances[col] < amt) {
+                tg.HapticFeedback.notificationOccurred('warning');
+                return;
+            }
+            balances[col] -= amt;
+            await saveBalances();
+            updateBalancesUI();
+            betAmount = amt;
+            betPlaced = true;
+            cashedOut = false;
+            currentMultiplier = 1.00;
+            multEl.innerText = '1.00x';
+            btn.innerText = 'ГОТОВО';
+            btn.disabled = true;
+
+            setTimeout(() => {
+                if (!betPlaced) return;
+                gameState = 'fly';
+                rocketWrap.style.opacity = '1';
+                rocketWrap.classList.add('fly-up');
+                rocketImg.classList.add('engine-fire');
+                scene.classList.add('grid-animate');
+                btn.innerText = 'ВЗЯТЬ';
+                btn.disabled = false;
+                crashPoint = parseFloat(generateCrash());
+                startTime = Date.now();
+                tg.HapticFeedback.impactOccurred('light');
+            }, 500);
+        }
+
+        // ============ ЦИКЛ ============
+        function tick() {
+            if (gameState === 'fly' && betPlaced) {
+                const elapsed = (Date.now() - startTime) / 1000;
+                currentMultiplier = Math.pow(1.09, elapsed);
+                if (currentMultiplier > 50) currentMultiplier = 50;
+                multEl.innerText = currentMultiplier.toFixed(2) + 'x';
+                if (currentMultiplier >= crashPoint) {
+                    crashGame();
+                    return;
+                }
+                if (cashedOut) {
+                    btn.innerText = 'ВЗЯТО';
+                    btn.disabled = true;
+                } else {
+                    btn.innerText = `ВЗЯТЬ ${(betAmount * currentMultiplier).toFixed(1)}`;
+                    btn.disabled = false;
+                }
+            } else if (gameState === 'wait' && !betPlaced) {
+                const now = Date.now();
+                const cycle = 15000;
+                const remain = cycle - (now % cycle);
+                if (remain < 10000) {
+                    const sec = Math.ceil(remain / 1000);
+                    if (sec <= 10) multEl.innerText = `⬆ ${sec}s`;
+                } else {
+                    multEl.innerText = '1.00x';
                 }
             }
         }
-    }
 
-    function doCrash(val) {
-        state = 'crash';
-        const rWrap = document.getElementById('rocket-wrap');
-        rWrap.classList.add('paused'); 
-        document.getElementById('rocket-img').src = "bomb.png";
-        document.getElementById('main-scene').classList.remove('grid-moving');
-        document.getElementById('multiplier').innerText = val + "x";
-        document.getElementById('multiplier').style.color = "#ff4d4d";
-        const btn = document.getElementById('btn-main');
-        btn.innerText = "КРАШ!"; btn.disabled = true;
-        betQueued = false;
-    }
-
-    async function onAction() {
-        const col = cur === 'stars' ? 'stars' : 'balance';
-        if (state === 'wait' && !betQueued) {
-            const amount = Number(document.getElementById('input-bet').value);
-            betVal = amount;
-            betQueued = true;
-            document.getElementById('btn-main').innerText = "ГОТОВО";
-            tg.HapticFeedback.impactOccurred('medium');
-        } else if (state === 'fly' && betQueued && !isCashedOut) {
-            isCashedOut = true;
-            betQueued = false;
-            document.getElementById('btn-main').innerText = "ВЗЯТО!";
-            document.getElementById('btn-main').disabled = true;
-            tg.HapticFeedback.notificationOccurred('success');
+        // ============ КНОПКА ============
+        function onAction() {
+            if (gameState === 'wait' && !betPlaced) {
+                startBet();
+            } else if (gameState === 'fly' && betPlaced && !cashedOut) {
+                takeProfit();
+            } else {
+                tg.HapticFeedback.impactOccurred('rigid');
+            }
         }
-    }
 
-    async function fetchHistory() {
-        const { data } = await SB.from('crash_history').select('multiplier').order('created_at', { ascending: false }).limit(6);
-        if (data) {
-            const container = document.getElementById('live-drop');
-            container.innerHTML = '';
-            data.forEach(item => {
-                const el = document.createElement('div');
-                el.className = 'drop-item';
-                el.style.color = item.multiplier > 1.5 ? 'var(--accent)' : '#ff4d4d';
-                el.innerText = item.multiplier + 'x';
-                container.appendChild(el);
-            });
+        btn.addEventListener('click', onAction);
+
+        // ============ СТАРТ ============
+        async function init() {
+            await loadBalances();
+            await loadHistory();
+            resetGame();
+            setInterval(tick, 100);
         }
-    }
 
-    function switchMode(m) { if (state === 'wait' && !betQueued) { cur = m; document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active')); document.getElementById('mode-' + m).classList.add('active'); } }
+        init();
 
-    checkAuth();
-    setInterval(tick, 100);
-</script>
+        inputBet.addEventListener('focus', function() { this.select(); });
+        console.log('NowearSpin Rocket with Supabase');
+    </script>
 </body>
 </html>
