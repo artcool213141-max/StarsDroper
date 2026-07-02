@@ -436,6 +436,30 @@ body.glitch-active {
     cursor: pointer; font-size: 13px;
 }
 .pw-error { color: #ff6666; font-size: 12px; font-weight: 700; min-height: 16px; }
+
+/* ==================== КАТЕГОРИИ МАГАЗИНА ==================== */
+.market-cat-title {
+    grid-column: 1 / -1; font-size: 12px; font-weight: 900; letter-spacing: 0.5px;
+    color: var(--neon); opacity: 0.85; margin: 6px 0 -4px; padding-left: 2px;
+}
+.market-cat-grid {
+    grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 15px;
+}
+
+/* ==================== ПИТОМЦЫ (панель коллекции) ==================== */
+.pet-card {
+    background: rgba(255,255,255,0.03); border-radius: 20px; padding: 14px 10px;
+    border: 1.5px solid var(--border); text-align: center; cursor: pointer;
+    transition: var(--trans);
+}
+.pet-card.owned { border-color: var(--rarity-color, var(--neon)); }
+.pet-card.locked { filter: grayscale(1) brightness(0.45); opacity: 0.7; cursor: default; }
+.pet-card.active-pet { background: rgba(250,204,21,0.08); box-shadow: 0 0 0 2px var(--rarity-color, var(--neon)) inset; }
+.pet-card .pet-icon-big { font-size: 34px; display: block; margin-bottom: 6px; }
+.pet-card .pet-name { font-size: 11px; font-weight: 800; margin-bottom: 3px; }
+.pet-card .pet-rarity { font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.5px; color: var(--rarity-color, #888); }
+.pet-card .pet-bonus { font-size: 10px; opacity: 0.7; margin-top: 4px; }
+.pet-summary { font-size: 12px; text-align: center; opacity: 0.85; margin-bottom: 14px; font-weight: 700; color: var(--neon); }
     </style>
 </head>
 <body>
@@ -521,6 +545,12 @@ body.glitch-active {
             Заводы дают пассивный доход в час. Чтобы построить завод, прокачайте нужные карточки-компоненты в МАРКЕТЕ до нужного уровня. Доход завода растёт навсегда и не сбрасывается при ребёртхе.
         </p>
         <div class="scroll-area" id="factory-list" style="grid-template-columns: 1fr;"></div>
+    </div>
+
+    <div class="drawer-wardrobe" id="pet-panel">
+        <div class="drawer-header"><h3>ПИТОМЦЫ</h3><div class="close-btn" onclick="closeAllPanels()">ЗАКРЫТЬ</div></div>
+        <div class="pet-summary" id="pet-summary-text"></div>
+        <div class="scroll-area" id="pet-list"></div>
     </div>
 
     <div class="drawer-wardrobe" id="wardrobe-panel">
@@ -627,12 +657,20 @@ const heroes = [
     const factoriesData = [
         { id: 0, name: "Майнинг-ферма", icon: "⛏️", unlockRebirth: 0, reqLvl: 3, coefPerLevel: 50,
           ingredients: [4, 8] },
+        { id: 4, name: "Стейкинг-пул", icon: "🥩", unlockRebirth: 0, reqLvl: 5, coefPerLevel: 20,
+          ingredients: [4] },
         { id: 1, name: "Крипто-хранилище", icon: "🏦", unlockRebirth: 1, reqLvl: 3, coefPerLevel: 400,
           ingredients: [9, 10] },
+        { id: 5, name: "Web3-агентство", icon: "🌐", unlockRebirth: 1, reqLvl: 4, coefPerLevel: 600,
+          ingredients: [8, 9] },
         { id: 2, name: "DAO-корпорация", icon: "🏛️", unlockRebirth: 3, reqLvl: 3, coefPerLevel: 5000,
           ingredients: [11, 13, 14] },
+        { id: 6, name: "Хедж-фонд", icon: "💹", unlockRebirth: 3, reqLvl: 4, coefPerLevel: 8000,
+          ingredients: [10, 14] },
         { id: 3, name: "Облачный дата-центр", icon: "☁️", unlockRebirth: 5, reqLvl: 3, coefPerLevel: 60000,
-          ingredients: [15, 16, 17] }
+          ingredients: [15, 16, 17] },
+        { id: 7, name: "Метавселенная", icon: "🕶️", unlockRebirth: 5, reqLvl: 4, coefPerLevel: 90000,
+          ingredients: [16, 17] }
     ];
 
     let state = {
@@ -646,6 +684,8 @@ const heroes = [
         marketLevels: {},
         factoryPph: {},      // id завода -> накопленный доход/час (перманентный, не сбрасывается)
         builtFactories: [],  // id заводов, которые уже построены
+        ownedPets: [0],       // питомцы в коллекции (стартовый - Дворняга)
+        activePetId: 0,       // какой питомец отображается на экране
         lastUnix: Date.now(),
         lastChargeUnix: 0
     };
@@ -704,9 +744,12 @@ const heroes = [
                 if (data.click_mult_percent !== undefined) state.clickMultPercent = parseFloat(data.click_mult_percent) || 0;
                 if (data.factory_pph) state.factoryPph = data.factory_pph;
                 if (data.built_factories) state.builtFactories = data.built_factories;
+                if (data.owned_pets) state.ownedPets = data.owned_pets;
+                if (data.active_pet_id !== undefined) state.activePetId = parseInt(data.active_pet_id);
                 
                 updateUI();
                 applyHeroVisuals();
+                refreshPetIcon();
             }
         } catch (e) { 
             console.error("Ошибка синхронизации с бэкендом при загрузке:", e); 
@@ -735,7 +778,9 @@ const heroes = [
                     last_charge_unix: state.lastChargeUnix,
                     click_mult_percent: state.clickMultPercent || 0,
                     factory_pph: state.factoryPph || {},
-                    built_factories: state.builtFactories || []
+                    built_factories: state.builtFactories || [],
+                    owned_pets: state.ownedPets || [0],
+                    active_pet_id: state.activePetId || 0
                 })
             });
         } catch (e) { 
@@ -1131,7 +1176,60 @@ function startLoops() {
     }
     // ==================== /СЛУЧАЙНЫЕ СОБЫТИЯ ====================
 
-    // ==================== ПИТОМЕЦ / КОСТОЧКА ====================
+    // Питомцы: постоянная коллекция. У каждого владения даёт перманентный
+    // % к общему доходу (клик + заводы), суммируется, НЕ сбрасывается при ребёртхе.
+    const petsData = [
+        { id: 0, name: "Дворняга", icon: "🐶", rarity: "common", rarityColor: "#9ca3af", bonus: 1 },
+        { id: 1, name: "Кот-хакер", icon: "🐱", rarity: "common", rarityColor: "#9ca3af", bonus: 1 },
+        { id: 2, name: "Хомяк-трейдер", icon: "🐹", rarity: "rare", rarityColor: "#60a5fa", bonus: 2 },
+        { id: 3, name: "Сова-аналитик", icon: "🦉", rarity: "rare", rarityColor: "#60a5fa", bonus: 2 },
+        { id: 4, name: "Дракон Nova", icon: "🐉", rarity: "epic", rarityColor: "#c084fc", bonus: 5 },
+        { id: 5, name: "Единорог DeFi", icon: "🦄", rarity: "epic", rarityColor: "#c084fc", bonus: 5 },
+        { id: 6, name: "Феникс Blockchain", icon: "🔥", rarity: "legendary", rarityColor: "#facc15", bonus: 10 },
+        { id: 7, name: "Кит-кит (Whale)", icon: "🐳", rarity: "legendary", rarityColor: "#facc15", bonus: 10 }
+    ];
+
+    function petBonusPercent() {
+        return (state.ownedPets || []).reduce((sum, id) => {
+            const p = petsData.find(x => x.id === id);
+            return sum + (p ? p.bonus : 0);
+        }, 0);
+    }
+
+    function refreshPetIcon() {
+        const pet = petsData.find(p => p.id === state.activePetId) || petsData[0];
+        const el = document.getElementById('pet-icon');
+        if (el) el.innerText = pet.icon;
+    }
+
+    function renderPets() {
+        const container = document.getElementById('pet-list');
+        container.innerHTML = '';
+        document.getElementById('pet-summary-text').innerText =
+            `Собрано: ${(state.ownedPets || []).length}/${petsData.length} · Бонус к доходу: +${petBonusPercent()}%`;
+
+        petsData.forEach(p => {
+            const owned = (state.ownedPets || []).includes(p.id);
+            const isActive = state.activePetId === p.id;
+            container.innerHTML += `
+                <div class="pet-card ${owned ? 'owned' : 'locked'} ${isActive ? 'active-pet' : ''}"
+                    style="--rarity-color: ${p.rarityColor}"
+                    onclick="${owned ? `selectPet(${p.id})` : ''}">
+                    <span class="pet-icon-big">${owned ? p.icon : '❓'}</span>
+                    <div class="pet-name">${owned ? p.name : '???'}</div>
+                    <div class="pet-rarity">${p.rarity}</div>
+                    <div class="pet-bonus">${owned ? ('+' + p.bonus + '% к доходу' + (isActive ? ' · АКТИВЕН' : '')) : 'Найдите косточку'}</div>
+                </div>`;
+        });
+    }
+
+    window.selectPet = function(id) {
+        if (!(state.ownedPets || []).includes(id)) return;
+        state.activePetId = id;
+        refreshPetIcon();
+        renderPets();
+        triggerSaveProcess();
+    }
     let earnLog = []; // временный лог заработка за последние 10 сек (не сохраняется)
     const BONE_MIN_INTERVAL_MS = 35000;
     const BONE_MAX_INTERVAL_MS = 60000;
@@ -1182,29 +1280,40 @@ function startLoops() {
         activeBoneEl.remove();
         activeBoneEl = null;
 
-        const reward = Math.max(5, Math.floor(recentEarnings() * 0.5));
-        state.points += reward;
+        const unowned = petsData.filter(p => !(state.ownedPets || []).includes(p.id));
+        const petDropChance = unowned.length > 0 ? 0.25 : 0;
 
         const pet = document.getElementById('pet-icon');
-        if (pet) {
-            pet.classList.add('pet-eat-anim');
-            setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
-            const rect = pet.getBoundingClientRect();
-            showPop(rect.left + rect.width / 2, rect.top, reward);
+
+        if (Math.random() < petDropChance) {
+            const newPet = unowned[Math.floor(Math.random() * unowned.length)];
+            state.ownedPets.push(newPet.id);
+            if (pet) {
+                pet.classList.add('pet-eat-anim');
+                setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
+                const rect = pet.getBoundingClientRect();
+                showTextPop(rect.left + rect.width / 2, rect.top, '🎉 ' + newPet.icon + ' ' + newPet.name + '!');
+            }
+        } else {
+            const reward = Math.max(5, Math.floor(recentEarnings() * 0.5));
+            state.points += reward;
+            if (pet) {
+                pet.classList.add('pet-eat-anim');
+                setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
+                const rect = pet.getBoundingClientRect();
+                showPop(rect.left + rect.width / 2, rect.top, reward);
+            }
         }
+
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         updateUI();
         triggerSaveProcess();
     }
 
-    // Ручное нажатие на питомца без косточки - просто небольшая подсказка/анимация
+    // Тап по питомцу: если летит косточка - ловим, иначе открываем коллекцию
     window.feedPetManually = function() {
         if (activeBoneEl) { window.catchBone(); return; }
-        const pet = document.getElementById('pet-icon');
-        if (pet) {
-            pet.classList.add('pet-eat-anim');
-            setTimeout(() => pet.classList.remove('pet-eat-anim'), 400);
-        }
+        window.openPanel('pet-panel');
     }
     // ==================== /ПИТОМЕЦ ====================
 
@@ -1225,7 +1334,7 @@ function startLoops() {
 
         if (state.energy >= tapCost) {
             state.energy -= tapCost;
-            const multFactor = 1 + (state.clickMultPercent || 0) / 100;
+            const multFactor = 1 + ((state.clickMultPercent || 0) + petBonusPercent()) / 100;
             const earned = Math.max(1, Math.floor(state.clickPower * multFactor * currentHero.x * eventIncomeMultiplier));
             state.points += earned;
             earnLog.push({ t: Date.now(), amt: earned });
@@ -1251,12 +1360,40 @@ function showPop(x, y, val) {
         setTimeout(() => p.remove(), 800);
     }
 
+    function showTextPop(x, y, text) {
+        const p = document.createElement('div');
+        p.className = 'click-pop';
+        p.style.whiteSpace = 'nowrap';
+        p.innerHTML = text;
+        p.style.left = x + 'px'; p.style.top = y + 'px';
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 1400);
+    }
+
+    const marketCategories = [
+        { type: 'click', title: '⚡ СИЛА КЛИКА' },
+        { type: 'mult', title: '📈 МУЛЬТИПЛИКАТОРЫ' },
+        { type: 'part', title: '⚙️ КОМПОНЕНТЫ ДЛЯ ЗАВОДОВ' },
+        { type: 'util', title: '🔋 ПРОЧЕЕ' }
+    ];
+
     function renderMarket() {
         const container = document.getElementById('market-list');
         container.innerHTML = '';
         const rebirthCount = getRebirthCount();
-        
-        marketData.forEach((item) => {
+
+        marketCategories.forEach(cat => {
+            const items = marketData
+                .filter(i => cat.type === 'util' ? ['energy', 'regen', 'full_charge'].includes(i.type) : i.type === cat.type)
+                .sort((a, b) => (a.unlockRebirth || 0) - (b.unlockRebirth || 0) || a.id - b.id);
+            if (items.length === 0) return;
+
+            container.innerHTML += `<div class="market-cat-title">${cat.title}</div>`;
+            const grid = document.createElement('div');
+            grid.className = 'market-cat-grid';
+            container.appendChild(grid);
+
+            items.forEach(item => {
             const lvl = state.marketLevels[item.id] || 0;
             
             let maxLvl = 15;
@@ -1302,7 +1439,7 @@ function showPop(x, y, val) {
             const isLocked = rebirthCount < (item.unlockRebirth || 0);
             const lockText = isLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребёртхе` : '';
             
-            container.innerHTML += `
+            grid.innerHTML += `
                 <div class="card-item ${isLocked ? 'locked' : ''}">
                     <span class="card-icon">${item.icon}</span>
                     <div class="card-title">${isLocked ? '???' : item.name}</div>
@@ -1313,6 +1450,7 @@ function showPop(x, y, val) {
                         ${isLocked ? '🔒' : (isMax ? 'МАКС' : (item.type === 'full_charge' && (Date.now() - state.lastChargeUnix < 60*60*1000) ? 'КД' : formatNumber(price)))}
                     </button>
                 </div>`;
+            });
         });
     }
 
@@ -1516,6 +1654,7 @@ window.handleHero = function(id) {
         if (id === 'wardrobe-panel') renderSkins();
         if (id === 'leaderboard-panel') fetchLeaderboard();
         if (id === 'factory-panel') renderFactories();
+        if (id === 'pet-panel') renderPets();
     }
 
     window.closeAllPanels = function() {
@@ -1547,6 +1686,7 @@ window.handleHero = function(id) {
         await loadFromDB();
         updateUI();
         applyHeroVisuals();
+        refreshPetIcon();
         startLoops();
     }
 
