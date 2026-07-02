@@ -268,7 +268,8 @@ def webhook():
                           json={"pre_checkout_query_id": query_id, "ok": True}, timeout=10)
             return "OK", 200
 
-if 'message' in update and 'successful_payment' in update['message']:
+        # 2. Успешный платеж
+        if 'message' in update and 'successful_payment' in update['message']:
             payment = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
             payload = payment.get('invoice_payload', "")
@@ -319,6 +320,10 @@ if 'message' in update and 'successful_payment' in update['message']:
             print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
             return "OK", 200
             
+        return "OK", 200
+    except Exception as e:
+        print(f"CRITICAL WEBHOOK ERROR: {str(e)}")
+        # Возвращаем 200, иначе Телеграм завалит повторами
         return "OK", 200
      
  
