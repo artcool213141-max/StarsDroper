@@ -492,13 +492,6 @@ body.glitch-active {
 </head>
 <body>
 
-<div id="password-gate">
-    <div class="pw-title">🔒 ДОСТУП ЗАКРЫТ</div>
-    <input type="password" id="pw-input" class="pw-input" placeholder="Пароль" inputmode="numeric" autocomplete="off">
-    <button class="pw-btn" onclick="checkPassword()">ВОЙТИ</button>
-    <div class="pw-error" id="pw-error"></div>
-</div>
-
 <div id="main-bg"></div>
 
 <div class="app-shell" id="app-shell-root" style="display:none;">
@@ -1771,17 +1764,6 @@ window.handleHero = function(id) {
             });
         }
     };
-
-    window.checkPassword = function() {
-        const val = document.getElementById('pw-input').value.trim();
-        if (val === '3330') {
-            localStorage.setItem('nova_pw_ok', '1');
-            unlockApp();
-        } else {
-            document.getElementById('pw-error').innerText = 'Неверный пароль';
-            document.getElementById('pw-input').value = '';
-        }
-    }
 
     function unlockApp() {
         document.getElementById('password-gate').style.display = 'none';
