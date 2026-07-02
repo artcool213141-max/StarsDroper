@@ -524,18 +524,25 @@ function openItem(i) {
     sellBtn.style.pointerEvents = "auto";
     
     const withdrawBtn = document.getElementById('withdraw-btn');
-    withdrawBtn.style.opacity = "1";
-    withdrawBtn.style.pointerEvents = "auto";
 
-    const userStars = user.stars || 0;
-    const isPaid = user.is_paid_75 === true;
-
-    if (isPaid && userStars < 75) {
-        withdrawBtn.style.opacity = "0.4";
-        withdrawBtn.style.pointerEvents = "none";
-        withdrawBtn.innerText = "НУЖНО 75 ⭐ ДЛЯ ВЫВОДА";
+    // star.png нельзя выводить — кнопка просто скрывается
+    if (fileName === 'star.png') {
+        withdrawBtn.style.display = "none";
     } else {
-        withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (75 ⭐)" : "ВЫВЕСТИ В БОТ";
+        withdrawBtn.style.display = "block";
+        withdrawBtn.style.opacity = "1";
+        withdrawBtn.style.pointerEvents = "auto";
+
+        const userStars = user.stars || 0;
+        const isPaid = user.is_paid_75 === true;
+
+        if (isPaid && userStars < 75) {
+            withdrawBtn.style.opacity = "0.4";
+            withdrawBtn.style.pointerEvents = "none";
+            withdrawBtn.innerText = "НУЖНО 75 ⭐ ДЛЯ ВЫВОДА";
+        } else {
+            withdrawBtn.innerText = isPaid ? "ВЫВЕСТИ В БОТ (75 ⭐)" : "ВЫВЕСТИ В БОТ";
+        }
     }
     
     document.getElementById('item-modal').style.display = 'flex';
