@@ -1443,7 +1443,7 @@ function showPop(x, y, val) {
             section.appendChild(grid);
             container.appendChild(section);
 
-            items.forEach(item => {
+            items.forEach((item, idx) => {
             const lvl = state.marketLevels[item.id] || 0;
             
             let maxLvl = 15;
@@ -1486,8 +1486,10 @@ function showPop(x, y, val) {
                 }
             }
 
-            const isLocked = rebirthCount < (item.unlockRebirth || 0);
-            const lockText = isLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребитхе` : '';
+            const isRebirthLocked = rebirthCount < (item.unlockRebirth || 0);
+            const isSeqLocked = lvl === 0 && idx > 0 && (state.marketLevels[items[idx - 1].id] || 0) === 0;
+            const isLocked = isRebirthLocked || isSeqLocked;
+            const lockText = isRebirthLocked ? `🔒 Откроется на ${item.unlockRebirth}-м ребитхе` : (isSeqLocked ? '🔒 Сначала купите предыдущий товар' : '');
             
             grid.innerHTML += `
                 <div class="card-item ${isLocked ? 'locked' : ''}">
@@ -1528,6 +1530,20 @@ function showPop(x, y, val) {
         const rebirthCount = getRebirthCount();
 
         if (rebirthCount < (item.unlockRebirth || 0)) return; // закрыто по числу ребитхов
+
+        // Проверка последовательной покупки: нельзя купить товар, пока не куплен предыдущий в категории
+        if (lvl === 0) {
+            const cat = marketCategories.find(c => c.type === 'util'
+                ? ['energy', 'regen', 'full_charge'].includes(item.type)
+                : c.type === item.type);
+            if (cat) {
+                const catItems = marketData
+                    .filter(i => cat.type === 'util' ? ['energy', 'regen', 'full_charge'].includes(i.type) : i.type === cat.type)
+                    .sort((a, b) => (a.unlockRebirth || 0) - (b.unlockRebirth || 0) || a.id - b.id);
+                const idx = catItems.findIndex(i => i.id === item.id);
+                if (idx > 0 && (state.marketLevels[catItems[idx - 1].id] || 0) === 0) return;
+            }
+        }
 
         let maxLvl = 15;
         if (item.type === 'energy') maxLvl = 5;
