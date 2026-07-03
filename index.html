@@ -2,79 +2,108 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Maintenance | System Access</title>
+    <title>NowearSpin | Maintenance</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400&display=swap');
+
         :root {
             --gold: #d4af37;
-            --gold-light: #f7ef8a;
-            --dark: #0a0a0a;
+            --gold-glow: rgba(212, 175, 55, 0.3);
+            --bg: #050505;
         }
 
         body {
-            background: var(--dark);
+            background-color: var(--bg);
+            background-image: radial-gradient(circle at center, #1a160a 0%, #050505 80%);
             color: var(--gold);
-            font-family: 'Segoe UI', sans-serif;
+            font-family: 'Montserrat', sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             margin: 0;
+        }
+
+        .card {
+            padding: 50px;
+            border: 1px solid var(--gold);
+            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 30px var(--gold-glow);
             text-align: center;
+            max-width: 400px;
         }
 
-        .container {
-            border: 2px solid var(--gold);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
-            background: linear-gradient(145deg, #1a1a1a, #000);
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            letter-spacing: 4px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
         }
 
-        h1 { text-transform: uppercase; letter-spacing: 5px; margin-bottom: 20px; }
+        p { font-weight: 300; opacity: 0.8; margin-bottom: 30px; }
 
         input {
-            background: transparent;
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--gold);
-            color: var(--gold);
-            padding: 10px;
+            color: white;
+            border-radius: 8px;
             text-align: center;
             font-size: 1.2rem;
-            border-radius: 5px;
-            width: 150px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            outline: none;
+            box-sizing: border-box;
         }
 
         button {
+            width: 100%;
+            padding: 12px;
             background: var(--gold);
-            color: var(--dark);
             border: none;
-            padding: 10px 20px;
-            cursor: pointer;
+            color: black;
             font-weight: bold;
-            border-radius: 5px;
+            border-radius: 8px;
+            cursor: pointer;
             transition: 0.3s;
         }
 
-        button:hover { background: var(--gold-light); transform: scale(1.05); }
+        button:hover {
+            box-shadow: 0 0 15px var(--gold);
+            transform: translateY(-2px);
+        }
+
+        #error-msg {
+            color: #ff4444;
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>TECHNICAL BREAK</h1>
-    <p>Доступ ограничен. Введите код администратора:</p>
-    <input type="password" id="code" maxlength="4" placeholder="****">
-    <br>
-    <button onclick="checkCode()">ВОЙТИ</button>
+<div class="card">
+    <h1>NowearSpin</h1>
+    <p>Технический перерыв</p>
+    <input type="password" id="code" maxlength="4" placeholder="Введите код">
+    <button onclick="checkCode()">ПОДТВЕРДИТЬ</button>
+    <div id="error-msg">Неверный код доступа</div>
 </div>
 
 <script>
     function checkCode() {
         const input = document.getElementById('code').value;
+        const error = document.getElementById('error-msg');
+        
         if (input === "3330") {
             window.location.href = "global.html";
         } else {
-            alert("Неверный код доступа!");
+            error.style.opacity = "1";
             document.getElementById('code').value = "";
         }
     }
