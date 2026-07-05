@@ -9,61 +9,157 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
-        :root { 
-            --bg-dark: #0f0a02; 
-            --accent-gold: #f5b025; 
-            --panel-bg: rgba(25, 19, 6, 0.75); 
+        :root {
+            --bg-dark: #000000;
+            --accent-gold: #f5b025;
+            --panel-bg: rgba(20, 20, 20, 0.75);
         }
         body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
         #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-        
-        .main-wrapper { 
-            position: relative; z-index: 1; padding: 24px 20px 140px; 
-            background: radial-gradient(circle at 50% 30%, #513e11 0%, #0f0a02 80%); 
-            min-height: 100vh; 
+
+        .main-wrapper {
+            position: relative; z-index: 1; padding: 24px 20px 140px;
+            background: var(--bg-dark);
+            min-height: 100vh;
         }
-        
+
         .orbitron { font-family: 'Orbitron', sans-serif; }
         .glass-card { background: var(--panel-bg); border: 1px solid rgba(245, 176, 37, 0.22); backdrop-filter: blur(20px); border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+
+        .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; border: none; }
+        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
+        .btn-gold:disabled { opacity: 0.4; box-shadow: none; }
+
+        /* --- Меню-строки (Инвентарь / Промокоды / Амбассадор) --- */
+        .menu-row {
+            display: flex; align-items: center; gap: 14px;
+            padding: 16px 10px; cursor: pointer;
+            transition: background 0.2s ease;
+            border-radius: 20px;
+        }
+        .menu-row:active { background: rgba(245, 176, 37, 0.06); }
+        .menu-row.disabled { cursor: default; opacity: 0.55; }
+        .menu-row.disabled:active { background: transparent; }
+        .menu-icon-wrap {
+            width: 42px; height: 42px; border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(245, 176, 37, 0.08);
+            border: 1px solid rgba(245, 176, 37, 0.18);
+            font-size: 19px; flex-shrink: 0;
+        }
+        .menu-label { flex: 1; font-size: 13px; font-weight: 800; letter-spacing: 0.01em; }
+        .menu-badge {
+            background: #e13a5b; color: #fff; font-size: 10px; font-weight: 900;
+            min-width: 22px; height: 22px; border-radius: 999px;
+            display: flex; align-items: center; justify-content: center; padding: 0 6px;
+        }
+        .menu-soon {
+            font-size: 9px; font-weight: 900; letter-spacing: 0.12em;
+            color: #b8ac8e; background: rgba(255,255,255,0.06);
+            padding: 5px 10px; border-radius: 999px; text-transform: uppercase;
+        }
+        .menu-arrow { color: rgba(255,255,255,0.25); flex-shrink: 0; }
+        .menu-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 10px; }
+
+        /* --- Раскрывающиеся секции под меню --- */
+        .collapsible { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
+        .collapsible.open { max-height: 2000px; }
+        .collapsible-inner { padding-top: 18px; }
+
         .inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
         .inventory-slot { aspect-ratio: 1/1; background: rgba(245, 176, 37, 0.04); border: 1px dashed rgba(245, 176, 37, 0.18); border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; overflow: hidden; }
-        
         .active-item { border: 1.5px solid var(--accent-gold); background: rgba(245, 176, 37, 0.08); cursor: pointer; }
         .active-item img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(245, 176, 37, 0.35)); }
-        
-        .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; }
-        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
-        
-        #item-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
-        
-        .dock-bar { 
-            position: fixed; 
-            bottom: 0; 
-            left: 0; 
-            right: 0; 
-            background: linear-gradient(to top, rgba(10, 6, 1, 0.98) 80%, rgba(25, 19, 6, 0.95));
-            border-top: 1px solid rgba(245, 176, 37, 0.25); 
-            display: flex; 
+
+        #item-modal, #settings-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
+
+        .dock-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.98) 80%, rgba(15, 15, 15, 0.95));
+            border-top: 1px solid rgba(245, 176, 37, 0.25);
+            display: flex;
             justify-content: space-around;
-            padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 24px)); 
-            z-index: 1000; 
+            padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 24px));
+            z-index: 1000;
             backdrop-filter: blur(10px);
         }
-        .dock-btn { 
-            flex: 1; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
+        .dock-btn {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
-            gap: 5px; 
-            color: #8c8375; 
-            text-decoration: none; 
+            gap: 5px;
+            color: #8c8375;
+            text-decoration: none;
             transition: all 0.2s ease;
         }
         .dock-btn span { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
         .dock-btn svg { width: 26px; height: 26px; transition: transform 0.2s ease; fill: currentColor; }
         .dock-btn:active svg { transform: scale(0.9); }
         .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); }
+
+        .toggle-switch { position: relative; width: 46px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; flex-shrink: 0; }
+        .toggle-switch.on { background: var(--accent-gold); }
+        .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: 0.2s; }
+        .toggle-switch.on::after { transform: translateX(20px); }
+
+        .lang-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
+        .lang-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); flex-shrink: 0; position: relative; }
+        .lang-radio.selected { border-color: var(--accent-gold); }
+        .lang-radio.selected::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-gold); }
+
+        /* --- Модалка пополнения (TON / Stars), как на главном экране --- */
+        .vault-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: flex-end; justify-content: center; }
+        .vault-modal.active { display: flex; }
+        .vault-sheet { width: 100%; max-width: 480px; background: #121212; border-radius: 20px 20px 0 0; padding: 12px 16px 24px 16px; border-top: 1px solid rgba(255,255,255,0.06); max-height: 80vh; overflow-y: auto; animation: vaultSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes vaultSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .vault-handle { width: 28px; height: 3px; background: rgba(255,255,255,0.15); border-radius: 10px; margin: 0 auto 14px; }
+        .vault-close { display: block; width: 100%; margin-top: 10px; padding: 8px; background: transparent; border: none; color: #666; font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer; }
+
+        .vault-tabs { display: flex; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px; border-radius: 12px; margin-bottom: 16px; }
+        .vault-tab { flex: 1; text-align: center; padding: 9px; border-radius: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #888; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease; }
+        .vault-tab.active { background: #fff; color: #000; }
+        .vault-tab:active { transform: scale(0.94); }
+
+        .vault-pane { display: none; }
+        .vault-pane.active { display: block; }
+
+        .packs-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .pack-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px 4px; text-align: center; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease; }
+        .pack-btn:active { transform: scale(0.9); background: rgba(255,255,255,0.1); }
+        .pack-btn .label { font-size: 7px; color: #888; font-weight: 700; text-transform: uppercase; }
+        .pack-btn .amount { font-size: 12px; font-weight: 800; margin-top: 2px; color: #4da6ff; }
+
+        .stars-input-row { display: flex; gap: 8px; align-items: center; }
+        .stars-input-row input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            outline: none;
+        }
+        .stars-pay-btn {
+            background: var(--accent-gold);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 18px;
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+        }
+        .stars-pay-btn:active { transform: scale(0.92); filter: brightness(1.15); }
+        .stars-pay-btn:disabled { opacity: 0.4; }
 
         /* Экран ошибки, если Telegram так и не отдал данные юзера */
         #tg-error-screen {
@@ -84,18 +180,35 @@
     </div>
 
     <div class="main-wrapper">
-        <header class="flex flex-col items-center mt-4 mb-8">
-            <div class="relative group">
+        <header class="flex flex-col items-center mt-2 mb-6 relative">
+            <button onclick="openSettings()" class="absolute top-0 right-0 w-11 h-11 rounded-full bg-black/40 border border-white/10 flex items-center justify-center active:scale-95 transition">
+                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-white/70">
+                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
+                </svg>
+            </button>
+
+            <div class="relative">
                 <img id="u-avatar" src="" class="w-24 h-24 rounded-full border-4 border-yellow-500/40 bg-gray-900 object-cover shadow-2xl">
-                <div class="absolute bottom-1 right-1 w-6 h-6 bg-yellow-500 border-4 border-[#0f0a02] rounded-full shadow-[0_0_10px_#f5b025]"></div>
+                <div class="absolute bottom-1 right-1 w-6 h-6 bg-yellow-500 border-4 border-black rounded-full shadow-[0_0_10px_#f5b025]"></div>
             </div>
-            <h2 id="u-name" class="orbitron text-2xl font-black italic mt-4 tracking-tighter text-white">ЗАГРУЗКА...</h2>
-            
-            <div class="flex flex-wrap justify-center gap-2 mt-4">
-                <div class="bg-[#d4af37]/20 border border-[#d4af37]/40 px-3 py-2 rounded-2xl flex items-center gap-2 shadow-[0_0_10px_rgba(212,175,55,0.2)]">
-                    <img src="img/star.png" class="w-4 h-4">
-                    <span id="u-stars" class="text-xs font-black text-[#d4af37]">0</span>
+            <h2 id="u-name" class="orbitron text-xl font-black italic mt-4 tracking-tighter text-white">@ЗАГРУЗКА...</h2>
+            <div id="u-id-label" class="mt-2 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: ЗАГРУЗКА...</div>
+        </header>
+
+        <section class="glass-card p-5 mb-6">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-[10px] uppercase text-gray-400 tracking-widest font-bold mb-1">Баланс</p>
+                    <div class="flex items-center gap-2">
+                        <img src="img/star.png" class="w-5 h-5">
+                        <span id="u-stars" class="text-xl font-black text-white orbitron">0</span>
+                    </div>
                 </div>
+                <div class="flex items-center gap-2">
+                    <button class="btn-gold px-6 py-3 text-[10px]" onclick="openVault('ton')">Пополнить</button>
+                </div>
+            </div>
+            <div class="flex gap-2 mt-4">
                 <div class="bg-black/40 border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2">
                     <img src="img/ton.png" class="w-4 h-4">
                     <span id="u-ton" class="text-xs font-black text-blue-400">0.00</span>
@@ -105,36 +218,60 @@
                     <span id="u-tickets" class="text-xs font-black text-yellow-600">0</span>
                 </div>
             </div>
-            <div id="u-id-label" class="mt-3 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: ЗАГРУЗКА...</div>
-        </header>
-
-        <section class="glass-card p-6 mb-6">
-            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Активация бонуса</h3>
-            <div class="flex gap-2">
-                <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-yellow-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
-                <button onclick="handlePromo()" class="btn-gold px-6 text-[10px]">ОК</button>
-            </div>
         </section>
 
-<section class="glass-card p-6 mb-6 border-yellow-400/10">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h3 class="orbitron text-[10px] font-black uppercase text-yellow-400 tracking-widest">Ваш промокод</h3>
-            <p class="text-[9px] text-gray-400 uppercase mt-1">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
-        </div>
-    </div>
-
-    <a href="Promocode.html" class="w-full btn-gold py-4 text-xs flex items-center justify-center">
-        СОЗДАТЬ ПРОМОКОД
-    </a>
-</section>
-        
-        <section class="glass-card p-6 min-h-[300px]">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="orbitron text-xs font-black uppercase italic">Ваш инвентарь</h3>
-                <span id="inv-count" class="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-full">0 ПРЕДМЕТОВ</span>
+        <section class="glass-card p-2 mb-6">
+            <!-- Инвентарь подарков -->
+            <div class="menu-row" onclick="toggleSection('inventory-section', this)">
+                <div class="menu-icon-wrap">🎁</div>
+                <div class="menu-label">Инвентарь подарков</div>
+                <div class="menu-badge" id="inv-badge">0</div>
+                <svg class="menu-arrow chevron" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
             </div>
-            <div id="grid" class="inventory-grid"></div>
+            <div class="collapsible" id="inventory-section">
+                <div class="collapsible-inner px-2 pb-3">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-full" id="inv-count">0 ПРЕДМЕТОВ</span>
+                    </div>
+                    <div id="grid" class="inventory-grid"></div>
+                </div>
+            </div>
+
+            <div class="menu-divider"></div>
+
+            <!-- Промокоды -->
+            <div class="menu-row" onclick="toggleSection('promo-section', this)">
+                <div class="menu-icon-wrap">🎟️</div>
+                <div class="menu-label">Промокоды</div>
+                <div class="menu-badge" id="ref-badge" style="background:rgba(245,176,37,0.15); color:var(--accent-gold);">0</div>
+                <svg class="menu-arrow chevron" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+            </div>
+            <div class="collapsible" id="promo-section">
+                <div class="collapsible-inner px-2 pb-3">
+                    <p class="text-[9px] text-gray-400 uppercase tracking-widest mb-3">Активировать промокод</p>
+                    <div class="flex gap-2 mb-5">
+                        <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-yellow-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
+                        <button onclick="handlePromo()" class="btn-gold px-6 text-[10px]">ОК</button>
+                    </div>
+
+                    <div class="border-t border-white/5 pt-4">
+                        <p class="text-[9px] text-gray-400 uppercase tracking-widest mb-1">Ваш реферальный промокод</p>
+                        <p class="text-[9px] text-gray-500 uppercase mb-3">Приглашено: <span id="ref-count" class="text-white font-bold">0</span> друзей</p>
+                        <a href="Promocode.html" class="w-full btn-gold py-4 text-xs flex items-center justify-center">
+                            СОЗДАТЬ ПРОМОКОД
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="menu-divider"></div>
+
+            <!-- Амбассадор (скоро) -->
+            <div class="menu-row disabled">
+                <div class="menu-icon-wrap">👑</div>
+                <div class="menu-label">Стать амбассадором</div>
+                <div class="menu-soon">СКОРО</div>
+            </div>
         </section>
 
         <div id="item-modal">
@@ -147,6 +284,60 @@
                     <button id="sell-btn" onclick="sellItem()" class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-white/10">ПРОДАТЬ</button>
                     <button onclick="closeModal()" class="w-full py-2 text-gray-500 text-[9px] font-black uppercase mt-2">ЗАКРЫТЬ</button>
                 </div>
+            </div>
+        </div>
+
+        <div id="settings-modal">
+            <div class="glass-card p-6 w-[88%] max-w-[380px] border-yellow-500/20">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="orbitron text-lg font-black italic uppercase">Настройки</h2>
+                    <button onclick="closeSettings()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center">
+                        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="white" d="M18.3 5.71a1 1 0 0 0-1.42 0L12 10.59 7.12 5.71A1 1 0 1 0 5.71 7.12L10.59 12l-4.88 4.88a1 1 0 1 0 1.41 1.41L12 13.41l4.88 4.88a1 1 0 0 0 1.41-1.41L13.41 12l4.88-4.88a1 1 0 0 0 .01-1.41z"/></svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center justify-between py-3">
+                    <span class="text-xs font-bold">👆 Тактильный отклик</span>
+                    <div id="haptics-toggle" class="toggle-switch on" onclick="toggleHaptics()"></div>
+                </div>
+
+                <div class="border-t border-white/10 mt-4 pt-4">
+                    <p class="text-[10px] uppercase text-gray-400 tracking-widest font-bold mb-1">Язык</p>
+                    <div class="lang-row" onclick="setLang('ru')">
+                        <div class="lang-radio selected" id="lang-ru-radio"></div>
+                        <span class="text-sm">🇷🇺 Русский</span>
+                    </div>
+                    <div class="lang-row" onclick="setLang('en')">
+                        <div class="lang-radio" id="lang-en-radio"></div>
+                        <span class="text-sm">🇬🇧 English</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="vault-modal" id="vaultModal" onclick="closeVault()">
+            <div class="vault-sheet" onclick="event.stopPropagation()">
+                <div class="vault-handle"></div>
+
+                <div class="vault-tabs">
+                    <div class="vault-tab" id="tabTon" onclick="setTab('ton')">TON</div>
+                    <div class="vault-tab" id="tabStars" onclick="setTab('stars')">Stars</div>
+                </div>
+
+                <div class="vault-pane" id="paneTon">
+                    <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:10px;text-transform:uppercase;">Выберите пакет пополнения</div>
+                    <div class="packs-grid" id="tonPacks"></div>
+                </div>
+
+                <div class="vault-pane" id="paneStars">
+                    <div style="font-size:10px;color:#888;font-weight:700;margin-bottom:10px;text-transform:uppercase;">Введите количество звёзд</div>
+                    <div class="stars-input-row">
+                        <input type="number" id="starsInput" min="1" placeholder="Например, 50">
+                        <button class="stars-pay-btn" id="starsPayBtn" onclick="verifyGift()">Оплатить</button>
+                    </div>
+                </div>
+
+                <button class="vault-close" onclick="closeVault()">Закрыть</button>
             </div>
         </div>
 
@@ -209,7 +400,7 @@ const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let user = null;
 let selectedIdx = -1;
-let isProcessing = false; 
+let isProcessing = false;
 
 async function loadUser() {
     try {
@@ -224,7 +415,8 @@ async function loadUser() {
         userId = String(tgUser.id);
 
         const firstName = tgUser.first_name || "ИГРОК";
-        document.getElementById('u-name').innerText = firstName.toUpperCase();
+        const displayName = tgUser.username ? `@${tgUser.username}` : firstName.toUpperCase();
+        document.getElementById('u-name').innerText = displayName;
 
         const photoUrl = tgUser.photo_url;
         if (document.getElementById('u-avatar')) {
@@ -276,9 +468,9 @@ async function loadUser() {
         document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
         document.getElementById('u-tickets').innerText = user.tickets || 0;
         document.getElementById('ref-count').innerText = user.referral_count || 0;
+        document.getElementById('ref-badge').innerText = user.referral_count || 0;
         document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
         renderGrid();
-        renderGifts();
 
     } catch (e) {
         console.error("Критическая ошибка:", e);
@@ -290,6 +482,7 @@ function renderGrid() {
     if (!grid || !user) return;
     const inv = Array.isArray(user.inventory) ? user.inventory : [];
     document.getElementById('inv-count').innerText = `${inv.length} ПРЕДМЕТОВ`;
+    document.getElementById('inv-badge').innerText = inv.length;
     grid.innerHTML = '';
     inv.forEach((it, i) => {
         const slot = document.createElement('div');
@@ -300,57 +493,6 @@ function renderGrid() {
         let imgName = imgPath.split('/').pop();
         slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
         grid.appendChild(slot);
-    });
-}
-
-function renderGifts() {
-    const giftsGrid = document.getElementById('gifts-grid');
-    if (!giftsGrid || !user) return;
-
-    let gifts = [];
-    if (Array.isArray(user.gifts)) {
-        gifts = user.gifts;
-    } else if (typeof user.gifts === 'string' && user.gifts.trim() !== "") {
-        try {
-            gifts = JSON.parse(user.gifts);
-        } catch(e) {
-            gifts = user.gifts.split(',').map(g => g.trim());
-        }
-    }
-
-    document.getElementById('gifts-count').innerText = `${gifts.length} ПОДАРКОВ`;
-    giftsGrid.innerHTML = '';
-
-    if (gifts.length === 0) {
-        giftsGrid.innerHTML = `<div class="col-span-3 text-center text-[10px] text-gray-500 uppercase tracking-widest py-4">У вас нет подарков</div>`;
-        return;
-    }
-
-    gifts.forEach((gift) => {
-        let giftFile = typeof gift === 'object' && gift.img ? gift.img : String(gift);
-        giftFile = giftFile.split('/').pop();
-
-        const slot = document.createElement('div');
-        slot.className = 'inventory-slot active-item';
-        
-        slot.onclick = () => {
-            const info = ITEMS[giftFile] || { name: giftFile.split('.')[0] || "Подарок", price: 0 };
-            document.getElementById('modal-img').src = `img/${giftFile}`;
-            document.getElementById('modal-name').innerText = info.name;
-            document.getElementById('sell-btn').innerText = `ПОДАРОЧНЫЙ ПРЕДМЕТ`;
-            document.getElementById('sell-btn').style.opacity = "0.5";
-            document.getElementById('sell-btn').style.pointerEvents = "none";
-            
-            const withdrawBtn = document.getElementById('withdraw-btn');
-            withdrawBtn.innerText = "ПОДАРОК (НЕ ДЛЯ ВЫВОДА)";
-            withdrawBtn.style.opacity = "0.5";
-            withdrawBtn.style.pointerEvents = "none";
-            
-            document.getElementById('item-modal').style.display = 'flex';
-        };
-
-        slot.innerHTML = `<img src="img/${giftFile}" onerror="this.src='img/star.png'">`;
-        giftsGrid.appendChild(slot);
     });
 }
 
@@ -511,7 +653,7 @@ async function withdrawToBot() {
         }
     });
 }
-    
+
 async function sellItem() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
@@ -559,15 +701,15 @@ function openItem(i) {
     const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
     const fileName = imgPath.split('/').pop();
     const info = ITEMS[fileName] || { name: "Rare Item", price: 100 };
-    
+
     document.getElementById('modal-img').src = `img/${fileName}`;
     document.getElementById('modal-name').innerText = info.name;
-    
+
     const sellBtn = document.getElementById('sell-btn');
     sellBtn.innerText = `ПРОДАТЬ ЗА ${info.price} ⭐`;
     sellBtn.style.opacity = "1";
     sellBtn.style.pointerEvents = "auto";
-    
+
     const withdrawBtn = document.getElementById('withdraw-btn');
 
     if (fileName === 'star.png') {
@@ -578,28 +720,230 @@ function openItem(i) {
         withdrawBtn.style.pointerEvents = "auto";
         withdrawBtn.innerText = "ВЫВЕСТИ В ПРОФИЛЬ (30 ⭐)";
     }
-    
+
     document.getElementById('item-modal').style.display = 'flex';
 }
 
-function closeModal() { 
-    document.getElementById('item-modal').style.display = 'none'; 
+function closeModal() {
+    document.getElementById('item-modal').style.display = 'none';
 }
 
-window.onload = () => { 
+// --- Модалка пополнения (TON / Stars) ---
+let isVaultProcessing = false;
+let isStarsProcessing = false;
+
+function setTab(type) {
+    const isTon = type === 'ton';
+    document.getElementById('tabTon').classList.toggle('active', isTon);
+    document.getElementById('tabStars').classList.toggle('active', !isTon);
+    document.getElementById('paneTon').classList.toggle('active', isTon);
+    document.getElementById('paneStars').classList.toggle('active', !isTon);
+}
+
+function openVault(tab) {
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    document.getElementById('vaultModal').classList.add('active');
+    setTab(tab || 'ton');
+}
+
+function closeVault() {
+    document.getElementById('vaultModal').classList.remove('active');
+}
+
+function renderTonPacks() {
+    const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
+    document.getElementById('tonPacks').innerHTML = PACKS.map(amt => `
+        <div class="pack-btn" onclick="processPayment(${amt})">
+            <div class="label">Пополнить</div>
+            <div class="amount">${amt} TON</div>
+        </div>
+    `).join('');
+}
+
+async function processPayment(amount) {
+    if (isVaultProcessing || !userId) return;
+    isVaultProcessing = true;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/create_crypto_pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, amount: Number(amount) })
+        });
+        const data = await res.json();
+        if (res.ok && data.pay_url) {
+            tg.openTelegramLink(data.pay_url);
+            closeVault();
+        } else {
+            tg.showAlert('Ошибка: ' + (data.error || 'Сервер не вернул ссылку'));
+        }
+    } catch (e) {
+        tg.showAlert('Ошибка сети');
+    } finally {
+        isVaultProcessing = false;
+    }
+}
+
+async function verifyGift() {
+    if (isStarsProcessing || !userId) return;
+    const val = parseInt(document.getElementById('starsInput').value, 10);
+    if (!val || val < 1) return tg.showAlert('Минимум 1 звезда');
+
+    const btn = document.getElementById('starsPayBtn');
+    isStarsProcessing = true;
+    btn.disabled = true;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    try {
+        const res = await fetch(`${BACKEND_URL}/api/create_stars_pay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId, amount: val })
+        });
+        const data = await res.json();
+        if (!res.ok || !data.pay_url) {
+            tg.showAlert('Ошибка: ' + (data.description || data.error || 'Сервер не вернул ссылку'));
+            return;
+        }
+        openStarsInvoice(data.pay_url);
+    } catch (e) {
+        tg.showAlert('Ошибка сети: ' + e.message);
+    } finally {
+        isStarsProcessing = false;
+        btn.disabled = false;
+    }
+}
+
+function openStarsInvoice(payUrl) {
+    try {
+        if (typeof tg.openInvoice === 'function') {
+            tg.openInvoice(payUrl, (status) => {
+                if (status === 'paid') {
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    tg.showAlert('Оплата прошла успешно!');
+                    closeVault();
+                    setTimeout(loadUser, 2000);
+                    setTimeout(loadUser, 5000);
+                } else if (status === 'failed') {
+                    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+                    tg.showAlert('Оплата не прошла. Попробуйте ещё раз.');
+                }
+            });
+            return;
+        }
+    } catch (e) {
+        console.error('openInvoice error:', e);
+    }
+
+    if (typeof tg.openTelegramLink === 'function') {
+        tg.openTelegramLink(payUrl);
+    } else {
+        window.location.href = payUrl;
+    }
+    closeVault();
+}
+
+// --- Раскрывающиеся строки меню (Инвентарь / Промокоды) ---
+function toggleSection(id, rowEl) {
+    const el = document.getElementById(id);
+    const isOpen = el.classList.contains('open');
+
+    // закрываем остальные секции, чтобы список был опрятным
+    document.querySelectorAll('.collapsible.open').forEach(s => {
+        if (s.id !== id) s.classList.remove('open');
+    });
+    document.querySelectorAll('.chevron').forEach(c => c.style.transform = 'rotate(0deg)');
+
+    el.classList.toggle('open', !isOpen);
+    if (rowEl) {
+        const chevron = rowEl.querySelector('.chevron');
+        if (chevron) chevron.style.transform = !isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
+    }
+}
+
+// --- Настройки ---
+let hapticsOn = true;
+
+function openSettings() {
+    document.getElementById('settings-modal').style.display = 'flex';
+}
+
+function closeSettings() {
+    document.getElementById('settings-modal').style.display = 'none';
+}
+
+function toggleHaptics() {
+    hapticsOn = !hapticsOn;
+    document.getElementById('haptics-toggle').classList.toggle('on', hapticsOn);
+    if (hapticsOn && tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+}
+
+function setLang(lang) {
+    document.getElementById('lang-ru-radio').classList.toggle('selected', lang === 'ru');
+    document.getElementById('lang-en-radio').classList.toggle('selected', lang === 'en');
+    // Переключение локализации подключается позже
+}
+
+// --- Летающие частицы на фоне ---
+function initParticles() {
+    const canvas = document.getElementById('stars-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, particles;
+
+    function resize() {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+    }
+
+    function makeParticles() {
+        const count = Math.floor((w * h) / 22000);
+        particles = Array.from({ length: count }, () => ({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 1.3 + 0.3,
+            vy: Math.random() * 0.15 + 0.03,
+            vx: (Math.random() - 0.5) * 0.08,
+            alpha: Math.random() * 0.5 + 0.2,
+            twinkle: Math.random() * 0.02 + 0.005,
+            dir: Math.random() > 0.5 ? 1 : -1
+        }));
+    }
+
+    function tick() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+            p.alpha += p.twinkle * p.dir;
+            if (p.alpha >= 0.8 || p.alpha <= 0.15) p.dir *= -1;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
+            ctx.fill();
+
+            p.y -= p.vy;
+            p.x += p.vx;
+            if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+            if (p.x < -5) p.x = w + 5;
+            if (p.x > w + 5) p.x = -5;
+        });
+        requestAnimationFrame(tick);
+    }
+
+    resize();
+    makeParticles();
+    tick();
+    window.addEventListener('resize', () => { resize(); makeParticles(); });
+}
+
+window.onload = () => {
     if (window.Telegram && window.Telegram.WebApp) {
         tg.expand();
     }
+    initParticles();
+    renderTonPacks();
     loadUser();
 };
-
-function showHelp() {
-    document.getElementById('help-modal').style.display = 'flex';
-}
-
-function closeHelp() {
-    document.getElementById('help-modal').style.display = 'none';
-}
 </script>
 </body>
 </html>
