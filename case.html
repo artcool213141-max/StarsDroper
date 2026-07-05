@@ -10,9 +10,9 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;600;700;900&display=swap');
         
         :root {
-            --bg-main: #0f0a02; /* Очень темный фон с золотым отливом */
-            --neon-gold: #f5b025; /* Чистый благородный золотой */
-            --neon-gold-dark: #c68c16; /* Более глубокий оттенок для теней */
+            --bg-main: #0f0a02;
+            --neon-gold: #f5b025;
+            --neon-gold-dark: #c68c16;
             --ton-blue: #0088cc;
         }
 
@@ -28,7 +28,6 @@
 
         .orbitron { font-family: 'Orbitron', sans-serif; }
 
-        /* --- Единая тап-анимация для интерактивных элементов --- */
         .tap-bounce { transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease, background 0.15s ease; }
         .tap-bounce:active { transform: scale(0.92); }
 
@@ -107,14 +106,13 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* --- Плавное появление модалки кейса вместо резкого display:none/flex --- */
-        #case-modal {
+        #case-modal, #rr-modal {
             opacity: 0;
             transform: scale(0.97);
             pointer-events: none;
             transition: opacity 0.28s ease, transform 0.28s ease;
         }
-        #case-modal.modal-open {
+        #case-modal.modal-open, #rr-modal.modal-open {
             opacity: 1;
             transform: scale(1);
             pointer-events: auto;
@@ -133,6 +131,42 @@
             letter-spacing: 0.15em;
         }
         .skip-btn:active { background: rgba(255,255,255,0.1); }
+
+        /* --- Русская рулетка: честный слайдер --- */
+        .rr-spinning { animation: rrSpin 0.6s linear infinite; }
+        @keyframes rrSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        input[type="range"].rr-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            outline: none;
+        }
+        input[type="range"].rr-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--neon-gold);
+            box-shadow: 0 0 12px rgba(245, 176, 37, 0.6);
+            cursor: pointer;
+            border: 3px solid #0f0a02;
+        }
+        input[type="range"].rr-slider::-moz-range-thumb {
+            width: 26px; height: 26px; border-radius: 50%;
+            background: var(--neon-gold);
+            box-shadow: 0 0 12px rgba(245, 176, 37, 0.6);
+            cursor: pointer;
+            border: 3px solid #0f0a02;
+        }
+
+        .section-label {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 11px;
+            color: var(--neon-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
     </style>
 </head>
 <body>
@@ -155,8 +189,17 @@
     <div id="live-drop-wrapper"><div id="live-drop-rail" class="live-rail"></div></div>
 
     <div class="p-5 flex flex-col gap-5 pb-24">
+
+        <div class="section-label px-1">🎁 Гарантированный приз</div>
         <div id="tickets-container"></div>
         <div class="grid grid-cols-2 gap-5" id="main-grid"></div>
+
+        <div class="section-label px-1 mt-6">🎰 Русская рулетка</div>
+        <div class="text-[9px] text-gray-500 px-1 mb-1 uppercase tracking-wide leading-relaxed">
+            Шанс на слайдере = реальный шанс победы. Цена прокрута честно пересчитывается вместе с шансом — никаких скрытых порогов.
+        </div>
+        <div class="grid grid-cols-2 gap-5" id="rr-grid"></div>
+
     </div>
 
     <div id="case-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#0f0a02]/98 backdrop-blur-2xl overflow-y-auto">
@@ -223,6 +266,54 @@
                 <button id="sell-all-btn" onclick="sellAllAndClose()" class="tap-bounce w-full bg-yellow-400 text-black py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-yellow-400/20">Продать</button>
                 <button id="keep-all-btn" onclick="saveToInventoryAndClose()" class="tap-bounce w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs">В инвентарь</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ============ ЧЕСТНАЯ РУССКАЯ РУЛЕТКА ============ -->
+    <div id="rr-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#0f0a02]/98 backdrop-blur-2xl overflow-y-auto">
+        <div class="flex justify-between items-center mb-8">
+            <button onclick="closeRR()" class="tap-bounce text-gray-500 font-bold text-xs uppercase tracking-widest">← Назад</button>
+            <div class="orbitron text-[10px] text-yellow-400 uppercase tracking-widest">Честный шанс</div>
+        </div>
+
+        <div id="rr-view-setup" class="flex flex-col items-center">
+            <img id="rr-img" src="" class="w-56 h-56 object-contain mb-4 drop-shadow-[0_0_20px_rgba(245,176,37,0.35)]">
+            <h1 id="rr-title" class="orbitron text-xl font-black mt-2 uppercase text-center tracking-wide mb-1"></h1>
+            <div class="flex items-center gap-1 mb-8">
+                <span class="text-[10px] text-gray-400 uppercase tracking-widest">Ценность приза:</span>
+                <img src="img/star.png" class="w-4 h-4">
+                <span id="rr-item-price" class="text-yellow-400 font-black text-sm"></span>
+            </div>
+
+            <div class="w-full flex flex-col items-center gap-3 mb-8">
+                <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Твой шанс на победу</span>
+                <div id="rr-chance-label" class="orbitron text-5xl font-black text-yellow-400">50%</div>
+                <input id="rr-slider" type="range" class="rr-slider" min="5" max="95" value="50" step="1" oninput="updateRR()">
+                <div class="flex justify-between w-full text-[9px] text-gray-500 font-bold uppercase tracking-widest px-1">
+                    <span>5% — дёшево, редко</span>
+                    <span>95% — дорого, почти всегда</span>
+                </div>
+                <div class="text-[9px] text-gray-500 uppercase tracking-widest text-center mt-2">
+                    Цена = цена приза × выбранный шанс. Реальный бросок использует ровно это число — без исключений.
+                </div>
+            </div>
+
+            <div class="w-full flex items-center justify-between bg-white/5 rounded-2xl px-5 py-4 mb-6 border border-white/10">
+                <span class="text-[11px] uppercase text-gray-400 font-bold">Цена прокрута</span>
+                <div class="flex items-center gap-2">
+                    <img src="img/star.png" class="w-5 h-5">
+                    <span id="rr-cost-label" class="orbitron text-yellow-400 font-black text-lg">0</span>
+                </div>
+            </div>
+
+            <button onclick="rollRR()" class="tap-bounce w-full bg-yellow-400 text-black py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-yellow-400/20">Крутить</button>
+        </div>
+
+        <div id="rr-view-result" class="hidden flex-col items-center gap-6 mt-16">
+            <img id="rr-spin-img" src="" class="w-40 h-40 object-contain">
+            <div id="rr-result-text" class="orbitron text-3xl font-black uppercase"></div>
+            <div id="rr-result-sub" class="text-[10px] text-gray-500 uppercase tracking-widest text-center"></div>
+            <button onclick="closeRR()" class="tap-bounce w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs mt-6">Закрыть</button>
         </div>
     </div>
     
@@ -304,7 +395,14 @@ const ITEMS = {
     "kkoolsoo.png": { name: "Nail", price: 10455, img: "kkoolsoo.png" },
     "kkolso.png": { name: "Ring", price: 3330, img: "kkolso.png" },
     "hero.png": { name: "Pepe", price: 543843, img: "hero.png" },
-    "chassiki.png": { name: "Watch", price: 4267, img: "chassiki.png" }
+    "chassiki.png": { name: "Watch", price: 4267, img: "chassiki.png" },
+
+    // --- Призы для честной "Русской рулетки" ---
+    "raketaton.png": { name: "Raketaton", price: 3999, img: "raketaton.png" },
+    "ochko.png": { name: "Ochko", price: 950, img: "ochko.png" },
+    "fen.png": { name: "Fen", price: 1750, img: "fen.png" },
+    "labyba.png": { name: "Labyba", price: 5500, img: "labyba.png" },
+    "cymka.png": { name: "Cymka", price: 13500, img: "cymka.png" }
 };
     
 const CASES = [
@@ -334,9 +432,16 @@ const CASES = [
     ]}
 ];
 
+// Список ключей для секции "Русская рулетка" (в заданном тобой порядке)
+const RR_KEYS = ["raketaton.png", "ochko.png", "fen.png", "labyba.png", "cymka.png"];
+
 let balance = { stars: 0, ton: 0, tickets: 0 };
 let mul = 1, activeCase = null, isBusy = false, currentWinners = [];
 let rollTimeoutId = null;
+
+// Состояние честной рулетки
+let rrActive = null;   // объект предмета из ITEMS
+let rrChance = 50;      // и единственное число для отображения, И для реального броска
 
 async function syncData() {
     try {
@@ -594,7 +699,6 @@ function renderLootPreview() {
     }).join('');
 }
 
-// Изменено название проекта во время рендера на NOWEARSPIN
 function render() {
     const tGrid = document.getElementById('tickets-container');
     const mGrid = document.getElementById('main-grid');
@@ -606,6 +710,116 @@ function render() {
             mGrid.innerHTML += `<div class="case-card p-4 flex flex-col items-center justify-between min-h-[280px]"><div onclick="openCase(${idx})" class="flex flex-col items-center"><img src="img/${c.img}" class="w-28 h-28 mb-2 object-contain"><div class="orbitron text-[10px] text-amber-400 font-black mb-4 uppercase text-center tracking-wide">${c.name}</div></div><div class="w-full flex flex-col gap-2"><button onclick="openCase(${idx})" class="tap-bounce w-full bg-white/5 py-2 rounded-xl text-[12px] font-bold border border-white/5">⭐ ${c.priceStars}</button><button onclick="openCase(${idx})" class="tap-bounce w-full bg-blue-500/10 py-2 rounded-xl text-[12px] font-bold text-blue-400">${c.priceTon} TON</button></div></div>`;
         }
     });
+}
+
+// ============ ЧЕСТНАЯ РУССКАЯ РУЛЕТКА ============
+
+function renderRR() {
+    const grid = document.getElementById('rr-grid');
+    grid.innerHTML = RR_KEYS.map((key, idx) => {
+        const it = ITEMS[key];
+        return `<div class="case-card p-4 flex flex-col items-center justify-between min-h-[240px]" onclick="openRR(${idx})">
+            <img src="img/${it.img}" class="w-24 h-24 mb-2 object-contain">
+            <div class="orbitron text-[10px] text-amber-400 font-black mb-2 uppercase text-center tracking-wide">${it.name}</div>
+            <div class="w-full bg-white/5 py-2 rounded-xl text-[11px] font-bold border border-white/5 flex items-center justify-center gap-1">
+                <img src="img/star.png" class="w-4 h-4"> ${it.price.toLocaleString('ru-RU')}
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openRR(idx) {
+    if (isBusy) return;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    const key = RR_KEYS[idx];
+    rrActive = ITEMS[key];
+    rrChance = 50;
+
+    document.getElementById('rr-modal').classList.add('modal-open');
+    document.getElementById('rr-view-setup').style.display = 'flex';
+    document.getElementById('rr-view-result').style.display = 'none';
+    document.getElementById('rr-img').src = `img/${rrActive.img}`;
+    document.getElementById('rr-title').innerText = rrActive.name;
+    document.getElementById('rr-item-price').innerText = rrActive.price.toLocaleString('ru-RU');
+    document.getElementById('rr-slider').value = rrChance;
+    updateRR();
+}
+
+// Пересчитывает и показанный шанс, и цену — из ОДНОЙ переменной rrChance
+function updateRR() {
+    rrChance = parseInt(document.getElementById('rr-slider').value, 10);
+    // Честная формула: цена прокрута прямо пропорциональна выбранному шансу.
+    // При 100% ты бы просто платил полную цену приза (без риска).
+    const cost = Math.max(1, Math.round(rrActive.price * (rrChance / 100)));
+    document.getElementById('rr-chance-label').innerText = `${rrChance}%`;
+    document.getElementById('rr-cost-label').innerText = cost.toLocaleString('ru-RU');
+}
+
+async function rollRR() {
+    if (isBusy || !rrActive) return;
+
+    const cost = Math.max(1, Math.round(rrActive.price * (rrChance / 100)));
+    if (balance.stars < cost) return alert("Недостаточно звёзд!");
+
+    isBusy = true;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+    balance.stars -= cost;
+    saveAndRefresh();
+    await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
+    });
+
+    document.getElementById('rr-view-setup').style.display = 'none';
+    document.getElementById('rr-view-result').style.display = 'flex';
+    const spinImg = document.getElementById('rr-spin-img');
+    spinImg.src = `img/${rrActive.img}`;
+    spinImg.classList.add('rr-spinning');
+    document.getElementById('rr-result-text').innerText = '';
+    document.getElementById('rr-result-sub').innerText = '';
+
+    // РЕАЛЬНЫЙ бросок — используем ровно тот же rrChance, что был на слайдере и в цене
+    const roll = Math.random() * 100;
+    const isWin = roll <= rrChance;
+
+    setTimeout(async () => {
+        spinImg.classList.remove('rr-spinning');
+        const resText = document.getElementById('rr-result-text');
+        const resSub = document.getElementById('rr-result-sub');
+
+        if (isWin) {
+            resText.innerText = "ПОБЕДА!";
+            resText.style.color = "#f5b025";
+            resSub.innerText = `${rrActive.name} добавлен в инвентарь`;
+
+            try {
+                const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, {
+                    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+                });
+                const data = await res.json();
+                let inv = Array.isArray(data[0]?.inventory) ? data[0].inventory : [];
+                inv.push({ id: Date.now() + Math.random(), name: rrActive.name, price: rrActive.price, img: `img/${rrActive.img}` });
+                await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
+                });
+            } catch (e) { console.error("RR inventory save error:", e); }
+
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        } else {
+            resText.innerText = "НЕУДАЧА";
+            resText.style.color = "#ef4444";
+            resSub.innerText = `Шанс был ${rrChance}% — в этот раз не повезло`;
+            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+        }
+
+        isBusy = false;
+    }, 2200);
+}
+
+function closeRR() {
+    document.getElementById('rr-modal').classList.remove('modal-open');
+    isBusy = false;
+    rrActive = null;
 }
 
 function startLiveDrop() {
@@ -621,7 +835,7 @@ function startLiveDrop() {
     }, 3000);
 }
 
-window.onload = () => { startLiveDrop(); render(); syncData(); tg.expand(); };
+window.onload = () => { startLiveDrop(); render(); renderRR(); syncData(); tg.expand(); };
 </script>
 </body>
 </html>
