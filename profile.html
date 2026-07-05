@@ -71,8 +71,6 @@
         .active-item { border: 1.5px solid var(--accent-gold); background: rgba(245, 176, 37, 0.08); cursor: pointer; }
         .active-item img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(245, 176, 37, 0.35)); }
 
-        #item-modal, #settings-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
-
         .dock-bar {
             position: fixed;
             bottom: 0;
@@ -179,15 +177,7 @@
         <p>Похоже, приложение открыто не через Telegram. Пожалуйста, откройте NowearSpin через кнопку в боте или меню чата.</p>
     </div>
 
-    <div class="main-wrapper">
-        <header class="flex flex-col items-center mt-2 mb-6 relative">
-            <button onclick="openSettings()" class="absolute top-0 right-0 w-11 h-11 rounded-full bg-black/40 border border-white/10 flex items-center justify-center active:scale-95 transition">
-                <svg viewBox="0 0 24 24" class="w-5 h-5 fill-white/70">
-                    <path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.07-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.74,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.07,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.47-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/>
-                </svg>
-            </button>
-
-            <div class="relative">
+          <div class="relative">
                 <img id="u-avatar" src="" class="w-24 h-24 rounded-full border-4 border-yellow-500/40 bg-gray-900 object-cover shadow-2xl">
                 <div class="absolute bottom-1 right-1 w-6 h-6 bg-yellow-500 border-4 border-black rounded-full shadow-[0_0_10px_#f5b025]"></div>
             </div>
@@ -835,14 +825,6 @@ function toggleSection(id, rowEl) {
 
 // --- Настройки ---
 let hapticsOn = true;
-
-function openSettings() {
-    document.getElementById('settings-modal').style.display = 'flex';
-}
-
-function closeSettings() {
-    document.getElementById('settings-modal').style.display = 'none';
-}
 
 function toggleHaptics() {
     hapticsOn = !hapticsOn;
