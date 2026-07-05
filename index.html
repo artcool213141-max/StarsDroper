@@ -239,6 +239,19 @@
             text-shadow: 0 2px 6px rgba(0,0,0,0.85), 0 1px 2px rgba(0,0,0,0.9);
         }
 
+        /* Общие стили для картинок внутри карточек */
+.card.ludo img.ludo-art {
+    position: absolute;
+    right: 15px;
+    bottom: 15px;
+    height: 75%;
+    object-fit: contain;
+    pointer-events: none;
+    filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+/* Ограничение текста, чтобы не налезал на картинку */
+.ludo-desc { max-width: 65%; }
+
         .card-content {
             position: relative;
             z-index: 3;
@@ -681,38 +694,49 @@
                     </svg>
                 </div>
 
-                <div class="card full wide anim-fade-d3 press-fx" data-nav="clicker.html">
-                    <span class="online-badge">● 5 онлайн</span>
-                    <div class="card-content">
-                        <div class="card-title">Кликер</div>
-                        <div class="card-desc">Тапай и зарабатывай</div>
-                    </div>
-                </div>
+<!-- КЛИКЕР (Розовый стиль) -->
+<div class="card full ludo press-fx" style="--c1:#501230; --c2:#200615; --accent:#f472b6;" data-nav="clicker.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Кликер</div>
+        <div class="ludo-sub">Тапай и забирай</div>
+    </div>
+    <div class="ludo-desc">Тапай по экрану и зарабатывай монеты</div>
+    <img class="ludo-art" src="img/kotel.png" alt="Кликер">
+</div>
 
-                <div class="card half square press-fx" data-nav="">
-                    <span class="soon-badge">SOON</span>
-                    <div class="card-content" style="text-align: center;">
-                        <div class="card-title">Кейсы</div>
-                        <div class="card-desc">Испытай удачу</div>
-                    </div>
-                </div>
+<!-- КЕЙСЫ -->
+<div class="card full ludo press-fx" style="--c1:#1e3a8a; --c2:#0c162d; --accent:#60a5fa;" data-nav="case.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Кейсы</div>
+        <div class="ludo-sub">Удача внутри</div>
+    </div>
+    <div class="ludo-desc">Открывай топовые кейсы и забирай редкие предметы</div>
+    <img class="ludo-art" src="img/case9.png" alt="Кейсы">
+</div>
 
-                <!-- АПГРЕЙД: пульсирующий зелёный неон по контуру -->
-                <div class="card half square neon-green press-fx" data-nav="update.html">
-                    <span class="soon-badge">SOON</span>
-                    <img class="card-bg" src="img/mini games img/update.png" alt="Апгрейд">
-                    <div class="card-content" style="text-align: center;">
-                        <div class="card-title">Апгрейд</div>
-                        <div class="card-desc">Обнови свой гифт</div>
-                    </div>
-                </div>
+<!-- АПГРЕЙД -->
+<div class="card full ludo press-fx" style="--c1:#064e3b; --c2:#021912; --accent:#34d399;" data-nav="update.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Апгрейд</div>
+        <div class="ludo-sub">Прокачка</div>
+    </div>
+    <div class="ludo-desc">Улучшай свои шансы и забирай лучший лут</div>
+    <img class="ludo-art" src="img/rozza.png" alt="Апгрейд">
+</div>
 
-                <div class="card full wide reveal press-fx" data-nav="">
-                    <span class="soon-badge">SOON</span>
-                    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
-                        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Рулетка</div>
-                        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути и выигрывай</div>
-                    </div>
+<!-- РУЛЕТКА -->
+<div class="card full ludo press-fx" style="--c1:#78350f; --c2:#291304; --accent:#fbbf24;" data-nav="wheel.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Рулетка</div>
+        <div class="ludo-sub">Испытай фарт</div>
+    </div>
+    <div class="ludo-desc">Крути колесо и выигрывай бонусы</div>
+    <img class="ludo-art" src="img/1may.jpg" alt="Рулетка">
+</div>
                 </div>
 
             </div>
