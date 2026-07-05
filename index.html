@@ -27,7 +27,6 @@
             user-select: none;
         }
 
-        /* ===== ФОН С ТОЧКАМИ ===== */
         .bg-dots {
             position: fixed;
             top: 0;
@@ -114,7 +113,6 @@
             overflow: hidden;
         }
 
-        /* ===== ЗАКРЕПЛЁННАЯ ШАПКА ===== */
         .topcard {
             flex-shrink: 0;
             display: flex;
@@ -160,7 +158,6 @@
         .bal-row .icon { font-size: 11px; }
         .bal-row .icon-img { width: 13px; height: 13px; object-fit: contain; flex-shrink: 0; }
 
-        /* ===== ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ ===== */
         .scroll {
             flex: 1;
             min-height: 0;
@@ -172,7 +169,6 @@
         }
         .scroll::-webkit-scrollbar { display: none; }
 
-        /* ===== BENTO GRID: белые карточки ===== */
         .mosaic {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -181,15 +177,13 @@
             padding-bottom: 86px;
         }
 
-        /* квадрат — только для half-карточек (400x400) */
         .card.square {
             aspect-ratio: 1 / 1;
             height: auto;
         }
 
-        /* широкий горизонтальный формат — для full-карточек с картинкой */
         .card.wide {
-            aspect-ratio: 21 / 9; /* подстрой под свою картинку, если нужно другое соотношение */
+            aspect-ratio: 21 / 9;
             height: auto;
         }
 
@@ -210,12 +204,10 @@
             box-sizing: border-box;
         }
 
-        /* карточка на всю ширину (2 колонки) */
         .card.full {
             grid-column: 1 / -1;
         }
 
-        /* карточка на половину ширины (1 колонка) */
         .card.half {
             grid-column: span 1;
         }
@@ -229,19 +221,18 @@
             transform: translateY(0);
         }
 
-        /* картинка-фон карточки: вписывается целиком, без обрезки и без растяжения */
-.card img.card-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover; /* <--- ТЕПЕРЬ ОНА ЗАПОЛНИТ ВСЮ КАРТОЧКУ */
-    object-position: center;
-    z-index: 1;
-    pointer-events: none;
-    transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
-}
+        .card img.card-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center;
+            z-index: 1;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+        }
 
         .card-content .card-title,
         .card-content .card-desc {
@@ -335,7 +326,107 @@
             box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
         }
 
-        /* ===== DOCK ===== */
+        /* ============================================================
+           PREMIUM CARD STYLE — тёмные карточки со свечением по контуру,
+           картинкой сбоку и градиентным затемнением под текст.
+           ============================================================ */
+        @property --angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @keyframes spin-border { to { --angle: 360deg; } }
+
+        .card.premium {
+            background: #0b0906;
+            border: none;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .card.premium::before {
+            content: '';
+            position: absolute;
+            inset: -1.5px;
+            border-radius: inherit;
+            z-index: 0;
+            background: conic-gradient(
+                from var(--angle, 0deg),
+                transparent 55%,
+                var(--glow, #d4af37) 80%,
+                transparent 100%
+            );
+            animation: spin-border 3.2s linear infinite;
+        }
+
+        .card.premium .card-inner {
+            position: absolute;
+            inset: 1.5px;
+            border-radius: 24.5px;
+            overflow: hidden;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            background: #0b0906;
+        }
+
+        .card.premium .card-bg-fade {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            background: linear-gradient(
+                100deg,
+                rgba(8,6,3,0.96) 0%,
+                rgba(8,6,3,0.82) 42%,
+                rgba(8,6,3,0.25) 72%,
+                rgba(8,6,3,0.0) 100%
+            );
+        }
+
+        .card.premium img.card-bg {
+            position: absolute;
+            object-fit: contain;
+            width: auto;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .card.premium.full img.card-bg {
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 145%;
+        }
+
+        .card.premium.half img.card-bg {
+            right: -14px;
+            bottom: -14px;
+            height: 108%;
+        }
+
+        .card.premium .card-content {
+            position: relative;
+            z-index: 3;
+            text-align: left;
+            padding: 16px 18px;
+        }
+
+        .card.premium.full .card-title { font-size: 19px; }
+        .card.premium.full .card-desc { font-size: 11px; }
+        .card.premium.half .card-title { font-size: 14px; }
+        .card.premium.half .card-desc { font-size: 9.5px; }
+
+        .card.premium .card-desc { color: rgba(255,255,255,0.55); }
+
+        .card.premium .card-shimmer {
+            position: absolute; inset: 0; z-index: 4; pointer-events: none;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.10) 50%, transparent 70%);
+            opacity: 0; transition: opacity 0.15s;
+        }
+        .card.premium.pressed .card-shimmer { opacity: 1; }
+        .card.premium.pressed img.card-bg { filter: brightness(1.08); }
+        .card.premium.pressed.full img.card-bg { transform: translateY(-50%) scale(1.04); }
+        .card.premium.pressed.half img.card-bg { transform: scale(1.04); }
+
         .dock {
             position: fixed;
             left: 50%;
@@ -384,7 +475,6 @@
         .dock-btn .d-label { font-size: 7px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; transition: all 0.2s ease; }
         .dock-btn.active { color: #fff; }
 
-        /* ===== MODAL ===== */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 2000; display: none; align-items: flex-end; justify-content: center; }
         .modal.active { display: flex; }
         .modal-sheet { width: 100%; max-width: 480px; background: #121212; border-radius: 20px 20px 0 0; padding: 12px 16px 24px 16px; border-top: 1px solid rgba(255,255,255,0.04); max-height: 80vh; overflow-y: auto; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -432,7 +522,6 @@
         }
         .stars-pay-btn.pressed { transform: scale(0.92); filter: brightness(1.15); }
 
-        /* ===== ЭКРАН ОШИБКИ ===== */
         #error-screen {
             position: fixed;
             inset: 0;
@@ -449,13 +538,11 @@
         #error-screen.active { display: flex; }
         #error-screen .msg { font-size: 12px; color: #999; font-weight: 600; }
 
-        /* ===== LOADER ===== */
         #loader { position: fixed; inset: 0; background: #050505; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.5s ease; }
         #loader.hidden { opacity: 0; pointer-events: none; }
         .loader-ring { width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.03); border-top: 2px solid #fff; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ===== ПЛАВНЫЙ ПЕРЕХОД МЕЖДУ СТРАНИЦАМИ ===== */
         #page-transition {
             position: fixed;
             inset: 0;
@@ -495,7 +582,6 @@
 
     <div class="app">
 
-        <!-- ШАПКА теперь ВНЕ .scroll — поэтому она никогда не скроллится и остаётся закреплённой сверху -->
         <div class="topcard anim-fade" id="topcard">
             <div class="user">
                 <img id="userAvatar" src="https://ui-avatars.com/api/?background=random&color=fff&name=User" alt="" class="avatar">
@@ -520,36 +606,33 @@
             </div>
         </div>
 
-        <!-- Только этот блок прокручивается -->
         <div class="scroll" id="scrollArea">
             <div class="mosaic">
 
-                <!--
-                    ============================================================
-                    КУДА ВПИСЫВАТЬ СВОЙ ФАЙЛ
-                    ============================================================
-                    У каждой карточки есть атрибут data-nav="ИМЯ_ФАЙЛА.html".
-                    Впишите туда путь к своему файлу — и при клике на белую
-                    карточку человека перекинет именно на этот файл.
-                    Если оставить data-nav="" (пусто), карточка кликается,
-                    но никуда не ведёт (удобно для "скоро" / заглушек).
-                    ============================================================
-                -->
-
-                <div class="card full wide anim-fade-d1 press-fx" data-nav="rolls.html">
-                    <span class="new-badge"></span>
-                    <img class="card-bg" src="img/mini games img/rolls.jpeg" alt="Роллс">
-                    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
-                        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;"></div>
-                        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);"></div>
+                <!-- ROLLS: премиум-стиль, тёмный фон, свечение фиолетовое -->
+                <div class="card full wide premium anim-fade-d1 press-fx" style="--glow:#9333ea;" data-nav="rolls.html">
+                    <span class="new-badge">NEW</span>
+                    <div class="card-inner">
+                        <div class="card-bg-fade"></div>
+                        <img class="card-bg" src="img/mini games img/rolls.jpeg" alt="Rolls">
+                        <div class="card-content">
+                            <div class="card-title">Rolls</div>
+                            <div class="card-desc">Крути колесо, лови удачу</div>
+                        </div>
+                        <div class="card-shimmer"></div>
                     </div>
                 </div>
 
-                <div class="card half square anim-fade-d2 press-fx" data-nav="ccrush.html">
-                    <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
-                    <div class="card-content">
-                        <div class="card-title"></div>
-                        <div class="card-desc"></div>
+                <!-- КРАШ: премиум-стиль, красное свечение -->
+                <div class="card half square premium anim-fade-d2 press-fx" style="--glow:#dc2626;" data-nav="ccrush.html">
+                    <div class="card-inner">
+                        <div class="card-bg-fade"></div>
+                        <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
+                        <div class="card-content">
+                            <div class="card-title">Краш</div>
+                            <div class="card-desc">Поймай икс</div>
+                        </div>
+                        <div class="card-shimmer"></div>
                     </div>
                 </div>
 
@@ -562,17 +645,14 @@
 
                 <div class="card full wide anim-fade-d3 press-fx" data-nav="clicker.html">
                     <span class="online-badge">● 5 онлайн</span>
-                    <!-- <img class="card-bg" src="img/redisain_games/clicker.jpg" alt="Кликер"> -->
                     <div class="card-content">
                         <div class="card-title">Кликер</div>
                         <div class="card-desc">Тапай и зарабатывай</div>
                     </div>
                 </div>
 
-                <!-- Кейсы и Апгрейд — снова половинки, в один ряд -->
                 <div class="card half square press-fx" data-nav="">
                     <span class="soon-badge">SOON</span>
-                    <!-- <img class="card-bg" src="img/redisain_games/cases.jpg" alt="Кейсы"> -->
                     <div class="card-content" style="text-align: center;">
                         <div class="card-title">Кейсы</div>
                         <div class="card-desc">Испытай удачу</div>
@@ -588,10 +668,8 @@
                     </div>
                 </div>
 
-                <!-- НОВАЯ большая кнопка ниже Кейсов и Апгрейда, такая же по размеру, как Кликер -->
                 <div class="card full wide reveal press-fx" data-nav="">
                     <span class="soon-badge">SOON</span>
-                    <!-- <img class="card-bg" src="img/redisain_games/roulette.jpg" alt="Рулетка"> -->
                     <div class="card-content" style="text-align: center; padding-bottom: 20px;">
                         <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Рулетка</div>
                         <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути и выигрывай</div>
@@ -601,7 +679,6 @@
             </div>
         </div>
 
-        <!-- ДОК прячется при скролле вниз и появляется при скролле вверх -->
         <div class="dock" id="dock">
             <div class="dock-btn active press-fx">
                 <svg class="d-icon" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011-1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
@@ -821,9 +898,6 @@
             document.getElementById('vaultModal').classList.remove('active');
         }
 
-        /* ==========================================================
-           ЕДИНАЯ АНИМАЦИЯ НАЖАТИЯ ДЛЯ ЛЮБОЙ КНОПКИ (.press-fx)
-           ========================================================== */
         function spawnRipple(el, x, y) {
             const rect = el.getBoundingClientRect();
             const ripple = document.createElement('span');
@@ -861,7 +935,6 @@
             });
         }
 
-        /* Плавный переход на другую страницу */
         function navigateTo(url) {
             tg.HapticFeedback.impactOccurred('medium');
             const overlay = document.getElementById('page-transition');
@@ -869,7 +942,6 @@
             setTimeout(() => { window.location.href = url; }, 260);
         }
 
-        // Клик по белым карточкам ведёт на файл из data-nav (если он указан)
         document.querySelectorAll('.mosaic .card').forEach(card => {
             card.addEventListener('click', () => {
                 const url = card.getAttribute('data-nav');
@@ -879,9 +951,6 @@
             });
         });
 
-        /* ==========================================================
-           ЗАКРЕПЛЁННАЯ ШАПКА + СКРЫВАЮЩИЙСЯ ДОК ПРИ СКРОЛЛЕ
-           ========================================================== */
         const scrollArea = document.getElementById('scrollArea');
         const dock = document.getElementById('dock');
         const topcard = document.getElementById('topcard');
@@ -890,10 +959,8 @@
         scrollArea.addEventListener('scroll', () => {
             const st = scrollArea.scrollTop;
 
-            // тень у шапки, если контент уехал под неё
             topcard.classList.toggle('is-scrolled', st > 4);
 
-            // скролл вниз -> прячем док, скролл вверх -> показываем
             if (st > lastScrollTop && st > 20) {
                 dock.classList.add('dock-hidden');
             } else {
@@ -902,7 +969,6 @@
             lastScrollTop = st <= 0 ? 0 : st;
         }, { passive: true });
 
-        /* Плавное появление карточек (.reveal), когда они попадают во вьюпорт при скролле */
         const revealObserver = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
