@@ -178,13 +178,13 @@
         .scroll::-webkit-scrollbar { display: none; }
 
         /* ===== BENTO GRID: белые карточки ===== */
-        .mosaic {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-auto-rows: 130px;
-            gap: 10px;
-            padding-bottom: 86px; /* место под плавающий док, чтобы карточки не прятались под ним */
-        }
+.mosaic {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(130px, auto); /* было: 130px */
+    gap: 10px;
+    padding-bottom: 86px;
+}
 
         .card {
             position: relative;
@@ -207,6 +207,11 @@
         .card.full {
             grid-column: 1 / -1;
         }
+
+        .card.square {
+    aspect-ratio: 1 / 1;
+    height: auto;
+}
 
         /* карточка на половину ширины (1 колонка) */
         .card.half {
@@ -544,13 +549,13 @@
                     </div>
                 </div>
 
-                <div class="card half anim-fade-d2 press-fx" data-nav="rolls.html">
-                    <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
-                    <div class="card-content">
-                        <div class="card-title">Краш</div>
-                        <div class="card-desc">Поймай икс</div>
-                    </div>
-                </div>
+<div class="card half square anim-fade-d2 press-fx" data-nav="rolls.html">
+    <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
+    <div class="card-content">
+        <div class="card-title">Краш</div>
+        <div class="card-desc">Поймай икс</div>
+    </div>
+</div>
 
                 <div class="card half anim-fade-d2b press-fx" data-nav="">
                     <div class="card-content" style="text-align: center;">
