@@ -309,8 +309,21 @@
             <button onclick="rollRR()" class="tap-bounce w-full bg-yellow-400 text-black py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-yellow-400/20">Крутить</button>
         </div>
 
+        <div id="rr-view-spin" class="hidden flex-col items-center">
+            <div class="text-center mb-6">
+                <h2 class="orbitron text-xl font-black uppercase text-white" id="rr-spin-title"></h2>
+                <div class="orbitron text-[10px] text-yellow-400 animate-pulse mt-1 uppercase tracking-widest">● Крутим...</div>
+            </div>
+            <div class="roulette-container w-full">
+                <div class="center-line"></div>
+                <div class="roulette-rail" id="rr-rail"></div>
+            </div>
+            <button onclick="skipRR()" class="skip-btn tap-bounce">Пропустить ⏭</button>
+        </div>
+
         <div id="rr-view-result" class="hidden flex-col items-center gap-6 mt-16">
-            <img id="rr-spin-img" src="" class="w-40 h-40 object-contain">
+            <img id="rr-result-img" src="" class="w-32 h-32 object-contain hidden">
+            <div id="rr-result-empty" class="text-6xl font-black opacity-10 hidden">—</div>
             <div id="rr-result-text" class="orbitron text-3xl font-black uppercase"></div>
             <div id="rr-result-sub" class="text-[10px] text-gray-500 uppercase tracking-widest text-center"></div>
             <button onclick="closeRR()" class="tap-bounce w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs mt-6">Закрыть</button>
@@ -755,6 +768,17 @@ function updateRR() {
     document.getElementById('rr-cost-label').innerText = cost.toLocaleString('ru-RU');
 }
 
+let rrSpinTimeoutId = null;
+let rrPendingWin = false; // результат уже решён до начала анимации ленты
+
+// Один тайл ленты: либо приз, либо "пусто" — чисто визуальная плитка
+function rrTile(showPrize) {
+    if (showPrize) {
+        return `<div class="roulette-item"><img src="img/${rrActive.img}"></div>`;
+    }
+    return `<div class="roulette-item"><div class="text-4xl font-black opacity-10">—</div></div>`;
+}
+
 async function rollRR() {
     if (isBusy || !rrActive) return;
 
@@ -770,56 +794,97 @@ async function rollRR() {
         method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
     });
 
-    document.getElementById('rr-view-setup').style.display = 'none';
-    document.getElementById('rr-view-result').style.display = 'flex';
-    const spinImg = document.getElementById('rr-spin-img');
-    spinImg.src = `img/${rrActive.img}`;
-    spinImg.classList.add('rr-spinning');
-    document.getElementById('rr-result-text').innerText = '';
-    document.getElementById('rr-result-sub').innerText = '';
-
-    // РЕАЛЬНЫЙ бросок — используем ровно тот же rrChance, что был на слайдере и в цене
+    // РЕАЛЬНЫЙ бросок — используем ровно тот же rrChance, что был на слайдере и в цене.
+    // Результат решается ЗДЕСЬ, ДО того как лента начнёт крутиться — лента лишь показывает уже готовый исход.
     const roll = Math.random() * 100;
-    const isWin = roll <= rrChance;
+    rrPendingWin = roll <= rrChance;
 
-    setTimeout(async () => {
-        spinImg.classList.remove('rr-spinning');
-        const resText = document.getElementById('rr-result-text');
-        const resSub = document.getElementById('rr-result-sub');
+    document.getElementById('rr-view-setup').style.display = 'none';
+    document.getElementById('rr-view-spin').style.display = 'flex';
+    document.getElementById('rr-view-result').style.display = 'none';
+    document.getElementById('rr-spin-title').innerText = rrActive.name;
 
-        if (isWin) {
-            resText.innerText = "ПОБЕДА!";
-            resText.style.color = "#f5b025";
-            resSub.innerText = `${rrActive.name} добавлен в инвентарь`;
+    const rail = document.getElementById('rr-rail');
+    rail.style.transition = 'none';
+    rail.style.transform = 'translateX(0px)';
+    rail.innerHTML = '';
 
-            try {
-                const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, {
-                    headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-                });
-                const data = await res.json();
-                let inv = Array.isArray(data[0]?.inventory) ? data[0].inventory : [];
-                inv.push({ id: Date.now() + Math.random(), name: rrActive.name, price: rrActive.price, img: `img/${rrActive.img}` });
-                await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
-                    method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
-                });
-            } catch (e) { console.error("RR inventory save error:", e); }
+    const winIndex = 30;
+    let railHtml = '';
+    for (let i = 0; i < 45; i++) {
+        // На выигрышной позиции — ровно то, что уже решено выше.
+        // На остальных позициях — просто визуальный шум (иногда приз мелькает, иногда пусто),
+        // это не влияет на исход, он уже зафиксирован в rrPendingWin.
+        const showPrize = (i === winIndex) ? rrPendingWin : (Math.random() < 0.15);
+        railHtml += rrTile(showPrize);
+    }
+    rail.innerHTML = railHtml;
 
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        } else {
-            resText.innerText = "НЕУДАЧА";
-            resText.style.color = "#ef4444";
-            resSub.innerText = `Шанс был ${rrChance}% — в этот раз не повезло`;
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        }
+    setTimeout(() => {
+        const itemWidth = 140;
+        const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
+        rail.style.transition = 'transform 6s cubic-bezier(0.15, 0, 0.05, 1)';
+        rail.style.transform = `translateX(-${offset}px)`;
+    }, 50);
 
-        isBusy = false;
-    }, 2200);
+    if (rrSpinTimeoutId) clearTimeout(rrSpinTimeoutId);
+    rrSpinTimeoutId = setTimeout(() => finishRR(), 6300);
+}
+
+function skipRR() {
+    if (!isBusy || document.getElementById('rr-view-spin').style.display === 'none') return;
+    if (rrSpinTimeoutId) { clearTimeout(rrSpinTimeoutId); rrSpinTimeoutId = null; }
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    finishRR();
+}
+
+async function finishRR() {
+    document.getElementById('rr-view-spin').style.display = 'none';
+    document.getElementById('rr-view-result').style.display = 'flex';
+
+    const resImg = document.getElementById('rr-result-img');
+    const resEmpty = document.getElementById('rr-result-empty');
+    const resText = document.getElementById('rr-result-text');
+    const resSub = document.getElementById('rr-result-sub');
+
+    if (rrPendingWin) {
+        resImg.src = `img/${rrActive.img}`;
+        resImg.classList.remove('hidden');
+        resEmpty.classList.add('hidden');
+        resText.innerText = "ПОБЕДА!";
+        resText.style.color = "#f5b025";
+        resSub.innerText = `${rrActive.name} добавлен в инвентарь`;
+
+        try {
+            const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, {
+                headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
+            });
+            const data = await res.json();
+            let inv = Array.isArray(data[0]?.inventory) ? data[0].inventory : [];
+            inv.push({ id: Date.now() + Math.random(), name: rrActive.name, price: rrActive.price, img: `img/${rrActive.img}` });
+            await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+                method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
+            });
+        } catch (e) { console.error("RR inventory save error:", e); }
+
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+    } else {
+        resImg.classList.add('hidden');
+        resEmpty.classList.remove('hidden');
+        resText.innerText = "НЕУДАЧА";
+        resText.style.color = "#ef4444";
+        resSub.innerText = `Шанс был ${rrChance}% — в этот раз не повезло`;
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+    }
+
+    isBusy = false;
 }
 
 function closeRR() {
     document.getElementById('rr-modal').classList.remove('modal-open');
     isBusy = false;
     rrActive = null;
+    if (rrSpinTimeoutId) { clearTimeout(rrSpinTimeoutId); rrSpinTimeoutId = null; }
 }
 
 function startLiveDrop() {
