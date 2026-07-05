@@ -18,7 +18,7 @@
         #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
         .main-wrapper {
-            position: relative; z-index: 1; padding: 24px 20px 140px;
+            position: relative; z-index: 1; padding: 24px 20px 110px;
             background: var(--bg-dark);
             min-height: 100vh;
         }
@@ -73,18 +73,36 @@
 
         #item-modal, #settings-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
 
+        /* ===== DOCK =====
+           Плавающая капсула поверх контента, как на главном экране.
+           Не занимает место в раскладке — по бокам нет "чёрных полей",
+           при скролле вниз плавно уезжает вниз и прячется полностью,
+           при скролле вверх — плавно возвращается. Кнопки: Главная и Профиль. */
         .dock-bar {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.98) 80%, rgba(15, 15, 15, 0.95));
-            border-top: 1px solid rgba(245, 176, 37, 0.25);
+            left: 50%;
+            bottom: max(14px, env(safe-area-inset-bottom));
+            transform: translateX(-50%);
+            width: calc(100% - 56px);
+            max-width: 300px;
+            background: rgba(15,15,15,0.85);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 999px;
+            border: 1px solid rgba(245, 176, 37, 0.18);
             display: flex;
             justify-content: space-around;
-            padding: 12px 10px calc(12px + env(safe-area-inset-bottom, 24px));
+            align-items: center;
+            padding: 8px 10px;
+            height: 56px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.5);
             z-index: 1000;
-            backdrop-filter: blur(10px);
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+        }
+        .dock-bar.dock-hidden {
+            transform: translateX(-50%) translateY(160%);
+            opacity: 0;
+            pointer-events: none;
         }
         .dock-btn {
             flex: 1;
@@ -92,14 +110,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 5px;
+            gap: 3px;
             color: #8c8375;
             text-decoration: none;
             transition: all 0.2s ease;
         }
-        .dock-btn span { font-size: 11px; font-weight: 700; letter-spacing: 0.03em; }
-        .dock-btn svg { width: 26px; height: 26px; transition: transform 0.2s ease; fill: currentColor; }
-        .dock-btn:active svg { transform: scale(0.9); }
+        .dock-btn span { font-size: 9px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
+        .dock-btn svg { width: 22px; height: 22px; transition: transform 0.2s ease; fill: currentColor; }
+        .dock-btn:active svg { transform: scale(0.88); }
         .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); }
 
         .toggle-switch { position: relative; width: 46px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; flex-shrink: 0; }
@@ -307,7 +325,8 @@
             </div>
         </div>
 
-        <nav class="dock-bar">
+        <!-- Плавающий док-капсула: только Главная и Профиль (без Кошелька) -->
+        <nav class="dock-bar" id="dockBar">
             <a href="index.html" class="dock-btn">
                 <svg viewBox="0 0 24 24">
                     <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
@@ -826,6 +845,21 @@ function toggleSection(id, rowEl) {
         if (chevron) chevron.style.transform = !isOpen ? 'rotate(90deg)' : 'rotate(0deg)';
     }
 }
+
+// --- Плавающий док: прячется при скролле вниз, появляется при скролле вверх ---
+(function initDockScroll() {
+    const dockBar = document.getElementById('dockBar');
+    let lastScrollTop = 0;
+    window.addEventListener('scroll', () => {
+        const st = window.scrollY || document.documentElement.scrollTop || 0;
+        if (st > lastScrollTop && st > 20) {
+            dockBar.classList.add('dock-hidden');
+        } else {
+            dockBar.classList.remove('dock-hidden');
+        }
+        lastScrollTop = st <= 0 ? 0 : st;
+    }, { passive: true });
+})();
 
 // --- Летающие частицы на фоне ---
 function initParticles() {
