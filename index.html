@@ -177,6 +177,29 @@
             padding-bottom: 86px;
         }
 
+        .separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin: 20px 0;
+    padding: 0 10px;
+}
+
+.separator::before,
+.separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.separator::before { margin-right: 15px; }
+.separator::after { margin-left: 15px; }
+
         .card.square {
             aspect-ratio: 1 / 1;
             height: auto;
@@ -647,6 +670,8 @@
         <div class="scroll" id="scrollArea">
             <div class="mosaic">
 
+                <!-- Разделитель -->
+<div class="separator">NowearSpin</div>
 <!-- ROLLS -->
 <div class="card full ludo anim-fade-d1 press-fx" style="--c1:#3a1250; --c2:#150620; --accent:#c084fc;" data-nav="rolls.html">
     <div class="ludo-arrow">›</div>
@@ -657,6 +682,7 @@
     <div class="ludo-desc">Крути колесо и забирай крупный приз</div>
     <img class="ludo-art" src="img/mini games img/rolls.png" alt="Rolls" style="right: 20px; bottom: 0px; height: 95%;">
 </div>
+                </div>
 
 <!-- КРАШ -->
 <div class="card half ludo anim-fade-d2 press-fx" style="--c1:#0d3d2e; --c2:#04140f; --accent:#34d399;" data-nav="ccrush.html">
