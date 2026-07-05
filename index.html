@@ -415,6 +415,15 @@
         .card.ludo.pressed { transform: scale(0.96); }
         .card.ludo.pressed .ludo-arrow { transform: scale(0.85); }
 
+        /* Мягкая пульсация для загадочной SVG-картинки "скоро" */
+        .mystery-svg {
+            animation: mysteryPulse 2.6s ease-in-out infinite;
+        }
+        @keyframes mysteryPulse {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.04); }
+        }
+
         /* ============================================================
            NEON GREEN — пульсирующее зелёное свечение по контуру карточки
            ============================================================ */
@@ -633,7 +642,7 @@
                         <div class="ludo-sub">Лови удачу</div>
                     </div>
                     <div class="ludo-desc">Крути колесо и забирай крупный приз</div>
-                    <img class="ludo-art" src="img/mini games img/rolls.png" alt="Rolls">
+                    <img class="ludo-art" src="img/mini games img/rolls.png" alt="Rolls" style="right: 10px; bottom: 4px; height: 68%;">
                 </div>
 
                 <!-- КРАШ: цветная карточка в стиле референса (зелёный) -->
@@ -644,14 +653,31 @@
                         <div class="ludo-sub">Умножь ставку</div>
                     </div>
                     <div class="ludo-desc">Успей забрать ставку</div>
-                    <img class="ludo-art" src="img/mini games img/croll.png" alt="Краш">
+                    <img class="ludo-art" src="img/mini games img/croll.png" alt="Краш" style="right: 4px; bottom: -2px; height: 62%;">
                 </div>
 
-                <div class="card half square anim-fade-d2b press-fx" data-nav="">
-                    <div class="card-content" style="text-align: center;">
-                        <div class="card-title" style="color: rgba(0,0,0,0.4); text-shadow:none;">Скоро</div>
-                        <div class="card-desc" style="color: rgba(0,0,0,0.3); text-shadow:none;">Новая мини-игра</div>
+                <!-- ЗАГАДОЧНАЯ МИНИ-ИГРА: тёмная ludo-карточка со светящимся знаком вопроса -->
+                <div class="card half square ludo anim-fade-d2b press-fx" style="--c1:#2b2b45; --c2:#0b0b14; --accent:#a78bfa;" data-nav="">
+                    <span class="soon-badge">SOON</span>
+                    <div class="ludo-top">
+                        <div class="ludo-title">???</div>
+                        <div class="ludo-sub">Новая мини-игра</div>
                     </div>
+                    <svg class="ludo-art mystery-svg" viewBox="0 0 200 200" style="right:-6px; bottom:-6px; height:66%; width:auto;">
+                        <defs>
+                            <radialGradient id="mysteryGlow" cx="50%" cy="50%" r="60%">
+                                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85"/>
+                                <stop offset="100%" stop-color="#312e81" stop-opacity="0"/>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="100" cy="100" r="95" fill="url(#mysteryGlow)"/>
+                        <circle cx="100" cy="100" r="62" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-dasharray="7 7"/>
+                        <text x="100" y="130" font-size="110" font-weight="900" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" opacity="0.95">?</text>
+                        <circle cx="38" cy="45" r="3" fill="#c4b5fd"/>
+                        <circle cx="165" cy="55" r="2.2" fill="#ddd6fe"/>
+                        <circle cx="150" cy="155" r="2.6" fill="#a78bfa"/>
+                        <circle cx="30" cy="150" r="2" fill="#c4b5fd"/>
+                    </svg>
                 </div>
 
                 <div class="card full wide anim-fade-d3 press-fx" data-nav="clicker.html">
