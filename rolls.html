@@ -378,6 +378,19 @@ async function loadOrCreateRound(){
   let { data } = await _supabase.from('roll_rounds')
     .select('*').order('id', {ascending:false}).limit(1).maybeSingle();
 
+  // ЗАЩИТА ОТ ЗАВИСШИХ РАУНДОВ:
+  // если последний раунд застрял в 'spinning' и с момента его старта
+  // (ends_at + ~время анимации) прошло больше 60 секунд — считаем его
+  // сломанным (например, у всех клиентов упал finalize) и принудительно
+  // закрываем, чтобы не блокировать ставки навсегда.
+  if(data && data.status === 'spinning'){
+    const stuckFor = Date.now() - new Date(data.ends_at).getTime();
+    if(stuckFor > 60000){
+      await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', data.id).eq('status','spinning');
+      data = { ...data, status:'finished' };
+    }
+  }
+
   const needNew = !data || data.status === 'finished';
 
   if(needNew){
@@ -724,25 +737,40 @@ async function trySettle(){
       currentRound = updated[0];
       spinWheelTo(landingAngle);
       setTimeout(async ()=>{
-        const { data: winnerRow } = await _supabase.from('users').select('*').eq('user_id', winnerWedge.user_id).single();
-        if(winnerRow){
-          const newStars = (winnerRow.stars||0) + totalStars;
-          const newTon = (winnerRow.balance||0) + totalTon;
-          const existingInventory = parseGifts(winnerRow[INVENTORY_COLUMN]);
-          const newInventory = [...existingInventory, ...giftFiles];
-          await _supabase.from('users').update({ stars:newStars, balance:newTon, [INVENTORY_COLUMN]:newInventory }).eq('user_id', winnerWedge.user_id);
+        // ВАЖНО: вся начисляющая логика обёрнута в try/catch/finally.
+        // Раньше при любой ошибке здесь (например .single() не находит
+        // строку победителя, сеть моргнула, RLS отклонил update) раунд
+        // так и оставался в статусе 'spinning' НАВСЕГДА — и placeBet()
+        // блокировал новые ставки у всех игроков до ручного вмешательства.
+        // Теперь status:'finished' гарантированно проставляется в finally,
+        // даже если начисление приза не удалось.
+        try{
+          const { data: winnerRow, error: wErr } = await _supabase.from('users').select('*').eq('user_id', winnerWedge.user_id).maybeSingle();
+          if(wErr) throw wErr;
+          if(winnerRow){
+            const newStars = (winnerRow.stars||0) + totalStars;
+            const newTon = (winnerRow.balance||0) + totalTon;
+            const existingInventory = parseGifts(winnerRow[INVENTORY_COLUMN]);
+            const newInventory = [...existingInventory, ...giftFiles];
+            const { error: payErr } = await _supabase.from('users').update({ stars:newStars, balance:newTon, [INVENTORY_COLUMN]:newInventory }).eq('user_id', winnerWedge.user_id);
+            if(payErr) throw payErr;
+          }
+          showWinnerBanner(winnerWedge.username, totalStars, totalTon, giftFiles.length, winnerWedge.avatar_url);
+          // если выиграли мы сами — подтягиваем актуальный баланс и инвентарь сразу
+          if(String(winnerWedge.user_id) === userId){
+            await loadMe(true);
+            myGifts = parseGifts(myProfile[INVENTORY_COLUMN]);
+            renderGiftsGrid();
+          }
+        } catch(finalizeErr){
+          console.error('finalize error (round will still be closed):', finalizeErr);
+        } finally {
+          // закрываем раунд в любом случае — это и было причиной "всё наебнулось"
+          await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id);
+          // через несколько секунд полностью перезагружаем страницу — гарантированно
+          // начинаем новый раунд "с нуля" и избегаем зависаний при частичном обновлении
+          setTimeout(()=>{ location.reload(); }, 4000);
         }
-        await _supabase.from('roll_rounds').update({ status:'finished' }).eq('id', currentRound.id);
-        showWinnerBanner(winnerWedge.username, totalStars, totalTon, giftFiles.length, winnerWedge.avatar_url);
-        // если выиграли мы сами — подтягиваем актуальный баланс и инвентарь сразу
-        if(String(winnerWedge.user_id) === userId){
-          await loadMe(true);
-          myGifts = parseGifts(myProfile[INVENTORY_COLUMN]);
-          renderGiftsGrid();
-        }
-        // через несколько секунд полностью перезагружаем страницу — гарантированно
-        // начинаем новый раунд "с нуля" и избегаем зависаний при частичном обновлении
-        setTimeout(()=>{ location.reload(); }, 4000);
       }, 4600);
     } else {
       // мы проиграли "гонку" — кто-то другой уже перевёл раунд в spinning.
