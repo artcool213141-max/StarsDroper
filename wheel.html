@@ -8,12 +8,12 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght=400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         :root { 
-            --accent: #d4af37; 
-            --accent-hover: #aa841c; 
-            --accent-gradient: linear-gradient(135deg, #f3e09a 0%, #d4af37 50%, #aa841c 100%);
-            --bg: #0d0a05; 
+            --accent: #f5b025; 
+            --accent-hover: #c68c16; 
+            --accent-gradient: linear-gradient(135deg, #fbe3a8 0%, #f5b025 50%, #c68c16 100%);
+            --bg: #000000; 
         }
         
         * { -webkit-tap-highlight-color: transparent; user-select: none; }
@@ -21,19 +21,30 @@
         body { 
             background: var(--bg); color: white; font-family: 'Inter', sans-serif; 
             margin: 0; overflow: hidden; height: 100vh; display: flex; flex-direction: column; 
+            position: relative;
         }
 
+        #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        .content-wrapper { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; }
+
         .header-panel { 
-            padding: 12px 16px; background: #0a0804; border-bottom: 1px solid #1c170a; 
+            padding: 12px 16px; background: rgba(10, 10, 10, 0.6); border-bottom: 1px solid rgba(245, 176, 37, 0.12); 
             padding-top: calc(12px + var(--tg-safe-area-inset-top, 0px));
+            backdrop-filter: blur(10px);
         }
+
+        /* --- Единая тап-анимация --- */
+        .tap-bounce { transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease; }
+        .tap-bounce:active { transform: scale(0.92); }
 
         #wheels-container { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; gap: 8px; overflow: hidden; }
 
         .wheel-track { 
             position: relative; width: 100%; height: 90px; overflow: hidden; 
-            border-top: 1px solid rgba(212, 175, 55, 0.2); border-bottom: 1px solid rgba(212, 175, 55, 0.2);
-            background: rgba(212, 175, 55, 0.02);
+            border-top: 1px solid rgba(245, 176, 37, 0.2); border-bottom: 1px solid rgba(245, 176, 37, 0.2);
+            background: rgba(245, 176, 37, 0.02);
+            border-radius: 14px;
         }
 
         .pointer { 
@@ -47,70 +58,90 @@
         .item { 
             min-width: 80px; height: 80px; margin: 0 4px; background: rgba(255, 255, 255, 0.02); 
             border-radius: 12px; display: flex; align-items: center; justify-content: center; 
-            border: 1px solid rgba(212, 175, 55, 0.1);
+            border: 1px solid rgba(245, 176, 37, 0.1);
         }
         .item img { width: 55px; height: 55px; object-fit: contain; }
 
         .btn-main { 
-            background: var(--accent-gradient); color: #0d0a05; font-weight: 900; border-radius: 18px; 
-            transition: 0.2s; box-shadow: 0 5px 25px rgba(212, 175, 55, 0.3);
+            background: var(--accent-gradient); color: #000; font-weight: 900; border-radius: 18px; 
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 5px 25px rgba(245, 176, 37, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .btn-main:active { transform: scale(0.97); }
+        .btn-main:active { transform: scale(0.95); }
         .btn-main:disabled { opacity: 0.3; filter: grayscale(1); }
 
-        .multi-btn { background: #141006; border: 1px solid #28200d; padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #5a4b2c; }
-        .multi-btn.active { border-color: var(--accent); background: #2b220c; color: white; box-shadow: 0 0 10px rgba(212, 175, 55, 0.2); }
+        .multi-btn { background: rgba(245, 176, 37, 0.04); border: 1px solid rgba(245, 176, 37, 0.1); padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #6b5c38; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+        .multi-btn.active { border-color: var(--accent); background: rgba(245, 176, 37, 0.12); color: white; box-shadow: 0 0 10px rgba(245, 176, 37, 0.25); }
+        .multi-btn:active { transform: scale(0.9); }
 
-        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(5, 4, 2, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
-        .modal-box { background: #120e06; border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(212, 175, 55, 0.2); }
+        .skip-wrap { display: none; justify-content: center; padding-bottom: 6px; }
+        .skip-wrap.show { display: flex; }
+        .skip-btn {
+            padding: 9px 26px; border-radius: 999px;
+            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12);
+            color: #d7cbb0; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.15em;
+        }
+        .skip-btn:active { background: rgba(255,255,255,0.1); }
+
+        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
+        .modal-box { background: rgba(20,20,20,0.9); border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(245, 176, 37, 0.2); animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+
+        .win-item-card { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         
         ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
+    <canvas id="stars-canvas"></canvas>
 
-    <header class="header-panel flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#1c160a] border border-[#2e2410] active:scale-90 transition-transform">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#d4af37]">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-            </a>
-            <div class="font-black italic text-lg tracking-tighter uppercase">Nowear<span class="text-[#d4af37]">Spin</span></div>
-        </div>
-        
-        <div class="flex items-center gap-2 bg-[#1c160a] px-4 py-1.5 rounded-full border border-[#3e3116] shadow-[0_0_10px_rgba(212,175,55,0.05)]">
-            <img src="img/star.png" class="w-4 h-4" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1828/1828884.png'">
-            <span id="val-stars" class="font-black text-sm text-[#d4af37]">0</span>
-        </div>
-    </header>
+    <div class="content-wrapper">
+        <header class="header-panel flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="index.html" class="tap-bounce flex items-center justify-center w-8 h-8 rounded-full bg-black/40 border border-white/10">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-[#f5b025]">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                </a>
+                <div class="font-black italic text-lg tracking-tighter uppercase">Nowear<span class="text-[#f5b025]">Spin</span></div>
+            </div>
+            
+            <div class="flex items-center gap-2 bg-black/40 px-4 py-1.5 rounded-full border border-[#f5b025]/25 shadow-[0_0_10px_rgba(245,176,37,0.08)]">
+                <img src="img/star.png" class="w-4 h-4" onerror="this.src='https://cdn-icons-png.flaticon.com/512/1828/1828884.png'">
+                <span id="val-stars" class="font-black text-sm text-[#f5b025]">0</span>
+            </div>
+        </header>
 
-    <div id="wheels-container"></div>
+        <div id="wheels-container"></div>
 
-    <div class="p-6 bg-[#0a0804] border-t border-[#1c170a] pb-[calc(24px + var(--tg-safe-area-inset-bottom, 0px))]">
-        <div id="multi-wrap" class="flex gap-2 mb-4">
-            <button onclick="setMulti(1)" class="multi-btn active" data-m="1">X1</button>
-            <button onclick="setMulti(2)" class="multi-btn" data-m="2">X2</button>
-            <button onclick="setMulti(3)" class="multi-btn" data-m="3">X3</button>
-            <button onclick="setMulti(4)" class="multi-btn" data-m="4">X4</button>
-            <button onclick="setMulti(5)" class="multi-btn" data-m="5">X5</button>
+        <div class="p-6 bg-black/40 border-t border-[#f5b025]/10">
+            <div id="skip-wrap" class="skip-wrap">
+                <button onclick="skipSpin()" class="skip-btn tap-bounce">Пропустить ⏭</button>
+            </div>
+            <div id="multi-wrap" class="flex gap-2 mb-4">
+                <button onclick="setMulti(1)" class="multi-btn tap-bounce active" data-m="1">X1</button>
+                <button onclick="setMulti(2)" class="multi-btn tap-bounce" data-m="2">X2</button>
+                <button onclick="setMulti(3)" class="multi-btn tap-bounce" data-m="3">X3</button>
+                <button onclick="setMulti(4)" class="multi-btn tap-bounce" data-m="4">X4</button>
+                <button onclick="setMulti(5)" class="multi-btn tap-bounce" data-m="5">X5</button>
+            </div>
+            <button id="spin-btn" onclick="startSpin()" class="w-full py-4 btn-main uppercase tracking-widest text-sm">Подключение...</button>
         </div>
-        <button id="spin-btn" onclick="startSpin()" class="w-full py-4 btn-main uppercase tracking-widest text-sm">Подключение...</button>
     </div>
 
     <div id="win-modal">
         <div class="modal-box">
-            <h2 class="text-xl font-black italic uppercase text-[#d4af37] tracking-wider">Отличный улов!</h2>
+            <h2 class="text-xl font-black italic uppercase text-[#f5b025] tracking-wider">Отличный улов!</h2>
             <p class="text-[11px] text-gray-400 uppercase font-medium mt-1">Твои награды:</p>
             
             <div id="win-items-container" class="grid grid-cols-3 gap-2 my-5"></div>
             
-            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-[#d4af37] text-sm">0</span> ★</p>
+            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-[#f5b025] text-sm">0</span> ★</p>
             
-            <button onclick="claimPrize('sell')" id="sell-btn" class="w-full bg-gradient-to-r from-[#f3e09a] via-[#d4af37] to-[#aa841c] text-[#0d0a05] py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
-            <button onclick="claimPrize('keep')" id="keep-btn" class="w-full bg-white/5 text-gray-300 py-4 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-white/5 active:bg-white/10">Оставить в рюкзаке</button>
+            <button onclick="claimPrize('sell')" id="sell-btn" class="tap-bounce w-full bg-gradient-to-r from-[#fbe3a8] via-[#f5b025] to-[#c68c16] text-black py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
+            <button onclick="claimPrize('keep')" id="keep-btn" class="tap-bounce w-full bg-white/5 text-gray-300 py-4 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-white/5">Оставить в рюкзаке</button>
         </div>
     </div>
 
@@ -137,6 +168,7 @@ const ALL_ITEMS = {
 
     const ALL_KEYS = Object.keys(ALL_ITEMS);
     let user = null, isSpinning = false, multi = 1, currentWins = [];
+    let spinTimeoutId = null;
 
     async function syncBalance() {
         if (!user) return;
@@ -199,7 +231,9 @@ async function startSpin() {
         if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
 
         isSpinning = true;
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
         document.getElementById('spin-btn').disabled = true;
+        document.getElementById('skip-wrap').classList.add('show');
         currentWins = [];
 
         // ЛОГИКА ШАНСОВ
@@ -226,24 +260,36 @@ async function startSpin() {
             document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
             document.getElementById(`line-${i}`).style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
         }
-        setTimeout(showModal, 8000);
+
+        if (spinTimeoutId) clearTimeout(spinTimeoutId);
+        spinTimeoutId = setTimeout(showModal, 8000);
+    }
+
+    function skipSpin() {
+        if (!isSpinning) return;
+        if (spinTimeoutId) { clearTimeout(spinTimeoutId); spinTimeoutId = null; }
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        showModal();
     }
 
     function showModal() {
+        document.getElementById('skip-wrap').classList.remove('show');
         const container = document.getElementById('win-items-container');
         container.innerHTML = '';
         let total = 0;
-        currentWins.forEach(w => {
+        currentWins.forEach((w, i) => {
             total += w.price;
-            container.innerHTML += `<div class="bg-white/5 p-2 rounded-xl border border-[#d4af37]/20"><img src="img/${w.img}" class="w-10 h-10 mx-auto"><p class="text-[10px] font-black text-[#d4af37] mt-1">${w.price}★</p></div>`;
+            container.innerHTML += `<div class="win-item-card bg-white/5 p-2 rounded-xl border border-[#f5b025]/20" style="animation-delay:${i * 0.08}s"><img src="img/${w.img}" class="w-10 h-10 mx-auto"><p class="text-[10px] font-black text-[#f5b025] mt-1">${w.price}★</p></div>`;
         });
         document.getElementById('total-win-price').innerText = total;
         document.getElementById('win-modal').style.display = 'flex';
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     }
 
     async function claimPrize(type) {
         await syncBalance();
         const sum = currentWins.reduce((s, w) => s + w.price, 0);
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
         if (type === 'sell') await SB.from('users').update({ stars: user.stars + sum }).eq('user_id', user.user_id);
         else {
             const inv = user.inventory || [];
@@ -253,8 +299,67 @@ async function startSpin() {
         location.reload();
     }
 
-    function setMulti(m) { multi = m; document.querySelectorAll('.multi-btn').forEach(b => b.classList.toggle('active', b.dataset.m == m)); updateUI(); }
+    function setMulti(m) {
+        multi = m;
+        if (tg.HapticFeedback) (tg.HapticFeedback.selectionChanged ? tg.HapticFeedback.selectionChanged() : tg.HapticFeedback.impactOccurred('light'));
+        document.querySelectorAll('.multi-btn').forEach(b => b.classList.toggle('active', b.dataset.m == m));
+        updateUI();
+    }
     window.addEventListener('focus', syncBalance);
+
+    // --- Летающие частицы на фоне (как на остальных страницах) ---
+    function initParticles() {
+        const canvas = document.getElementById('stars-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let w, h, particles;
+
+        function resize() {
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+        }
+
+        function makeParticles() {
+            const count = Math.floor((w * h) / 22000);
+            particles = Array.from({ length: count }, () => ({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: Math.random() * 1.3 + 0.3,
+                vy: Math.random() * 0.15 + 0.03,
+                vx: (Math.random() - 0.5) * 0.08,
+                alpha: Math.random() * 0.5 + 0.2,
+                twinkle: Math.random() * 0.02 + 0.005,
+                dir: Math.random() > 0.5 ? 1 : -1
+            }));
+        }
+
+        function tick() {
+            ctx.clearRect(0, 0, w, h);
+            particles.forEach(p => {
+                p.alpha += p.twinkle * p.dir;
+                if (p.alpha >= 0.8 || p.alpha <= 0.15) p.dir *= -1;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
+                ctx.fill();
+
+                p.y -= p.vy;
+                p.x += p.vx;
+                if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+                if (p.x < -5) p.x = w + 5;
+                if (p.x > w + 5) p.x = -5;
+            });
+            requestAnimationFrame(tick);
+        }
+
+        resize();
+        makeParticles();
+        tick();
+        window.addEventListener('resize', () => { resize(); makeParticles(); });
+    }
+
+    initParticles();
     checkAuth();
 </script>
 </body>
