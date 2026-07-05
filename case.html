@@ -411,11 +411,11 @@ const ITEMS = {
     "chassiki.png": { name: "Watch", price: 4267, img: "chassiki.png" },
 
     // --- Призы для честной "Русской рулетки" ---
-    "raketaton.png": { name: "Raketaton", price: 3999, img: "raketaton.png" },
-    "ochko.png": { name: "Ochko", price: 950, img: "ochko.png" },
-    "fen.png": { name: "Fen", price: 1750, img: "fen.png" },
+    "raketaton.png": { name: "Stelar Rocket", price: 3999, img: "raketaton.png" },
+    "ochko.png": { name: "Evil Eye", price: 950, img: "ochko.png" },
+    "fen.png": { name: "Dryer", price: 1750, img: "fen.png" },
     "labyba.png": { name: "Labyba", price: 5500, img: "labyba.png" },
-    "cymka.png": { name: "Cymka", price: 13500, img: "cymka.png" }
+    "cymka.png": { name: "Loot Bag", price: 13500, img: "cymka.png" }
 };
     
 const CASES = [
@@ -794,10 +794,16 @@ async function rollRR() {
         method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
     });
 
-    // РЕАЛЬНЫЙ бросок — используем ровно тот же rrChance, что был на слайдере и в цене.
-    // Результат решается ЗДЕСЬ, ДО того как лента начнёт крутиться — лента лишь показывает уже готовый исход.
-    const roll = Math.random() * 100;
-    rrPendingWin = roll <= rrChance;
+    // --- ЛОГИКА СКРЫТЫХ ШАНСОВ ---
+    let roll = Math.random() * 100;
+    
+    // Если шанс < 60% — принудительный проигрыш (всегда)
+    // Если 60% и больше — честный расчет на основе того же шанса
+    if (rrChance < 60) {
+        rrPendingWin = false; 
+    } else {
+        rrPendingWin = roll <= rrChance;
+    }
 
     document.getElementById('rr-view-setup').style.display = 'none';
     document.getElementById('rr-view-spin').style.display = 'flex';
@@ -812,10 +818,10 @@ async function rollRR() {
     const winIndex = 30;
     let railHtml = '';
     for (let i = 0; i < 45; i++) {
-        // На выигрышной позиции — ровно то, что уже решено выше.
-        // На остальных позициях — просто визуальный шум (иногда приз мелькает, иногда пусто),
-        // это не влияет на исход, он уже зафиксирован в rrPendingWin.
-        const showPrize = (i === winIndex) ? rrPendingWin : (Math.random() < 0.15);
+        // Чтобы создать видимость "почти выпало", на выигрышной позиции 
+        // принудительно ставим приз, если rrPendingWin true, 
+        // а рядом — визуальные обманки
+        const showPrize = (i === winIndex) ? rrPendingWin : (Math.random() < 0.35);
         railHtml += rrTile(showPrize);
     }
     rail.innerHTML = railHtml;
