@@ -8,13 +8,13 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
-
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        
         :root {
-            --accent: #f5b025;
-            --accent-hover: #c68c16;
-            --bg: #000000;
-            --card-bg: rgba(245, 176, 37, 0.04);
+            --accent: #f59e0b;
+            --accent-hover: #d97706;
+            --bg: #0f0f0f;
+            --card-bg: rgba(255, 255, 255, 0.03);
         }
 
         body { 
@@ -25,24 +25,18 @@
             overflow: hidden; 
             margin: 0;
             user-select: none;
-            position: relative;
         }
-
-        .orbitron { font-family: 'Orbitron', sans-serif; }
-
-        #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
-        .content-wrapper { position: relative; z-index: 1; }
 
         /* Круговая рулетка */
         .wheel-container { 
             width: 190px; height: 190px; 
             border-radius: 50%; 
             background: #050505; 
-            border: 2px solid rgba(245, 176, 37, 0.22); 
+            border: 2px solid rgba(245, 158, 11, 0.2); 
             margin: 10px auto; 
             position: relative; 
             display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 0 30px rgba(245, 176, 37, 0.15);
+            box-shadow: 0 0 30px rgba(245, 158, 11, 0.1);
         }
         
         #wheel-progress { 
@@ -61,7 +55,7 @@
             height: 220px; overflow-y: auto; 
             background: var(--card-bg); 
             border-radius: 16px; padding: 10px; 
-            border: 1px solid rgba(245, 176, 37, 0.1); 
+            border: 1px solid rgba(255,255,255,0.05); 
         }
         
         .item-card { 
@@ -70,31 +64,28 @@
             border-radius: 12px; background: rgba(255,255,255,0.02); 
             border: 1px solid transparent; transition: 0.2s;
         }
-        .item-card.active { border-color: var(--accent); background: rgba(245, 176, 37, 0.08); }
+        .item-card.active { border-color: var(--accent); background: rgba(245, 158, 11, 0.08); }
 
         /* Слоты */
         .slot { 
             width: 100%; height: 75px; 
             background: var(--card-bg); 
-            border: 1px solid rgba(245, 176, 37, 0.1); 
+            border: 1px solid rgba(255,255,255,0.05); 
             border-radius: 18px; 
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: 0.3s;
         }
-        .slot.filled { border-color: rgba(245, 176, 37, 0.35); background: rgba(245, 176, 37, 0.05); }
+        .slot.filled { border-color: rgba(245, 158, 11, 0.3); background: rgba(245, 158, 11, 0.03); }
 
         .btn-main { 
             background: var(--accent); color: #000; 
             font-weight: 900; width: 100%; 
-            padding: 18px; border-radius: 20px; 
-            box-shadow: 0 6px 0 var(--accent-hover); 
-            transition: 0.1s;
-            text-transform: uppercase;
-            border: none;
-            outline: none;
+            padding: 18px; border-radius: 16px; 
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.15); 
+            transition: 0.3s; 
         }
         .btn-main:disabled { background: #222; color: #555; box-shadow: none; opacity: 0.5; }
-        .btn-main:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--accent-hover); }
+        .btn-main:active { transform: scale(0.98); }
 
         #res-msg { position: absolute; font-size: 26px; font-weight: 900; z-index: 40; display: none; text-align: center; width: 100%; letter-spacing: 2px; }
         
@@ -103,56 +94,53 @@
     </style>
 </head>
 <body class="p-5">
-    <canvas id="stars-canvas"></canvas>
 
-    <div class="content-wrapper">
-        <div class="flex justify-between items-center mb-4">
-            <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-black/40 border border-white/10 active:scale-90 transition-transform">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
-                    <line x1="19" y1="12" x2="5" y2="12"></line>
-                    <polyline points="12 19 5 12 12 5"></polyline>
-                </svg>
-            </a>
-            <div class="text-[11px] font-black text-[#f5b025] tracking-widest uppercase orbitron italic">Модернизация</div>
+    <div class="flex justify-between items-center mb-4">
+        <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#111] border border-[#222] active:scale-90 transition-transform">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="text-gray-400">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+        </a>
+        <div class="text-[11px] font-black text-[#f59e0b] tracking-widest uppercase">Модернизация</div>
+    </div>
+
+    <div class="wheel-container">
+        <div id="wheel-progress"></div>
+        <div id="pointer-wrapper"><div id="pointer"></div></div>
+        <div id="res-msg"></div>
+        <div id="center-ui" class="relative z-10 text-center">
+            <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]">
+            <div id="view-empty" class="text-5xl font-black opacity-10">?</div>
         </div>
+    </div>
 
-        <div class="wheel-container">
-            <div id="wheel-progress"></div>
-            <div id="pointer-wrapper"><div id="pointer"></div></div>
-            <div id="res-msg"></div>
-            <div id="center-ui" class="relative z-10 text-center">
-                <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(245,176,37,0.4)]">
-                <div id="view-empty" class="text-5xl font-black opacity-10">?</div>
-            </div>
+    <div id="info-chance" class="text-center text-[#f59e0b] font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите предмет</div>
+
+    <div class="grid grid-cols-2 gap-4 mb-5">
+        <div class="slot" id="slot-1">
+            <img id="img-1" src="" class="w-10 h-10 object-contain hidden">
+            <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Твой предмет</div>
         </div>
-
-        <div id="info-chance" class="text-center text-[#f5b025] font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите предмет</div>
-
-        <div class="grid grid-cols-2 gap-4 mb-5">
-            <div class="slot" id="slot-1">
-                <img id="img-1" src="" class="w-10 h-10 object-contain hidden">
-                <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Твой предмет</div>
-            </div>
-            <div class="slot" id="slot-2">
-                <img id="img-2" src="" class="w-10 h-10 object-contain hidden">
-                <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Цель апгрейда</div>
-            </div>
+        <div class="slot" id="slot-2">
+            <img id="img-2" src="" class="w-10 h-10 object-contain hidden">
+            <div class="text-[8px] font-bold opacity-30 mt-1 uppercase tracking-tighter">Цель апгрейда</div>
         </div>
+    </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <div>
-                <h3 class="text-[10px] font-black uppercase mb-3 opacity-30 text-center tracking-widest">Твой рюкзак</h3>
-                <div id="mine-list" class="scroll-area"></div>
-            </div>
-            <div>
-                <h3 class="text-[10px] font-black uppercase mb-3 text-[#f5b025] text-center tracking-widest">Доступно</h3>
-                <div id="target-list" class="scroll-area"></div>
-            </div>
+    <div class="grid grid-cols-2 gap-4">
+        <div>
+            <h3 class="text-[10px] font-black uppercase mb-3 opacity-30 text-center tracking-widest">Твой рюкзак</h3>
+            <div id="mine-list" class="scroll-area"></div>
         </div>
+        <div>
+            <h3 class="text-[10px] font-black uppercase mb-3 text-[#f59e0b] text-center tracking-widest">Доступно</h3>
+            <div id="target-list" class="scroll-area"></div>
+        </div>
+    </div>
 
-        <div class="fixed bottom-6 left-5 right-5">
-            <button id="upg-btn" onclick="startUpgrade()" class="btn-main uppercase tracking-wider text-xs" disabled>Запустить улучшение</button>
-        </div>
+    <div class="fixed bottom-6 left-5 right-5">
+        <button id="upg-btn" onclick="startUpgrade()" class="btn-main uppercase tracking-wider text-xs" disabled>Запустить улучшение</button>
     </div>
 
 <script>
@@ -278,7 +266,7 @@ const ITEMS_DATA = {
                     <img src="img/${file}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
                     <div class="overflow-hidden">
                         <div class="text-[9px] font-black truncate uppercase">${info.name}</div>
-                        <div class="text-[7px] text-[#f5b025] font-bold">${info.price} ⭐</div>
+                        <div class="text-[7px] text-[#f59e0b] font-bold">${info.price} ⭐</div>
                     </div>
                 </div>`).join('');
     }
@@ -319,11 +307,11 @@ const ITEMS_DATA = {
             visualChance = Math.min(Math.max(visualChance, 10), 85);
             
             info.innerText = `ШАНС НА УСПЕХ: ${visualChance.toFixed(1)}%`;
-            wheel.style.background = `conic-gradient(#f5b025 ${visualChance * 3.6}deg, transparent 0deg)`;
+            wheel.style.background = `conic-gradient(#f59e0b ${visualChance * 3.6}deg, transparent 0deg)`;
             btn.disabled = false;
         } else {
             btn.disabled = true;
-            wheel.style.background = `conic-gradient(#f5b025 0deg, transparent 0deg)`;
+            wheel.style.background = `conic-gradient(#f59e0b 0deg, transparent 0deg)`;
             info.innerText = s1 ? "ВЫБЕРИ ЦЕЛЬ УЛУЧШЕНИЯ" : "ВЫБЕРИ СВОЙ ПРЕДМЕТ";
         }
     }
@@ -340,7 +328,7 @@ if (s2.price > s1.price * 7.5) {
         
         // Через 2 секунды возвращаем всё как было
         setTimeout(() => {
-            info.style.color = "#f5b025"; // Возвращаем золотой цвет
+            info.style.color = "#f59e0b"; // Возвращаем золотой цвет
             updateUI(); 
         }, 2000);
         return;
@@ -378,7 +366,7 @@ if (s2.price > s1.price * 7.5) {
             const targetFile = s2.img.split('/').pop();
 
             if (isWin) {
-                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#f5b025";
+                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#f59e0b";
                 if(s1.idx >= 0 && s1.idx < newInv.length) {
                     newInv[s1.idx] = targetFile;
                 }
@@ -401,59 +389,7 @@ if (s2.price > s1.price * 7.5) {
         }, 3600);
     }
 
-    // --- Летающие частицы на фоне (как на других страницах) ---
-    function initParticles() {
-        const canvas = document.getElementById('stars-canvas');
-        if (!canvas) return;
-        const ctx = canvas.getContext('2d');
-        let w, h, particles;
-
-        function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
-        }
-
-        function makeParticles() {
-            const count = Math.floor((w * h) / 22000);
-            particles = Array.from({ length: count }, () => ({
-                x: Math.random() * w,
-                y: Math.random() * h,
-                r: Math.random() * 1.3 + 0.3,
-                vy: Math.random() * 0.15 + 0.03,
-                vx: (Math.random() - 0.5) * 0.08,
-                alpha: Math.random() * 0.5 + 0.2,
-                twinkle: Math.random() * 0.02 + 0.005,
-                dir: Math.random() > 0.5 ? 1 : -1
-            }));
-        }
-
-        function tick() {
-            ctx.clearRect(0, 0, w, h);
-            particles.forEach(p => {
-                p.alpha += p.twinkle * p.dir;
-                if (p.alpha >= 0.8 || p.alpha <= 0.15) p.dir *= -1;
-
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
-                ctx.fill();
-
-                p.y -= p.vy;
-                p.x += p.vx;
-                if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
-                if (p.x < -5) p.x = w + 5;
-                if (p.x > w + 5) p.x = -5;
-            });
-            requestAnimationFrame(tick);
-        }
-
-        resize();
-        makeParticles();
-        tick();
-        window.addEventListener('resize', () => { resize(); makeParticles(); });
-    }
-
-    window.onload = () => { if(tg.expand) tg.expand(); initParticles(); loadFromDB(); };
+    window.onload = () => { if(tg.expand) tg.expand(); loadFromDB(); };
 </script>
 </body>
 </html>
