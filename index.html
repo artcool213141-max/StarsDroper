@@ -647,54 +647,42 @@
         <div class="scroll" id="scrollArea">
             <div class="mosaic">
 
-                <!-- ROLLS: цветная карточка в стиле референса (фиолетовый) -->
-                <div class="card full ludo anim-fade-d1 press-fx" style="--c1:#3a1250; --c2:#150620; --accent:#c084fc;" data-nav="rolls.html">
-                    <div class="ludo-arrow">›</div>
-                    <div class="ludo-top">
-                        <div class="ludo-title">Rolls</div>
-                        <div class="ludo-sub">Лови удачу</div>
-                    </div>
-                    <div class="ludo-desc">Крути колесо и забирай крупный приз</div>
-                    <!-- Изменен стиль для ludo-art: bottom увеличено с 16px до 18px -->
-                  <img class="ludo-art" src="img/mini games img/rolls.png" alt="Rolls" style="right: 20px; bottom: 18px; height: 84%;">
-                </div>
+<!-- ROLLS -->
+<div class="card full ludo anim-fade-d1 press-fx" style="--c1:#3a1250; --c2:#150620; --accent:#c084fc;" data-nav="rolls.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Rolls</div>
+        <div class="ludo-sub">Лови удачу</div>
+    </div>
+    <div class="ludo-desc">Крути колесо и забирай крупный приз</div>
+    <img class="ludo-art" src="img/mini games img/rolls.png" alt="Rolls" style="right: 20px; bottom: 0px; height: 95%;">
+</div>
 
-                <!-- КРАШ: цветная карточка в стиле референса (зелёный) -->
-                <div class="card half ludo anim-fade-d2 press-fx" style="--c1:#0d3d2e; --c2:#04140f; --accent:#34d399;" data-nav="ccrush.html">
-                    <div class="ludo-arrow">›</div>
-                    <div class="ludo-top">
-                        <div class="ludo-title">Краш</div>
-                        <div class="ludo-sub">Умножь ставку</div>
-                    </div>
-                    <div class="ludo-desc">Успей забрать ставку</div>
-                    <img class="ludo-art" src="img/mini games img/croll.png" alt="Краш" style="right: 18px; bottom: 24px; height: 48%;">
-                </div>
+<!-- КРАШ -->
+<div class="card half ludo anim-fade-d2 press-fx" style="--c1:#0d3d2e; --c2:#04140f; --accent:#34d399;" data-nav="ccrush.html">
+    <div class="ludo-arrow">›</div>
+    <div class="ludo-top">
+        <div class="ludo-title">Краш</div>
+        <div class="ludo-sub">Умножь ставку</div>
+    </div>
+    <div class="ludo-desc">Успей забрать ставку</div>
+    <img class="ludo-art" src="img/mini games img/croll.png" alt="Краш" style="right: 18px; bottom: 24px; height: 48%;">
+</div>
 
-                <!-- ЗАГАДОЧНАЯ МИНИ-ИГРА: тёмная ludo-карточка со светящимся знаком вопроса -->
-                <div class="card half square ludo anim-fade-d2b press-fx" style="--c1:#2b2b45; --c2:#0b0b14; --accent:#a78bfa;" data-nav="">
-                    <span class="soon-badge">SOON</span>
-                    <div class="ludo-top">
-                        <div class="ludo-title">???</div>
-                        <div class="ludo-sub">Новая мини-игра</div>
-                    </div>
-                    <svg class="ludo-art mystery-svg" viewBox="0 0 200 200" style="right:8px; bottom:10px; height:52%; width:auto;">
-                        <defs>
-                            <radialGradient id="mysteryGlow" cx="50%" cy="50%" r="60%">
-                                <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85"/>
-                                <stop offset="100%" stop-color="#312e81" stop-opacity="0"/>
-                            </radialGradient>
-                        </defs>
-                        <circle cx="100" cy="100" r="95" fill="url(#mysteryGlow)"/>
-                        <circle cx="100" cy="100" r="62" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-dasharray="7 7"/>
-                        <text x="100" y="130" font-size="110" font-weight="900" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" opacity="0.95">?</text>
-                        <circle cx="38" cy="45" r="3" fill="#c4b5fd"/>
-                        <circle cx="165" cy="55" r="2.2" fill="#ddd6fe"/>
-                        <circle cx="150" cy="155" r="2.6" fill="#a78bfa"/>
-                        <circle cx="30" cy="150" r="2" fill="#c4b5fd"/>
-                    </svg>
-                </div>
+<!-- ЗАГАДОЧНАЯ МИНИ-ИГРА -->
+<div class="card half square ludo anim-fade-d2b press-fx" style="--c1:#2b2b45; --c2:#0b0b14; --accent:#a78bfa;" data-nav="">
+    <span class="soon-badge">SOON</span>
+    <div class="ludo-top">
+        <div class="ludo-title">???</div>
+        <div class="ludo-sub">Новая игра</div>
+    </div>
+    <svg class="ludo-art mystery-svg" viewBox="0 0 200 200" style="right:8px; bottom:10px; height:52%; width:auto;">
+        <defs><radialGradient id="mysteryGlow" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#a78bfa" stop-opacity="0.85"/><stop offset="100%" stop-color="#312e81" stop-opacity="0"/></radialGradient></defs>
+        <circle cx="100" cy="100" r="95" fill="url(#mysteryGlow)"/><circle cx="100" cy="100" r="62" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-dasharray="7 7"/><text x="100" y="130" font-size="110" font-weight="900" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" opacity="0.95">?</text>
+    </svg>
+</div>
 
-<!-- КЛИКЕР (Розовый стиль) -->
+<!-- КЛИКЕР -->
 <div class="card full ludo press-fx" style="--c1:#501230; --c2:#200615; --accent:#f472b6;" data-nav="clicker.html">
     <div class="ludo-arrow">›</div>
     <div class="ludo-top">
@@ -702,29 +690,29 @@
         <div class="ludo-sub">Тапай и забирай</div>
     </div>
     <div class="ludo-desc">Тапай по экрану и зарабатывай монеты</div>
-    <img class="ludo-art" src="img/kotel.png" alt="Кликер">
+    <img class="ludo-art" src="img/kotel.png" alt="Кликер" style="right: 10px; bottom: 10px; height: 65%;">
 </div>
 
-<!-- КЕЙСЫ -->
-<div class="card full ludo press-fx" style="--c1:#1e3a8a; --c2:#0c162d; --accent:#60a5fa;" data-nav="case.html">
+<!-- КЕЙСЫ (Половинка) -->
+<div class="card half ludo press-fx" style="--c1:#1e3a8a; --c2:#0c162d; --accent:#60a5fa;" data-nav="case.html">
     <div class="ludo-arrow">›</div>
     <div class="ludo-top">
         <div class="ludo-title">Кейсы</div>
         <div class="ludo-sub">Удача внутри</div>
     </div>
-    <div class="ludo-desc">Открывай топовые кейсы и забирай редкие предметы</div>
-    <img class="ludo-art" src="img/case9.png" alt="Кейсы">
+    <div class="ludo-desc" style="max-width: 60%;">Открывай кейсы</div>
+    <img class="ludo-art" src="img/case9.png" alt="Кейсы" style="right: 10px; bottom: 15px; height: 50%;">
 </div>
 
-<!-- АПГРЕЙД -->
-<div class="card full ludo press-fx" style="--c1:#064e3b; --c2:#021912; --accent:#34d399;" data-nav="update.html">
+<!-- АПГРЕЙД (Половинка) -->
+<div class="card half ludo press-fx" style="--c1:#064e3b; --c2:#021912; --accent:#34d399;" data-nav="update.html">
     <div class="ludo-arrow">›</div>
     <div class="ludo-top">
         <div class="ludo-title">Апгрейд</div>
         <div class="ludo-sub">Прокачка</div>
     </div>
-    <div class="ludo-desc">Улучшай свои шансы и забирай лучший лут</div>
-    <img class="ludo-art" src="img/rozza.png" alt="Апгрейд">
+    <div class="ludo-desc" style="max-width: 60%;">Улучшай шансы</div>
+    <img class="ludo-art" src="img/rozza.png" alt="Апгрейд" style="right: 10px; bottom: 15px; height: 50%;">
 </div>
 
 <!-- РУЛЕТКА -->
@@ -735,7 +723,7 @@
         <div class="ludo-sub">Испытай фарт</div>
     </div>
     <div class="ludo-desc">Крути колесо и выигрывай бонусы</div>
-    <img class="ludo-art" src="img/1may.jpg" alt="Рулетка">
+    <img class="ludo-art" src="img/1may.jpg" alt="Рулетка" style="right: 20px; bottom: 15px; height: 60%;">
 </div>
                 </div>
 
