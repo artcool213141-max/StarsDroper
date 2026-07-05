@@ -327,105 +327,121 @@
         }
 
         /* ============================================================
-           PREMIUM CARD STYLE — тёмные карточки со свечением по контуру,
-           картинкой сбоку и градиентным затемнением под текст.
+           LUDO STYLE — цветные градиентные карточки в стиле референса:
+           заголовок + цветной подзаголовок сверху слева, круглая стрелка
+           справа сверху, описание снизу слева, картинка "убегает" за край
+           карточки снизу-справа.
            ============================================================ */
-        @property --angle {
-            syntax: '<angle>';
-            initial-value: 0deg;
-            inherits: false;
-        }
-        @keyframes spin-border { to { --angle: 360deg; } }
-
-        .card.premium {
-            background: #0b0906;
+        .card.ludo {
+            background: linear-gradient(160deg, var(--c1, #1a1a2e) 0%, var(--c2, #0a0a14) 100%);
             border: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            display: block;
+            padding: 0;
         }
 
-        .card.premium::before {
-            content: '';
+        .card.ludo .ludo-arrow {
             position: absolute;
-            inset: -1.5px;
-            border-radius: inherit;
-            z-index: 0;
-            background: conic-gradient(
-                from var(--angle, 0deg),
-                transparent 55%,
-                var(--glow, #d4af37) 80%,
-                transparent 100%
-            );
-            animation: spin-border 3.2s linear infinite;
-        }
-
-        .card.premium .card-inner {
-            position: absolute;
-            inset: 1.5px;
-            border-radius: 24.5px;
-            overflow: hidden;
-            z-index: 1;
+            top: 14px;
+            right: 14px;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.10);
+            border: 1px solid rgba(255,255,255,0.18);
             display: flex;
             align-items: center;
-            background: #0b0906;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            font-weight: 700;
+            z-index: 4;
+            backdrop-filter: blur(4px);
+            transition: transform 0.15s ease;
         }
 
-        .card.premium .card-bg-fade {
+        .card.ludo .ludo-top {
             position: absolute;
-            inset: 0;
-            z-index: 1;
-            background: linear-gradient(
-                100deg,
-                rgba(8,6,3,0.96) 0%,
-                rgba(8,6,3,0.82) 42%,
-                rgba(8,6,3,0.25) 72%,
-                rgba(8,6,3,0.0) 100%
-            );
-        }
-
-        .card.premium img.card-bg {
-            position: absolute;
-            object-fit: contain;
-            width: auto;
-            z-index: 0;
-            pointer-events: none;
-        }
-
-        .card.premium.full img.card-bg {
-            right: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            height: 145%;
-        }
-
-        .card.premium.half img.card-bg {
-            right: -14px;
-            bottom: -14px;
-            height: 108%;
-        }
-
-        .card.premium .card-content {
-            position: relative;
+            top: 16px;
+            left: 18px;
             z-index: 3;
-            text-align: left;
-            padding: 16px 18px;
         }
 
-        .card.premium.full .card-title { font-size: 19px; }
-        .card.premium.full .card-desc { font-size: 11px; }
-        .card.premium.half .card-title { font-size: 14px; }
-        .card.premium.half .card-desc { font-size: 9.5px; }
-
-        .card.premium .card-desc { color: rgba(255,255,255,0.55); }
-
-        .card.premium .card-shimmer {
-            position: absolute; inset: 0; z-index: 4; pointer-events: none;
-            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.10) 50%, transparent 70%);
-            opacity: 0; transition: opacity 0.15s;
+        .card.ludo .ludo-title {
+            font-size: 19px;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: #fff;
+            letter-spacing: -0.3px;
+            line-height: 1.1;
         }
-        .card.premium.pressed .card-shimmer { opacity: 1; }
-        .card.premium.pressed img.card-bg { filter: brightness(1.08); }
-        .card.premium.pressed.full img.card-bg { transform: translateY(-50%) scale(1.04); }
-        .card.premium.pressed.half img.card-bg { transform: scale(1.04); }
+
+        .card.ludo .ludo-sub {
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--accent, #fff);
+            letter-spacing: 0.4px;
+            margin-top: 4px;
+        }
+
+        .card.ludo .ludo-desc {
+            position: absolute;
+            left: 18px;
+            bottom: 14px;
+            font-size: 11px;
+            color: rgba(255,255,255,0.75);
+            line-height: 1.35;
+            max-width: 52%;
+            z-index: 3;
+            font-weight: 500;
+        }
+
+        .card.ludo .ludo-art {
+            position: absolute;
+            right: -8px;
+            bottom: -8px;
+            height: 78%;
+            width: auto;
+            object-fit: contain;
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        .card.ludo.half .ludo-title { font-size: 15px; }
+        .card.ludo.half .ludo-sub { font-size: 9px; }
+        .card.ludo.half .ludo-desc { font-size: 9.5px; max-width: 60%; }
+        .card.ludo.half .ludo-art { height: 60%; }
+
+        .card.ludo.pressed { transform: scale(0.96); }
+        .card.ludo.pressed .ludo-arrow { transform: scale(0.85); }
+
+        /* ============================================================
+           NEON GREEN — пульсирующее зелёное свечение по контуру карточки
+           ============================================================ */
+        .card.neon-green {
+            box-shadow:
+                0 0 0 1.5px rgba(34,197,94,0.9),
+                0 0 18px 3px rgba(34,197,94,0.55),
+                0 0 40px 8px rgba(34,197,94,0.25);
+            animation: neon-pulse 2.4s ease-in-out infinite;
+        }
+        @keyframes neon-pulse {
+            0%, 100% {
+                box-shadow:
+                    0 0 0 1.5px rgba(34,197,94,0.85),
+                    0 0 16px 3px rgba(34,197,94,0.5),
+                    0 0 36px 7px rgba(34,197,94,0.22);
+            }
+            50% {
+                box-shadow:
+                    0 0 0 1.5px rgba(74,222,128,1),
+                    0 0 26px 6px rgba(34,197,94,0.8),
+                    0 0 55px 12px rgba(34,197,94,0.4);
+            }
+        }
+        .card.neon-green.pressed {
+            animation-play-state: paused;
+        }
 
         .dock {
             position: fixed;
@@ -609,31 +625,26 @@
         <div class="scroll" id="scrollArea">
             <div class="mosaic">
 
-                <!-- ROLLS: премиум-стиль, тёмный фон, свечение фиолетовое -->
-                <div class="card full wide premium anim-fade-d1 press-fx" style="--glow:#9333ea;" data-nav="rolls.html">
-                    <span class="new-badge">NEW</span>
-                    <div class="card-inner">
-                        <div class="card-bg-fade"></div>
-                        <img class="card-bg" src="img/mini games img/rolls.jpeg" alt="Rolls">
-                        <div class="card-content">
-                            <div class="card-title">Rolls</div>
-                            <div class="card-desc">Крути колесо, лови удачу</div>
-                        </div>
-                        <div class="card-shimmer"></div>
+                <!-- ROLLS: цветная карточка в стиле референса (фиолетовый) -->
+                <div class="card full ludo anim-fade-d1 press-fx" style="--c1:#3a1250; --c2:#150620; --accent:#c084fc;" data-nav="rolls.html">
+                    <div class="ludo-arrow">›</div>
+                    <div class="ludo-top">
+                        <div class="ludo-title">Rolls</div>
+                        <div class="ludo-sub">Лови удачу</div>
                     </div>
+                    <div class="ludo-desc">Крути колесо и забирай крупный приз</div>
+                    <img class="ludo-art" src="img/mini games img/rolls.jpeg" alt="Rolls">
                 </div>
 
-                <!-- КРАШ: премиум-стиль, красное свечение -->
-                <div class="card half square premium anim-fade-d2 press-fx" style="--glow:#dc2626;" data-nav="ccrush.html">
-                    <div class="card-inner">
-                        <div class="card-bg-fade"></div>
-                        <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
-                        <div class="card-content">
-                            <div class="card-title">Краш</div>
-                            <div class="card-desc">Поймай икс</div>
-                        </div>
-                        <div class="card-shimmer"></div>
+                <!-- КРАШ: цветная карточка в стиле референса (зелёный) -->
+                <div class="card half ludo anim-fade-d2 press-fx" style="--c1:#0d3d2e; --c2:#04140f; --accent:#34d399;" data-nav="ccrush.html">
+                    <div class="ludo-arrow">›</div>
+                    <div class="ludo-top">
+                        <div class="ludo-title">Краш</div>
+                        <div class="ludo-sub">Умножь ставку</div>
                     </div>
+                    <div class="ludo-desc">Успей забрать ставку</div>
+                    <img class="ludo-art" src="img/mini games img/crush.jpeg" alt="Краш">
                 </div>
 
                 <div class="card half square anim-fade-d2b press-fx" data-nav="">
@@ -659,7 +670,8 @@
                     </div>
                 </div>
 
-                <div class="card half square press-fx" data-nav="update.html">
+                <!-- АПГРЕЙД: пульсирующий зелёный неон по контуру -->
+                <div class="card half square neon-green press-fx" data-nav="update.html">
                     <span class="soon-badge">SOON</span>
                     <img class="card-bg" src="img/mini games img/update.png" alt="Апгрейд">
                     <div class="card-content" style="text-align: center;">
