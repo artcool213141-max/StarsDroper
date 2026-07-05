@@ -287,34 +287,6 @@
             </div>
         </div>
 
-        <div id="settings-modal">
-            <div class="glass-card p-6 w-[88%] max-w-[380px] border-yellow-500/20">
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="orbitron text-lg font-black italic uppercase">Настройки</h2>
-                    <button onclick="closeSettings()" class="w-9 h-9 rounded-full bg-white/5 flex items-center justify-center">
-                        <svg width="16" height="16" viewBox="0 0 24 24"><path fill="white" d="M18.3 5.71a1 1 0 0 0-1.42 0L12 10.59 7.12 5.71A1 1 0 1 0 5.71 7.12L10.59 12l-4.88 4.88a1 1 0 1 0 1.41 1.41L12 13.41l4.88 4.88a1 1 0 0 0 1.41-1.41L13.41 12l4.88-4.88a1 1 0 0 0 .01-1.41z"/></svg>
-                    </button>
-                </div>
-
-                <div class="flex items-center justify-between py-3">
-                    <span class="text-xs font-bold">👆 Тактильный отклик</span>
-                    <div id="haptics-toggle" class="toggle-switch on" onclick="toggleHaptics()"></div>
-                </div>
-
-                <div class="border-t border-white/10 mt-4 pt-4">
-                    <p class="text-[10px] uppercase text-gray-400 tracking-widest font-bold mb-1">Язык</p>
-                    <div class="lang-row" onclick="setLang('ru')">
-                        <div class="lang-radio selected" id="lang-ru-radio"></div>
-                        <span class="text-sm">🇷🇺 Русский</span>
-                    </div>
-                    <div class="lang-row" onclick="setLang('en')">
-                        <div class="lang-radio" id="lang-en-radio"></div>
-                        <span class="text-sm">🇬🇧 English</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <div class="vault-modal" id="vaultModal" onclick="closeVault()">
             <div class="vault-sheet" onclick="event.stopPropagation()">
                 <div class="vault-handle"></div>
