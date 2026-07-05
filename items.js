@@ -65,5 +65,9 @@ const ITEMS = {
     "kkoolsoo.png": { name: "Nail", price: 10455, img: "kkoolsoo.png" },
     "kkolso.png": { name: "Ring", price: 3330, img: "kkolso.png" },
     "hero.png": { name: "Pepe", price: 543843, img: "hero.png" },
-    "chassiki.png": { name: "Watch", price: 4267, img: "chassiki.png" }
+    "raketaton.png": { name: "StellarRoceket", price: 3999, img: "raketaton.png" },
+    "ochko.png": { name: "Evil Eye", price: 950, img: "ochko.png" },
+    "fen.png": { name: "Dryer", price: 4267, img: "fen.png" },
+    "labyba.png": { name: "Jolly Chimp", price: 5500, img: "labyba.png" },
+    "cymka.png": { name: "Loot Bag", price: 13500, img: "cymka.png" }
 };
