@@ -114,11 +114,7 @@
             overflow: hidden;
         }
 
-        /* ===== ЗАКРЕПЛЁННАЯ ШАПКА =====
-           topcard больше не находится внутри .scroll, поэтому она никогда
-           не прокручивается вместе с карточками — визуально это и есть
-           "закреплённая шапка". При скролле контента вниз добавляем лёгкую
-           тень, чтобы было видно, что что-то уехало под неё. */
+        /* ===== ЗАКРЕПЛЁННАЯ ШАПКА ===== */
         .topcard {
             flex-shrink: 0;
             display: flex;
@@ -164,8 +160,7 @@
         .bal-row .icon { font-size: 11px; }
         .bal-row .icon-img { width: 13px; height: 13px; object-fit: contain; flex-shrink: 0; }
 
-        /* ===== ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ =====
-           Только этот блок скроллится. Шапка и док находятся вне него. */
+        /* ===== ПРОКРУЧИВАЕМАЯ ОБЛАСТЬ ===== */
         .scroll {
             flex: 1;
             min-height: 0;
@@ -178,13 +173,25 @@
         .scroll::-webkit-scrollbar { display: none; }
 
         /* ===== BENTO GRID: белые карточки ===== */
-.mosaic {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    grid-auto-rows: minmax(130px, auto); /* было: 130px */
-    gap: 10px;
-    padding-bottom: 86px;
-}
+        .mosaic {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            grid-auto-rows: minmax(130px, auto);
+            gap: 10px;
+            padding-bottom: 86px;
+        }
+
+        /* квадрат — только для half-карточек (400x400) */
+        .card.square {
+            aspect-ratio: 1 / 1;
+            height: auto;
+        }
+
+        /* широкий горизонтальный формат — для full-карточек с картинкой */
+        .card.wide {
+            aspect-ratio: 21 / 9; /* подстрой под свою картинку, если нужно другое соотношение */
+            height: auto;
+        }
 
         .card {
             position: relative;
@@ -208,18 +215,11 @@
             grid-column: 1 / -1;
         }
 
-        .card.square {
-    aspect-ratio: 1 / 1;
-    height: auto;
-}
-
         /* карточка на половину ширины (1 колонка) */
         .card.half {
             grid-column: span 1;
         }
 
-        /* Карточки, которые появляются плавно при прокрутке к ним
-           (например те, что изначально ниже видимой области экрана) */
         .card.reveal {
             opacity: 0;
             transform: translateY(24px);
@@ -229,18 +229,19 @@
             transform: translateY(0);
         }
 
-        /* картинка-фон карточки (накладывается пользователем позже) */
-.card img.card-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Картинка будет целиком внутри, без обрезания */
-    object-position: center;
-    z-index: 1;
-    pointer-events: none; /* Чтобы клики проходили сквозь картинку */
-}
+        /* картинка-фон карточки: вписывается целиком, без обрезки и без растяжения */
+        .card img.card-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: center;
+            z-index: 1;
+            pointer-events: none;
+            transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.3s ease;
+        }
 
         .card-content .card-title,
         .card-content .card-desc {
@@ -274,7 +275,7 @@
             transform: scale(0.94);
             box-shadow: 0 0 0 2px rgba(0,0,0,0.06), 0 0 20px rgba(0,0,0,0.1);
         }
-        .card.pressed img.card-bg { transform: translate(-50%, -50%) scale(1.08); filter: brightness(1.1); }
+        .card.pressed img.card-bg { transform: scale(1.08); filter: brightness(1.1); }
 
         .ripple {
             position: absolute;
@@ -334,10 +335,7 @@
             box-shadow: 0 4px 12px rgba(167, 139, 250, 0.3);
         }
 
-        /* ===== DOCK =====
-           Плавающая капсула поверх контента (position: fixed), НЕ занимает
-           место в раскладке — поэтому по бокам нет "чёрных полей", а когда
-           док прячется, контент под ним становится полностью виден. */
+        /* ===== DOCK ===== */
         .dock {
             position: fixed;
             left: 50%;
@@ -359,8 +357,6 @@
             z-index: 40;
             transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
         }
-        /* При скролле вниз док плавно уезжает вниз и прячется,
-           при скролле вверх — плавно возвращается на место */
         .dock.dock-hidden {
             transform: translateX(-50%) translateY(160%);
             opacity: 0;
@@ -540,65 +536,70 @@
                     ============================================================
                 -->
 
-<div class="card full square anim-fade-d1 press-fx" data-nav="crash.html">
-    <span class="new-badge">NEW</span>
-    <!-- <img class="card-bg" src="img/redisain_games/rocket.jpg" alt="Краш"> -->
-    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
-        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Rolls</div>
-        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути колесо, лови удачу</div>
-    </div>
-</div>
+                <div class="card full wide anim-fade-d1 press-fx" data-nav="crash.html">
+                    <span class="new-badge">NEW</span>
+                    <!-- <img class="card-bg" src="img/redisain_games/rocket.jpg" alt="Rolls"> -->
+                    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
+                        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Rolls</div>
+                        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути колесо, лови удачу</div>
+                    </div>
+                </div>
 
-<div class="card half square anim-fade-d2 press-fx" data-nav="rolls.html">
-    <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
-    <div class="card-content">
-    </div>
-</div>
+                <div class="card half square anim-fade-d2 press-fx" data-nav="rolls.html">
+                    <img class="card-bg" src="img/mini games img/crush.jpeg" alt="Краш">
+                    <div class="card-content">
+                        <div class="card-title">Краш</div>
+                        <div class="card-desc">Поймай икс</div>
+                    </div>
+                </div>
 
-<div class="card half square anim-fade-d2b press-fx" data-nav="">
-    <div class="card-content" style="text-align: center;">
-        <div class="card-title" style="color: rgba(0,0,0,0.4); text-shadow:none;">Скоро</div>
-        <div class="card-desc" style="color: rgba(0,0,0,0.3); text-shadow:none;">Новая мини-игра</div>
-    </div>
-</div>
+                <div class="card half square anim-fade-d2b press-fx" data-nav="">
+                    <div class="card-content" style="text-align: center;">
+                        <div class="card-title" style="color: rgba(0,0,0,0.4); text-shadow:none;">Скоро</div>
+                        <div class="card-desc" style="color: rgba(0,0,0,0.3); text-shadow:none;">Новая мини-игра</div>
+                    </div>
+                </div>
 
-<div class="card full square anim-fade-d3 press-fx" data-nav="clicker.html">
-    <span class="online-badge">● 5 онлайн</span>
-    <!-- <img class="card-bg" src="img/redisain_games/clicker.jpg" alt="Кликер"> -->
-    <div class="card-content">
-        <div class="card-title">Кликер</div>
-        <div class="card-desc">Тапай и зарабатывай</div>
-    </div>
-</div>
+                <div class="card full wide anim-fade-d3 press-fx" data-nav="clicker.html">
+                    <span class="online-badge">● 5 онлайн</span>
+                    <!-- <img class="card-bg" src="img/redisain_games/clicker.jpg" alt="Кликер"> -->
+                    <div class="card-content">
+                        <div class="card-title">Кликер</div>
+                        <div class="card-desc">Тапай и зарабатывай</div>
+                    </div>
+                </div>
 
-<!-- Кейсы и Апгрейд — снова половинки, в один ряд -->
-<div class="card half square press-fx" data-nav="">
-    <span class="soon-badge">SOON</span>
-    <!-- <img class="card-bg" src="img/redisain_games/cases.jpg" alt="Кейсы"> -->
-    <div class="card-content" style="text-align: center;">
-        <div class="card-title">Кейсы</div>
-        <div class="card-desc">Испытай удачу</div>
-    </div>
-</div>
+                <!-- Кейсы и Апгрейд — снова половинки, в один ряд -->
+                <div class="card half square press-fx" data-nav="">
+                    <span class="soon-badge">SOON</span>
+                    <!-- <img class="card-bg" src="img/redisain_games/cases.jpg" alt="Кейсы"> -->
+                    <div class="card-content" style="text-align: center;">
+                        <div class="card-title">Кейсы</div>
+                        <div class="card-desc">Испытай удачу</div>
+                    </div>
+                </div>
 
-<div class="card half square press-fx" data-nav="">
-    <span class="soon-badge">SOON</span>
-    <!-- <img class="card-bg" src="img/redisain_games/upgrade.jpg" alt="Апгрейд"> -->
-    <div class="card-content" style="text-align: center;">
-        <div class="card-title">Апгрейд</div>
-        <div class="card-desc">Обнови свой гифт</div>
-    </div>
-</div>
+                <div class="card half square press-fx" data-nav="">
+                    <span class="soon-badge">SOON</span>
+                    <!-- <img class="card-bg" src="img/redisain_games/upgrade.jpg" alt="Апгрейд"> -->
+                    <div class="card-content" style="text-align: center;">
+                        <div class="card-title">Апгрейд</div>
+                        <div class="card-desc">Обнови свой гифт</div>
+                    </div>
+                </div>
 
-<!-- НОВАЯ большая кнопка ниже Кейсов и Апгрейда, такая же по размеру, как Кликер -->
-<div class="card full square reveal press-fx" data-nav="">
-    <span class="soon-badge">SOON</span>
-    <!-- <img class="card-bg" src="img/redisain_games/roulette.jpg" alt="Рулетка"> -->
-    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
-        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Рулетка</div>
-        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути и выигрывай</div>
-    </div>
-</div>
+                <!-- НОВАЯ большая кнопка ниже Кейсов и Апгрейда, такая же по размеру, как Кликер -->
+                <div class="card full wide reveal press-fx" data-nav="">
+                    <span class="soon-badge">SOON</span>
+                    <!-- <img class="card-bg" src="img/redisain_games/roulette.jpg" alt="Рулетка"> -->
+                    <div class="card-content" style="text-align: center; padding-bottom: 20px;">
+                        <div class="card-title" style="font-size: 17px; letter-spacing: -0.3px;">Рулетка</div>
+                        <div class="card-desc" style="font-size: 10px; color: rgba(255,255,255,0.7);">Крути и выигрывай</div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
 
         <!-- ДОК прячется при скролле вниз и появляется при скролле вверх -->
         <div class="dock" id="dock">
