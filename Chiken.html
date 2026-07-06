@@ -82,25 +82,40 @@
     <div id="toast" class="toast"></div>
 </div>
 
-<div class="bg-[#222] border-t border-zinc-800 p-4 shrink-0 flex flex-col gap-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2 bg-[#1a1a1a] p-2 rounded-xl border border-zinc-800">
-            <button onclick="switchBetType('stars')" id="tab-stars" class="px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all">⭐ Stars</button>
-            <button onclick="switchBetType('ton')" id="tab-ton" class="px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all">💎 TON</button>
-            <input type="number" id="bet-amount" min="1" step="1" class="w-24 bg-transparent text-center font-black text-sm text-white outline-none ml-1" value="10">
-        </div>
+<div class="bg-[#222] border-t border-zinc-800 p-4 shrink-0 flex flex-col gap-3">
+    <div class="flex gap-2">
+        <button onclick="switchBetType('stars')" id="tab-stars" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs bg-zinc-700 text-white transition-all">
+            <img src="img/star.png" class="w-4 h-4 object-contain" alt=""> STARS
+        </button>
+        <button onclick="switchBetType('ton')" id="tab-ton" class="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs bg-zinc-800 text-zinc-400 transition-all">
+            <img src="img/ton.png" class="w-4 h-4 object-contain" alt=""> TON
+        </button>
+    </div>
 
-        <div class="flex gap-1.5">
-            <button id="btn-add10" onclick="addAmount(10)" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-3 py-2.5 rounded-lg">+10</button>
-            <button id="btn-add50" onclick="addAmount(50)" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-3 py-2.5 rounded-lg">+50</button>
-            <button id="btn-max" onclick="setMax()" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-4 py-2.5 rounded-lg">MAX</button>
+    <div class="flex gap-2">
+        <div class="flex-1 bg-[#1a1a1a] border border-zinc-800 rounded-xl px-3 py-1.5 flex flex-col justify-center">
+            <span class="text-[9px] uppercase tracking-wider text-zinc-500 font-bold">Ставка</span>
+            <input type="number" id="bet-amount" min="1" step="1" class="bg-transparent text-white font-black text-lg outline-none w-full" value="10">
         </div>
+        <div class="flex gap-1.5" id="stepper">
+            <button id="btn-step-down" onclick="stepBet(-1)" class="w-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-black text-lg text-zinc-300">−</button>
+            <button id="btn-step-up" onclick="stepBet(1)" class="w-10 bg-zinc-800 hover:bg-zinc-700 rounded-lg font-black text-lg text-zinc-300">+</button>
+        </div>
+    </div>
 
-        <div class="flex items-center gap-1 bg-[#1a1a1a] p-1.5 rounded-xl">
-            <button class="diff-btn active" id="diff-easy" onclick="switchDifficulty('easy')">Easy</button>
-            <button class="diff-btn" id="diff-medium" onclick="switchDifficulty('medium')">Medium</button>
-            <button class="diff-btn" id="diff-hard" onclick="switchDifficulty('hard')">Hard</button>
-        </div>
+    <div class="flex gap-1.5" id="quick-bets">
+        <button id="qb-10" onclick="setBetAmount(10)" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">10</button>
+        <button id="qb-50" onclick="setBetAmount(50)" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">50</button>
+        <button id="qb-100" onclick="setBetAmount(100)" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">100</button>
+        <button id="qb-500" onclick="setBetAmount(500)" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">500</button>
+        <button id="qb-half" onclick="halveBetAmount()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">½</button>
+        <button id="qb-double" onclick="doubleBetAmount()" class="flex-1 bg-zinc-800 hover:bg-zinc-700 text-[11px] font-bold py-2 rounded-lg">2×</button>
+    </div>
+
+    <div class="flex items-center justify-center gap-1 bg-[#1a1a1a] p-1.5 rounded-xl">
+        <button class="diff-btn active flex-1" id="diff-easy" onclick="switchDifficulty('easy')">Easy</button>
+        <button class="diff-btn flex-1" id="diff-medium" onclick="switchDifficulty('medium')">Medium</button>
+        <button class="diff-btn flex-1" id="diff-hard" onclick="switchDifficulty('hard')">Hard</button>
     </div>
 
     <div class="flex gap-3">
@@ -154,21 +169,21 @@ function crashChanceAt(step) {
 }
 
 // --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
-const imgChicken = new Image();       imgChicken.src = 'img/chkenroad/chiken.png';
-const imgFriedChicken = new Image();  imgFriedChicken.src = 'img/chkenroad/fried_chicken.png';
-const imgLvl = new Image();           imgLvl.src = 'img/chkenroad/cryg.png';
-const imgBarrier = new Image();       imgBarrier.src = 'img/chkenroad/hatch.png';
+const imgChicken = new Image();       imgChicken.src = 'img/chikenroad/chiken.png';
+const imgFriedChicken = new Image();  imgFriedChicken.src = 'img/chikenroad/fried_chicken.png';
+const imgLvl = new Image();           imgLvl.src = 'img/chikenroad/cryg.png';
+const imgBarrier = new Image();       imgBarrier.src = 'img/chikenroad/hatch.png';
 
 const carSources = [
-    'img/chkenroad/car1.png',
-    'img/chkenroad/car2.png',
-    'img/chkenroad/car3.png',
-    'img/chkenroad/car4.png'
+    'img/chikenroad/car1.png',
+    'img/chikenroad/car2.png',
+    'img/chikenroad/car3.png'
 ];
 const loadedCarImages = carSources.map(src => { const img = new Image(); img.src = src; return img; });
 const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
 
 let activeCar = { lane: -1, y: -150, targetY: 200, active: false, speed: 22, isCrash: false, imgIndex: 0 };
+let chickenDisplayX = 20; // eased on-screen X position of the chicken, animates towards target lane
 
 // --- НАСТРОЙКИ СЕТКИ И ДИНАМИЧЕСКОЙ КАМЕРЫ ---
 const startZoneWidth = 120;
@@ -197,8 +212,10 @@ function showToast(message, type = 'info') {
 function switchBetType(t) {
     if (isPlaying || isBusy) return;
     betType = t;
-    document.getElementById('tab-stars').className = t === 'stars' ? 'px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all' : 'px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all';
-    document.getElementById('tab-ton').className = t === 'ton' ? 'px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all' : 'px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all';
+    const activeCls = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs bg-zinc-700 text-white transition-all';
+    const inactiveCls = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs bg-zinc-800 text-zinc-400 transition-all';
+    document.getElementById('tab-stars').className = t === 'stars' ? activeCls : inactiveCls;
+    document.getElementById('tab-ton').className = t === 'ton' ? activeCls : inactiveCls;
 }
 
 function switchDifficulty(d) {
@@ -213,9 +230,14 @@ function setControlsDisabled(disabled) {
     document.getElementById('bet-amount').disabled = disabled;
     document.getElementById('tab-stars').disabled = disabled;
     document.getElementById('tab-ton').disabled = disabled;
-    document.getElementById('btn-add10').disabled = disabled;
-    document.getElementById('btn-add50').disabled = disabled;
-    document.getElementById('btn-max').disabled = disabled;
+    document.getElementById('btn-step-down').disabled = disabled;
+    document.getElementById('btn-step-up').disabled = disabled;
+    document.getElementById('qb-10').disabled = disabled;
+    document.getElementById('qb-50').disabled = disabled;
+    document.getElementById('qb-100').disabled = disabled;
+    document.getElementById('qb-500').disabled = disabled;
+    document.getElementById('qb-half').disabled = disabled;
+    document.getElementById('qb-double').disabled = disabled;
     document.getElementById('diff-easy').disabled = disabled;
     document.getElementById('diff-medium').disabled = disabled;
     document.getElementById('diff-hard').disabled = disabled;
@@ -247,16 +269,30 @@ async function loadMe() {
     }
 }
 
-function addAmount(v) {
+function stepBet(dir) {
+    if (isPlaying || isBusy) return;
     const inp = document.getElementById('bet-amount');
-    const next = (parseFloat(inp.value) || 0) + v;
-    inp.value = betType === 'stars' ? Math.round(next) : Math.round(next * 100) / 100;
+    const v = Math.max(1, (parseFloat(inp.value) || 0) + dir);
+    inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
 }
 
-function setMax() {
-    if (!myProfile) return;
+function setBetAmount(v) {
+    if (isPlaying || isBusy) return;
+    document.getElementById('bet-amount').value = v;
+}
+
+function halveBetAmount() {
+    if (isPlaying || isBusy) return;
     const inp = document.getElementById('bet-amount');
-    inp.value = betType === 'stars' ? Math.floor(myProfile.stars || 0) : Math.floor((myProfile.balance || 0) * 100) / 100;
+    const v = Math.max(1, (parseFloat(inp.value) || 0) / 2);
+    inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
+}
+
+function doubleBetAmount() {
+    if (isPlaying || isBusy) return;
+    const inp = document.getElementById('bet-amount');
+    const v = Math.max(1, (parseFloat(inp.value) || 0) * 2);
+    inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
 }
 
 function renderStaticFields() {
@@ -352,10 +388,19 @@ function renderStaticFields() {
     }
 
     // Курица — sits on whichever lane is currently being attempted (or the
-    // last confirmed one if idle).
+    // last confirmed one if idle). We ease её X-position towards the target
+    // lane each frame and add a small hop (vertical bounce) while it's still
+    // travelling, so movement between manholes reads as a step, not a teleport.
     let chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
-    let chickenX = chickenLane >= 0 ? startZoneWidth + chickenLane * laneWidth + (laneWidth / 2) - 45 : 20;
-    let chickenY = VH / 2 - 45;
+    let chickenTargetX = chickenLane >= 0 ? startZoneWidth + chickenLane * laneWidth + (laneWidth / 2) - 45 : 20;
+    chickenDisplayX += (chickenTargetX - chickenDisplayX) * 0.18;
+    if (Math.abs(chickenTargetX - chickenDisplayX) < 0.5) chickenDisplayX = chickenTargetX;
+
+    const hopDist = Math.abs(chickenTargetX - chickenDisplayX);
+    const hopOffset = Math.min(16, hopDist * 0.22);
+
+    let chickenX = chickenDisplayX;
+    let chickenY = VH / 2 - 45 - hopOffset;
 
     const showFried = activeCar.active && activeCar.isCrash && activeCar.y >= activeCar.targetY - 20;
     if (showFried) {
@@ -421,6 +466,7 @@ async function pressGo() {
             isPlaying = true;
             currentStep = -1;
             pendingStep = -1;
+            chickenDisplayX = 20;
 
             document.getElementById('btn-go').innerText = 'GO';
             document.getElementById('btn-cashout').classList.remove('hidden');
@@ -502,6 +548,7 @@ async function handleCrash(step) {
         setTimeout(() => {
             currentStep = -1;
             pendingStep = -1;
+            chickenDisplayX = 20;
             isBusy = false;
             setControlsDisabled(false);
         }, 1200);
@@ -536,6 +583,7 @@ async function cashOut() {
     } finally {
         currentStep = -1;
         pendingStep = -1;
+        chickenDisplayX = 20;
         isBusy = false;
         setControlsDisabled(false);
     }
