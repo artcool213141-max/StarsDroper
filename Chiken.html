@@ -198,7 +198,7 @@ const carSources = [
 const loadedCarImages = carSources.map(src => { const img = new Image(); img.src = src; return img; });
 const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
 
-let activeCar = { lane: -1, y: -150, targetY: 200, active: false, speed: 22, isCrash: false, imgIndex: 0 };
+let activeCar = { lane: -1, y: -150, targetY: 200, active: false, isCrash: false, imgIndex: 0, sourceRef: null };
 let chickenDisplayX = 20; // eased on-screen X position of the chicken, animates towards target lane
 
 // --- НАСТРОЙКИ СЕТКИ И ДИНАМИЧЕСКОЙ КАМЕРЫ ---
@@ -464,14 +464,24 @@ function renderStaticFields() {
         }
     }
 
-    // Фоновый декоративный трафик убран: раньше на экране одновременно ездило
-    // много машин, из-за чего казалось, что курица "случайно" проходит сквозь
-    // них без последствий. Теперь на дороге видна ровно одна машина — та,
-    // что прямо сейчас решает исход текущего шага (см. ниже). Если наезда
-    // нет, машина будет видно проезжать МИМО курицы и дальше вниз за экран;
-    // если наезд есть — она остановится ровно на курице.
+    // Фоновый трафик — теперь едет постоянно на всех полосах, а не только
+    // в момент шага. Машину, которая прямо сейчас "решает" исход текущего
+    // шага (activeCar), мы не рисуем здесь дважды — она уже временно
+    // изъята из ambientCars в triggerCarLogic и рисуется ниже отдельно.
+    ambientCars.forEach(car => {
+        let carX = startZoneWidth + car.lane * laneWidth + (laneWidth / 2) - 35;
+        let img = loadedCarImages[car.imgIndex];
+        if (img && img.complete && img.naturalWidth) {
+            ctx.drawImage(img, carX, car.y, 70, 140);
+        } else {
+            ctx.fillStyle = fallbackCarColors[car.imgIndex] || '#ef4444';
+            ctx.fillRect(carX, car.y, 70, 130);
+        }
+    });
 
-    // Машина испытания (решает исход текущего шага)
+    // Машина испытания (решает исход текущего шага) — взята из фонового
+    // потока (см. triggerCarLogic), поэтому визуально она не отличается от
+    // остального трафика: та же скорость, та же полоса, тот же спрайт.
     if (activeCar.active) {
         let carX = startZoneWidth + activeCar.lane * laneWidth + (laneWidth / 2) - 35;
         let currentCarImg = loadedCarImages[activeCar.imgIndex];
@@ -547,6 +557,7 @@ function renderStaticFields() {
 }
 
 function updateLoop() {
+    updateAmbientCars();   // фоновый трафик теперь реально едет каждый кадр
     renderStaticFields();
     requestAnimationFrame(updateLoop);
 }
@@ -613,30 +624,39 @@ async function pressGo() {
     }
 }
 
+// Исход шага по-прежнему решает RNG (crashChanceAt) — честность/edge казино
+// не меняются. Но теперь визуально "решающая" машина берётся из уже едущего
+// фонового трафика на этой полосе, а не появляется из ниоткуда — так дорога
+// выглядит живой и правдоподобной, будто игрок реально ловит окно.
 function triggerCarLogic(step) {
     isBusy = true;
     pendingStep = step;
-    activeCar.lane = step;
-    activeCar.y = -150;
-    activeCar.active = true;
-    activeCar.imgIndex = Math.floor(Math.random() * carSources.length);
 
     const isCrash = Math.random() < crashChanceAt(step);
+    const hitY = (VH / ZOOM) / 2 - 55;   // точка на дороге, где стоит курица
+    const passAfterHitY = hitY + 40;     // насколько ниже курицы машина должна проехать, чтобы шаг засчитался
+
+    // Ищем машину из фонового потока на нужной полосе, ближе всех подъезжающую к курице.
+    let candidates = ambientCars.filter(c => c.lane === step && c.y < hitY + 200);
+    let resolvingCar;
+    if (candidates.length) {
+        resolvingCar = candidates.reduce((a, b) => (a.y > b.y ? a : b));
+        ambientCars.splice(ambientCars.indexOf(resolvingCar), 1); // временно управляем ей вручную
+    } else {
+        // Полоса сейчас пустая — спавним машину сверху, чтобы было что показать.
+        resolvingCar = { lane: step, y: -150, imgIndex: Math.floor(Math.random() * carSources.length) };
+    }
+
+    activeCar.lane = step;
+    activeCar.y = resolvingCar.y;
+    activeCar.imgIndex = resolvingCar.imgIndex;
+    activeCar.active = true;
     activeCar.isCrash = isCrash;
-
-    // Ряд, где стоят курица/люки — именно тут машина либо тормозит и давит
-    // курицу, либо (если не авария) на глазах проезжает мимо неё дальше вниз
-    // и уезжает за пределы экрана. Раньше машина всегда просто исчезала на
-    // этой же точке, из-за чего исход казался случайным, а не "физическим".
-    const hitY = (VH / ZOOM) / 2 - 55;
-    const passY = (VH / ZOOM) + 160;
-    activeCar.targetY = hitY;
-
-    let stepConfirmed = false;
+    activeCar.sourceRef = resolvingCar;
 
     function animate() {
         if (!activeCar.active) return;
-        activeCar.y += activeCar.speed;
+        activeCar.y += ambientSpeed(); // та же скорость, что у всего трафика — машина не выделяется
 
         if (activeCar.isCrash) {
             if (activeCar.y >= hitY) {
@@ -647,15 +667,18 @@ function triggerCarLogic(step) {
                 return;
             }
         } else {
-            // Курица дожидается, пока машина полностью проедет мимо и уедет
-            // за экран, и только тогда шаг засчитывается и курица прыгает —
-            // так видно, что машина реально проехала мимо, а не "сквозь".
-            if (activeCar.y >= passY) {
+            // Курица дожидается, пока машина реально проедет мимо неё, и
+            // только тогда шаг засчитывается и курица прыгает дальше.
+            if (activeCar.y >= passAfterHitY) {
                 activeCar.active = false;
-                stepConfirmed = true;
                 currentStep = step;
                 pendingStep = -1;
                 isBusy = false;
+
+                // Возвращаем машину обратно в общий поток — дорога не должна
+                // "терять" машины после каждого шага.
+                ambientCars.push({ lane: step, y: activeCar.y, imgIndex: activeCar.imgIndex });
+
                 const currentMult = multiplierAt(currentStep);
                 document.getElementById('cashout-preview').innerText =
                     `(${(currentBet * currentMult).toFixed(2)} ${betType === 'stars' ? '⭐' : '💎'})`;
@@ -690,6 +713,13 @@ async function handleCrash(step) {
         // Briefly leave the crash scene on screen, then reset the board so the
         // next round starts clean instead of showing stale opened hatches.
         setTimeout(() => {
+            // Машина, которая нас "сбила", была временно изъята из
+            // ambientCars — возвращаем её обратно в поток, иначе трафик со
+            // временем поредеет.
+            if (activeCar.sourceRef) {
+                ambientCars.push({ lane: activeCar.lane, y: -150 - Math.random() * 200, imgIndex: activeCar.imgIndex });
+                activeCar.sourceRef = null;
+            }
             currentStep = -1;
             pendingStep = -1;
             chickenDisplayX = 20;
