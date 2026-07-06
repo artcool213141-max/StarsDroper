@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Chicken Road - NowearSpin</title>
+    <title>Chicken Road — NowearSpin</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -169,15 +169,15 @@ function crashChanceAt(step) {
 }
 
 // --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
-const imgChicken = new Image();       imgChicken.src = 'img/chikenroad/chiken.png';
-const imgFriedChicken = new Image();  imgFriedChicken.src = 'img/chikenroad/fried_chicken.png';
-const imgLvl = new Image();           imgLvl.src = 'img/chikenroad/cryg.png';
-const imgBarrier = new Image();       imgBarrier.src = 'img/chikenroad/hatch.png';
+const imgChicken = new Image();       imgChicken.src = 'chikenroad/chiken.png';
+const imgFriedChicken = new Image();  imgFriedChicken.src = 'chikenroad/fried_chicken.png';
+const imgLvl = new Image();           imgLvl.src = 'chikenroad/cryg.png';
+const imgBarrier = new Image();       imgBarrier.src = 'chikenroad/hatch.png';
 
 const carSources = [
-    'img/chikenroad/car1.png',
-    'img/chikenroad/car2.png',
-    'img/chikenroad/car3.png'
+    'chikenroad/car1.png',
+    'chikenroad/car2.png',
+    'chikenroad/car3.png'
 ];
 const loadedCarImages = carSources.map(src => { const img = new Image(); img.src = src; return img; });
 const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
