@@ -98,8 +98,8 @@
         <span class="font-black text-xl tracking-tight text-white">CHICKEN <span class="text-red-500">2</span> ROAD</span>
     </div>
     <div class="flex gap-2">
-        <div class="balance-pill">⭐ <span id="my-stars">0</span></div>
-        <div class="balance-pill">💎 <span id="my-ton">0</span></div>
+        <div class="balance-pill"><img src="img/star.png" class="w-4 h-4 object-contain" alt=""> <span id="my-stars">0</span></div>
+        <div class="balance-pill"><img src="img/ton.png" class="w-4 h-4 object-contain" alt=""> <span id="my-ton">0</span></div>
     </div>
 </header>
 
@@ -201,9 +201,14 @@ let currentBet = 0;
 
 // Multiplier ladders + crash-chance curves per difficulty.
 const DIFFICULTIES = {
-    easy:   { multipliers: [1.03, 1.08, 1.15, 1.24, 1.35, 1.50, 1.70, 2.00], baseCrash: 0.08, crashStep: 0.020 },
-    medium: { multipliers: [1.10, 1.25, 1.45, 1.75, 2.15, 2.70, 3.50, 4.60], baseCrash: 0.14, crashStep: 0.032 },
-    hard:   { multipliers: [1.20, 1.50, 2.00, 2.70, 3.80, 5.50, 8.00, 12.0], baseCrash: 0.20, crashStep: 0.045 },
+    // В Easy шансы на проигрыш начинаются с 12% и растут до 2.5x (примерно 5-6 шаг)
+    easy:   { multipliers: [1.03, 1.08, 1.15, 1.24, 1.35, 1.50, 1.70, 2.00], baseCrash: 0.12, crashStep: 0.050 },
+    
+    // В Medium шансы значительно выше, дойти до 4x (примерно 7 шаг) будет трудно
+    medium: { multipliers: [1.10, 1.25, 1.45, 1.75, 2.15, 2.70, 3.50, 4.60], baseCrash: 0.25, crashStep: 0.080 },
+    
+    // В Hard шансы на проигрыш сразу очень высокие, дойти до 5x (5 шаг) практически нереально
+    hard:   { multipliers: [1.20, 1.50, 2.00, 2.70, 3.80, 5.50, 8.00, 12.0], baseCrash: 0.45, crashStep: 0.150 },
 };
 
 function activeConfig() { return DIFFICULTIES[difficulty]; }
@@ -354,6 +359,21 @@ function showToast(message, type = 'info') {
     toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2400);
 }
 
+// Быстрые ставки разные для звёзд и TON — для TON суммы вида 10/50/100
+// бессмысленны, нужны дробные значения от 0.1.
+const QUICK_BETS = { stars: [10, 50, 100, 500], ton: [0.1, 0.5, 1, 5] };
+const QUICK_BET_IDS = ['qb-10', 'qb-50', 'qb-100', 'qb-500'];
+
+function refreshQuickBetButtons() {
+    const vals = QUICK_BETS[betType];
+    QUICK_BET_IDS.forEach((id, i) => {
+        const btn = document.getElementById(id);
+        const val = vals[i];
+        btn.textContent = betType === 'ton' ? val.toFixed(1) : String(val);
+        btn.onclick = () => setBetAmount(val);
+    });
+}
+
 function switchBetType(t) {
     if (isPlaying || isBusy) return;
     betType = t;
@@ -361,6 +381,20 @@ function switchBetType(t) {
     const inactiveCls = 'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-black text-xs bg-zinc-800 text-zinc-400 transition-all';
     document.getElementById('tab-stars').className = t === 'stars' ? activeCls : inactiveCls;
     document.getElementById('tab-ton').className = t === 'ton' ? activeCls : inactiveCls;
+
+    // Минимальная ставка и шаг ввода зависят от валюты: у звёзд — целые
+    // числа от 1, у TON — дробные от 0.1.
+    const inp = document.getElementById('bet-amount');
+    if (t === 'ton') {
+        inp.min = '0.1';
+        inp.step = '0.1';
+        inp.value = '0.1';
+    } else {
+        inp.min = '1';
+        inp.step = '1';
+        inp.value = '10';
+    }
+    refreshQuickBetButtons();
 }
 
 function switchDifficulty(d) {
@@ -417,26 +451,30 @@ async function loadMe() {
 function stepBet(dir) {
     if (isPlaying || isBusy) return;
     const inp = document.getElementById('bet-amount');
-    const v = Math.max(1, (parseFloat(inp.value) || 0) + dir);
+    const minVal = betType === 'ton' ? 0.1 : 1;
+    const inc = betType === 'ton' ? 0.1 : 1;
+    const v = Math.max(minVal, (parseFloat(inp.value) || 0) + inc * dir);
     inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
 }
 
 function setBetAmount(v) {
     if (isPlaying || isBusy) return;
-    document.getElementById('bet-amount').value = v;
+    document.getElementById('bet-amount').value = betType === 'stars' ? v : v.toFixed(1);
 }
 
 function halveBetAmount() {
     if (isPlaying || isBusy) return;
     const inp = document.getElementById('bet-amount');
-    const v = Math.max(1, (parseFloat(inp.value) || 0) / 2);
+    const minVal = betType === 'ton' ? 0.1 : 1;
+    const v = Math.max(minVal, (parseFloat(inp.value) || 0) / 2);
     inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
 }
 
 function doubleBetAmount() {
     if (isPlaying || isBusy) return;
     const inp = document.getElementById('bet-amount');
-    const v = Math.max(1, (parseFloat(inp.value) || 0) * 2);
+    const minVal = betType === 'ton' ? 0.1 : 1;
+    const v = Math.max(minVal, (parseFloat(inp.value) || 0) * 2);
     inp.value = betType === 'stars' ? Math.round(v) : Math.round(v * 100) / 100;
 }
 
@@ -670,6 +708,11 @@ async function pressGo() {
             const amount = parseFloat(inp.value);
 
             if (!amount || amount <= 0) { showToast('Введите ставку', 'error'); return; }
+            const minBet = betType === 'ton' ? 0.1 : 1;
+            if (amount < minBet) {
+                showToast(`Минимальная ставка: ${minBet} ${betType === 'stars' ? '⭐' : '💎'}`, 'error');
+                return;
+            }
 
             await loadMe();
             if (!myProfile) return;
@@ -908,6 +951,7 @@ async function cashOut() {
 
 updateLoop();
 loadMe();
+refreshQuickBetButtons();
 </script>
 
 </body>
