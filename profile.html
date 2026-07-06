@@ -15,6 +15,11 @@
             --panel-bg: rgba(20, 20, 20, 0.75);
         }
         body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
+        input, textarea {
+            -webkit-user-select: text;
+            user-select: text;
+            -webkit-touch-callout: default;
+        }
         #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
 
         .main-wrapper {
@@ -73,11 +78,6 @@
 
         #item-modal, #settings-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
 
-        /* ===== DOCK =====
-           Плавающая капсула поверх контента, как на главном экране.
-           Не занимает место в раскладке — по бокам нет "чёрных полей",
-           при скролле вниз плавно уезжает вниз и прячется полностью,
-           при скролле вверх — плавно возвращается. Кнопки: Главная и Профиль. */
         .dock-bar {
             position: fixed;
             left: 50%;
@@ -130,7 +130,6 @@
         .lang-radio.selected { border-color: var(--accent-gold); }
         .lang-radio.selected::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-gold); }
 
-        /* --- Модалка пополнения (TON / Stars), как на главном экране --- */
         .vault-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: flex-end; justify-content: center; }
         .vault-modal.active { display: flex; }
         .vault-sheet { width: 100%; max-width: 480px; background: #121212; border-radius: 20px 20px 0 0; padding: 12px 16px 24px 16px; border-top: 1px solid rgba(255,255,255,0.06); max-height: 80vh; overflow-y: auto; animation: vaultSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -179,7 +178,6 @@
         .stars-pay-btn:active { transform: scale(0.92); filter: brightness(1.15); }
         .stars-pay-btn:disabled { opacity: 0.4; }
 
-        /* Экран ошибки, если Telegram так и не отдал данные юзера */
         #tg-error-screen {
             position: fixed; inset: 0; z-index: 10001; display: none;
             flex-direction: column; align-items: center; justify-content: center;
@@ -285,7 +283,7 @@
         <svg class="menu-arrow" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
     </a>
 </section>
-        
+
         <div id="item-modal">
             <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-yellow-500/30">
                 <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(245,176,37,0.4)]">
@@ -325,7 +323,6 @@
             </div>
         </div>
 
-        <!-- Плавающий док-капсула: только Главная и Профиль (без Кошелька) -->
         <nav class="dock-bar" id="dockBar">
             <a href="index.html" class="dock-btn">
                 <svg viewBox="0 0 24 24">
@@ -342,16 +339,12 @@
         </nav>
     </div>
 
-<!-- Список подарков вынесен в отдельный файл -->
 <script src="items.js"></script>
 
 <script>
 const tg = window.Telegram.WebApp;
-
-// Вызываем ready() СРАЗУ, до чтения любых данных
 tg.ready();
 
-// --- Надёжное ожидание данных юзера от Telegram (защита от гонки загрузки) ---
 function waitForTelegramUser(maxAttempts = 30, interval = 100) {
     return new Promise((resolve) => {
         let attempts = 0;
@@ -363,7 +356,7 @@ function waitForTelegramUser(maxAttempts = 30, interval = 100) {
             }
             attempts++;
             if (attempts >= maxAttempts) {
-                resolve(null); // так и не дождались — НЕ подставляем фейковый ID
+                resolve(null);
                 return;
             }
             setTimeout(check, interval);
@@ -372,7 +365,6 @@ function waitForTelegramUser(maxAttempts = 30, interval = 100) {
     });
 }
 
-// userId больше не константа — заполняется только реальными данными
 let userId = null;
 const BACKEND_URL = 'https://stars-droper-main.vercel.app';
 
@@ -392,7 +384,6 @@ async function loadUser() {
         const tgUser = await waitForTelegramUser();
 
         if (!tgUser) {
-            // Так и не получили данные от Telegram — показываем понятный экран
             document.getElementById('tg-error-screen').style.display = 'flex';
             return;
         }
@@ -416,10 +407,8 @@ async function loadUser() {
         }
 
         if (data) {
-            // Юзер уже есть в базе
             user = data;
         } else {
-            // Юзера нет — создаём с дефолтными значениями
             console.warn("Пользователь не найден в базе, создаём нового...");
 
             const newUserPayload = {
@@ -448,7 +437,6 @@ async function loadUser() {
             user = createdUser;
         }
 
-        // Отрисовка данных (общая для обоих случаев)
         document.getElementById('u-stars').innerText = user.stars || 0;
         document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
         document.getElementById('u-tickets').innerText = user.tickets || 0;
@@ -473,7 +461,6 @@ function renderGrid() {
         const slot = document.createElement('div');
         slot.className = 'inventory-slot active-item';
         slot.onclick = () => openItem(i);
-        // Безопасное извлечение имени файла
         let imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
         let imgName = imgPath.split('/').pop();
         slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
@@ -487,7 +474,6 @@ async function handlePromo() {
     const codeText = input.value.trim().toUpperCase();
     if (!codeText) return;
 
-    // ---------- 1. Обычные промокоды (promo_codes) — многоразовые, но не более 1 раза на юзера ----------
     const usedCodes = user.used_promos ? String(user.used_promos).split(',') : [];
     if (usedCodes.includes(codeText)) {
         tg.showAlert("❌ Вы уже использовали этот промокод");
@@ -516,7 +502,6 @@ async function handlePromo() {
         return;
     }
 
-    // ---------- 2. Реферальные промокоды пользователей (userss_promo) — только ОДИН раз за аккаунт ----------
     const { data: refPromo, error: refErr } = await _supabase.from('userss_promo').select('*').eq('code', codeText).maybeSingle();
 
     if (refErr) {
@@ -549,7 +534,6 @@ async function handlePromo() {
         const { error: updErr } = await _supabase.from('users').update(upd).eq('user_id', userId);
 
         if (!updErr) {
-            // Записываем факт активации (создатель заберёт награду вручную на Promocode.html)
             await _supabase.from('userss_promo_activations').insert({
                 code: codeText,
                 activator_id: Number(userId)
@@ -575,7 +559,6 @@ async function handlePromo() {
         return;
     }
 
-    // ---------- 3. Код не найден нигде ----------
     tg.showAlert("🛑 Промокод не найден");
 }
 
@@ -713,7 +696,6 @@ function closeModal() {
     document.getElementById('item-modal').style.display = 'none';
 }
 
-// --- Модалка пополнения (TON / Stars) ---
 let isVaultProcessing = false;
 let isStarsProcessing = false;
 
@@ -828,12 +810,10 @@ function openStarsInvoice(payUrl) {
     closeVault();
 }
 
-// --- Раскрывающиеся строки меню (Инвентарь / Промокоды) ---
 function toggleSection(id, rowEl) {
     const el = document.getElementById(id);
     const isOpen = el.classList.contains('open');
 
-    // закрываем остальные секции, чтобы список был опрятным
     document.querySelectorAll('.collapsible.open').forEach(s => {
         if (s.id !== id) s.classList.remove('open');
     });
@@ -846,7 +826,6 @@ function toggleSection(id, rowEl) {
     }
 }
 
-// --- Плавающий док: прячется при скролле вниз, появляется при скролле вверх ---
 (function initDockScroll() {
     const dockBar = document.getElementById('dockBar');
     let lastScrollTop = 0;
@@ -861,7 +840,6 @@ function toggleSection(id, rowEl) {
     }, { passive: true });
 })();
 
-// --- Летающие частицы на фоне ---
 function initParticles() {
     const canvas = document.getElementById('stars-canvas');
     if (!canvas) return;
