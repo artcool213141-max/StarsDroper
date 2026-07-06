@@ -234,16 +234,69 @@ function ambientSpeed() {
     return base * progressBoost;
 }
 
+// Габарит машины (высота спрайта) + зазор между машинами в очереди у забора —
+// используется, чтобы машины красиво "упирались" друг в друга, а не
+// наслаивались одна на другую.
+const CAR_HEIGHT = 140;
+const QUEUE_GAP = 18;
+
+// Линия, у которой останавливается машина перед закрытым (пройденным) люком.
+// Совпадает по высоте с местом, где физически нарисован забор (barrierY=28,
+// высота — barrierH), плюс небольшой отступ, чтобы машина не "впритык".
+function barrierStopY() {
+    const barrierW = laneWidth - 14;
+    const barrierH = Math.round(barrierW * 0.57);
+    return 28 + barrierH + 8;
+}
+
+// Полоса считается перекрытой забором, если курица её уже прошла — ровно
+// так же, как условие отрисовки забора ниже (i <= currentStep && i < 7).
+function laneIsBlocked(lane) {
+    return lane <= currentStep && lane < 7;
+}
+
 function updateAmbientCars() {
     const spd = ambientSpeed();
     const wrapAt = (VH / ZOOM) + 160;
-    ambientCars.forEach(car => {
-        car.y += spd;
-        if (car.y > wrapAt) {
-            car.y = -150 - Math.random() * 200;
-            car.imgIndex = Math.floor(Math.random() * carSources.length);
+    const stopY = barrierStopY();
+
+    for (let lane = 0; lane < 8; lane++) {
+        const laneCars = ambientCars.filter(c => c.lane === lane);
+
+        if (!laneIsBlocked(lane)) {
+            // Полоса свободна — обычное сквозное движение с рециклом сверху.
+            laneCars.forEach(car => {
+                car.y += spd;
+                if (car.y > wrapAt) {
+                    car.y = -150 - Math.random() * 200;
+                    car.imgIndex = Math.floor(Math.random() * carSources.length);
+                }
+            });
+            continue;
         }
-    });
+
+        // Полоса перекрыта забором — строим очередь: ближайшая к забору
+        // машина едет первой, остальные останавливаются друг за другом.
+        laneCars.sort((a, b) => b.y - a.y); // ближе к забору (больше y) — первая в очереди
+        let limit = stopY;
+        laneCars.forEach(car => {
+            if (car.y <= limit) {
+                car.y = Math.min(car.y + spd, limit);
+                limit = car.y - (CAR_HEIGHT + QUEUE_GAP);
+            } else {
+                // Редкий edge case: машина уже проехала место, где через
+                // мгновение встанет забор (курица только что прошла этот
+                // люк). Не дёргаем её резко назад — даём спокойно доехать и
+                // уйти за экран, а на этой полосе она больше не появится,
+                // пока люк открыт.
+                car.y += spd;
+                if (car.y > wrapAt) {
+                    car.y = -150 - Math.random() * 300; // после респавна встанет в очередь как обычно
+                    car.imgIndex = Math.floor(Math.random() * carSources.length);
+                }
+            }
+        });
+    }
 }
 
 // ---------- Canvas sizing (fixes blurry / stretched rendering on HiDPI) ----------
