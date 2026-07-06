@@ -60,6 +60,31 @@
         .toast.success { border-color: rgba(52,211,153,0.5); color: #6ee7b7; }
         #bet-amount::-webkit-outer-spin-button, #bet-amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         #bet-amount { -moz-appearance: textfield; }
+
+        .crash-modal {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.6); opacity: 0; pointer-events: none;
+            transition: opacity .25s ease; z-index: 60; border-radius: 12px;
+        }
+        .crash-modal.show { opacity: 1; pointer-events: auto; }
+        .crash-modal-card {
+            background: #202020; border: 1px solid rgba(255,255,255,0.12); border-radius: 18px;
+            padding: 26px 32px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+            transform: scale(0.82); transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+        }
+        .crash-modal.show .crash-modal-card { transform: scale(1); }
+        .crash-modal-img {
+            width: 100px; height: 100px; object-fit: contain; margin: 0 auto 14px; display: block;
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.45));
+        }
+        .crash-modal-title { font-weight: 900; font-size: 22px; color: #f87171; letter-spacing: .4px; }
+        .crash-modal-subtitle { font-weight: 700; font-size: 13px; color: #d4d4d8; margin-top: 8px; }
+
+        @keyframes screenFlash {
+            0% { background: rgba(239,68,68,0.35); }
+            100% { background: rgba(239,68,68,0); }
+        }
+        .impact-flash { animation: screenFlash .35s ease-out; }
     </style>
 </head>
 <body>
@@ -77,9 +102,17 @@
     </div>
 </header>
 
-<div class="canvas-container">
+<div class="canvas-container" id="canvas-container">
     <canvas id="gameCanvas" class="rounded-xl"></canvas>
     <div id="toast" class="toast"></div>
+
+    <div id="crash-modal" class="crash-modal">
+        <div class="crash-modal-card">
+            <img src="diechik.png" alt="" class="crash-modal-img">
+            <div class="crash-modal-title">Курица сбита 🐔💥</div>
+            <div class="crash-modal-subtitle">Удачи в следующий раз!</div>
+        </div>
+    </div>
 </div>
 
 <div class="bg-[#222] border-t border-zinc-800 p-4 shrink-0 flex flex-col gap-3">
@@ -200,6 +233,7 @@ const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
 
 let activeCar = { lane: -1, y: -150, targetY: 200, active: false, isCrash: false, imgIndex: 0, sourceRef: null };
 let chickenDisplayX = 20; // eased on-screen X position of the chicken, animates towards target lane
+let screenShake = 0; // затухающая тряска экрана в момент столкновения
 
 // --- НАСТРОЙКИ СЕТКИ И ДИНАМИЧЕСКОЙ КАМЕРЫ ---
 // Люки стоят ближе друг к другу (уже, чем раньше) и сами крупнее — под референс.
@@ -241,16 +275,12 @@ const CAR_HEIGHT = 140;
 const QUEUE_GAP = 18;
 
 // Линия, у которой останавливается машина перед закрытым (пройденным) люком.
-// ВАЖНО: car.y — это верхний левый угол спрайта, а машина едет "носом вниз",
-// значит именно НИЖНИЙ край спрайта (car.y + CAR_HEIGHT) должен коснуться
-// нижней границы забора (barrierY + barrierH). Отсюда car.y считается в
-// обратную сторону — и получается отрицательным, то есть большая часть
-// корпуса машины прячется за верхней границей экрана, а виден только "нос",
-// упирающийся прямо в забор — а не сам корпус, наваленный поверх люка ниже.
+// Машина должна быть скрыта ЦЕЛИКОМ за верхней границей экрана — если
+// показывать даже небольшой её кусок, он неизбежно попадает в ту же
+// область, где нарисован забор (0–84px), и визуально накладывается на него.
+// Поэтому просто держим машину полностью за кадром, пока полоса закрыта.
 function barrierStopY() {
-    const barrierW = laneWidth - 14;
-    const barrierH = Math.round(barrierW * 0.57);
-    return (28 + barrierH) - CAR_HEIGHT;
+    return -CAR_HEIGHT - 40;
 }
 
 // Полоса считается перекрытой забором, если курица её уже прошла — ровно
@@ -428,6 +458,16 @@ function renderStaticFields() {
     const viewH = VH / ZOOM;
 
     ctx.save();
+
+    if (screenShake > 0.3) {
+        const dx = (Math.random() - 0.5) * screenShake;
+        const dy = (Math.random() - 0.5) * screenShake;
+        ctx.translate(dx, dy);
+        screenShake *= 0.82;
+    } else {
+        screenShake = 0;
+    }
+
     ctx.scale(ZOOM, ZOOM);
     ctx.translate(-cameraX, 0);
 
@@ -659,6 +699,8 @@ async function pressGo() {
             currentStep = -1;
             pendingStep = -1;
             chickenDisplayX = 20;
+            hideCrashModal();
+            showCrashChicken = false;
 
             document.getElementById('btn-go').innerText = 'GO';
             document.getElementById('btn-cashout').classList.remove('hidden');
@@ -719,8 +761,7 @@ function triggerCarLogic(step) {
             if (activeCar.y >= hitY) {
                 activeCar.y = hitY;
                 activeCar.active = false;
-                showCrashChicken = true;
-                handleCrash(step);
+                triggerImpact(step);
                 return;
             }
         } else {
@@ -752,12 +793,35 @@ function triggerCarLogic(step) {
     animate();
 }
 
+// Разыгрывает сам момент удара: сначала машина останавливается вплотную к
+// курице и экран трясётся (видно, что произошло столкновение), и только
+// СПУСТЯ короткую паузу спрайт курицы меняется на задавленную — раньше эта
+// подмена происходила в тот же кадр, что и остановка машины, из-за чего не
+// было видно самого "наезда". Ещё через паузу — итоговая модалка.
+function triggerImpact(step) {
+    tg.HapticFeedback && tg.HapticFeedback.impactOccurred('heavy');
+    screenShake = 14;
+
+    setTimeout(() => {
+        showCrashChicken = true;
+        tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('error');
+        setTimeout(() => handleCrash(step), 550);
+    }, 220);
+}
+
+function showCrashModal() {
+    document.getElementById('crash-modal').classList.add('show');
+}
+
+function hideCrashModal() {
+    document.getElementById('crash-modal').classList.remove('show');
+}
+
 async function handleCrash(step) {
     isPlaying = false;
     document.getElementById('btn-go').innerText = 'PLAY';
     document.getElementById('btn-cashout').classList.add('hidden');
-    tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('error');
-    showToast('Курица не выжила 🐔🔥', 'error');
+    showCrashModal();
 
     try {
         await _supabase.from('chicken_games').update({
@@ -767,8 +831,8 @@ async function handleCrash(step) {
     } catch (e) {
         console.error(e);
     } finally {
-        // Briefly leave the crash scene on screen, then reset the board so the
-        // next round starts clean instead of showing stale opened hatches.
+        // Держим модалку и задавленную курицу на экране подольше, чтобы
+        // результат был явно виден, и только потом сбрасываем поле.
         setTimeout(() => {
             // Машина, которая нас "сбила", была временно изъята из
             // ambientCars — возвращаем её обратно в поток, иначе трафик со
@@ -781,9 +845,10 @@ async function handleCrash(step) {
             pendingStep = -1;
             chickenDisplayX = 20;
             showCrashChicken = false;
+            hideCrashModal();
             isBusy = false;
             setControlsDisabled(false);
-        }, 1200);
+        }, 1900);
     }
 }
 
