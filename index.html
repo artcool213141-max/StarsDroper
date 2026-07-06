@@ -1007,9 +1007,18 @@
         document.querySelectorAll('.mosaic .card').forEach(card => {
             card.addEventListener('click', () => {
                 const url = card.getAttribute('data-nav');
-                if (url && url.trim() !== '' && url.trim() !== '#') {
-                    navigateTo(url.trim());
+                if (!url || url.trim() === '' || url.trim() === '#') return;
+                const target = url.trim();
+
+                if (target === 'Chiken.html') {
+                    const pass = prompt('Введите пароль для входа:');
+                    if (pass !== '3330') {
+                        if (pass !== null) alert('Неверный пароль');
+                        return;
+                    }
                 }
+
+                navigateTo(target);
             });
         });
 
