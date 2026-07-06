@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NowearSpin - Амбассадорка</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
+        :root {
+            --bg-dark: #000000;
+            --accent-gold: #f5b025;
+            --panel-bg: rgba(20, 20, 20, 0.75);
+        }
+        body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
+        #stars-canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        .main-wrapper {
+            position: relative; z-index: 1; padding: 24px 20px 60px;
+            background: var(--bg-dark);
+            min-height: 100vh;
+        }
+
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        .glass-card { background: var(--panel-bg); border: 1px solid rgba(245, 176, 37, 0.22); backdrop-filter: blur(20px); border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+
+        .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; border: none; }
+        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
+        .btn-gold:disabled { opacity: 0.5; box-shadow: none; }
+
+        .btn-outline { background: rgba(255,255,255,0.04); color: var(--accent-gold); font-weight: 900; text-transform: uppercase; border-radius: 20px; border: 1px solid rgba(245,176,37,0.4); transition: 0.1s; }
+        .btn-outline:active { transform: translateY(2px); }
+
+        .back-btn { position: fixed; top: 16px; left: 16px; z-index: 50; background: rgba(245,176,37,0.15); border: 1px solid rgba(245,176,37,0.4); border-radius: 999px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; color: var(--accent-gold); text-decoration: none; }
+        .code-display { letter-spacing: 0.25em; }
+        .deposit-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; gap: 8px; }
+
+        .quiz-opt { display: block; width: 100%; text-align: left; padding: 14px 16px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; color: #eee; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 10px; }
+        .quiz-opt.selected { background: rgba(245,176,37,0.18); border-color: var(--accent-gold); color: var(--accent-gold); }
+        .step-dot { width: 6px; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.15); }
+        .step-dot.active { background: var(--accent-gold); width: 18px; }
+    </style>
+</head>
+<body>
+    <canvas id="stars-canvas"></canvas>
+
+    <a href="profile.html" class="back-btn">←</a>
+
+    <div class="main-wrapper">
+        <header class="flex flex-col items-center mt-14 mb-8">
+            <h2 class="orbitron text-xl font-black italic tracking-tighter text-white uppercase">Амбассадорка</h2>
+            <p class="text-[10px] text-gray-400 uppercase mt-2 text-center max-w-[280px]">
+                Приводи людей и получай % с каждого их пополнения
+            </p>
+        </header>
+
+        <!-- Загрузка -->
+        <section id="loading-block" class="text-center text-[10px] text-gray-500 uppercase tracking-widest py-10">
+            Загрузка...
+        </section>
+
+        <!-- ============ БЛОК 1: Интро перед тестом ============ -->
+        <section id="intro-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Условия сотрудничества</h3>
+            <p class="text-[11px] text-gray-300 leading-relaxed mb-3">
+                Мы работаем по системе <span class="text-yellow-400 font-black">промокодов амбассадорки</span>:
+                когда приведённый вами человек пополняет баланс, <span class="text-yellow-400 font-black">40%</span>
+                от суммы пополнения зачисляется на ваш баланс амбассадора, оставшиеся <span class="font-black">60%</span>
+                идут разработчикам проекта.
+            </p>
+            <p class="text-[11px] text-gray-300 leading-relaxed mb-5">
+                Перед тем как получить доступ к созданию своего промокода, ответьте на несколько вопросов —
+                это займёт меньше минуты. Заявка рассматривается вручную.
+            </p>
+            <button onclick="startQuiz()" class="w-full btn-gold py-4 text-xs">НАЧАТЬ АНКЕТУ</button>
+        </section>
+
+        <!-- ============ БЛОК 2: Квиз ============ -->
+        <section id="quiz-block" class="glass-card p-6 mb-6" style="display:none;">
+            <div class="flex items-center justify-center gap-2 mb-5" id="quiz-dots"></div>
+
+            <!-- Шаг 1: платформа -->
+            <div class="quiz-step" data-step="1">
+                <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">1. Откуда у вас трафик?</h3>
+                <button class="quiz-opt" data-value="tiktok" onclick="selectPlatform('tiktok', this)">TikTok</button>
+                <button class="quiz-opt" data-value="telegram" onclick="selectPlatform('telegram', this)">Telegram</button>
+                <button class="quiz-opt" data-value="youtube" onclick="selectPlatform('youtube', this)">YouTube</button>
+                <button class="quiz-opt" data-value="instagram" onclick="selectPlatform('instagram', this)">Instagram</button>
+            </div>
+
+            <!-- Шаг 2: подписчики (варианты подставляются под платформу) -->
+            <div class="quiz-step" data-step="2" style="display:none;">
+                <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">2. Сколько у вас подписчиков?</h3>
+                <div id="followers-options"></div>
+            </div>
+
+            <!-- Шаг 3: ссылка -->
+            <div class="quiz-step" data-step="3" style="display:none;">
+                <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">3. Ссылка на вашу площадку</h3>
+                <input type="text" id="quiz-link" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 outline-none text-white text-sm mb-4" placeholder="https://...">
+                <button onclick="nextFromLink()" class="w-full btn-gold py-4 text-xs">ДАЛЕЕ</button>
+            </div>
+
+            <!-- Шаг 4: о себе -->
+            <div class="quiz-step" data-step="4" style="display:none;">
+                <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">4. Немного о себе</h3>
+                <p class="text-[9px] text-gray-500 uppercase mb-3">Кто вы, откуда, где учитесь/работаете и т.д.</p>
+                <textarea id="quiz-about" rows="4" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 outline-none text-white text-sm mb-4" placeholder="Расскажите о себе..."></textarea>
+                <button onclick="nextFromAbout()" class="w-full btn-gold py-4 text-xs">ДАЛЕЕ</button>
+            </div>
+
+            <!-- Шаг 5: контакты -->
+            <div class="quiz-step" data-step="5" style="display:none;">
+                <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">5. Контактные данные</h3>
+                <input type="text" id="quiz-contact" class="w-full bg-white/5 border border-white/10 rounded-xl p-4 outline-none text-white text-sm mb-4" placeholder="@username в Telegram">
+                <button id="quiz-submit-btn" onclick="submitQuiz()" class="w-full btn-gold py-4 text-xs">ОТПРАВИТЬ ЗАЯВКУ</button>
+            </div>
+        </section>
+
+        <!-- ============ БЛОК 3: Заявка на рассмотрении ============ -->
+        <section id="pending-block" class="glass-card p-6 mb-6 text-center" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-3">Заявка отправлена</h3>
+            <p class="text-[11px] text-gray-300 leading-relaxed">
+                Ваша анкета на рассмотрении. Как только доступ будет одобрен, здесь появится возможность
+                создать свой промокод амбассадора.
+            </p>
+        </section>
+
+        <!-- ============ БЛОК 4: Баланс амбассадора ============ -->
+        <section id="balance-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Баланс амбассадора</h3>
+            <div class="bg-black/30 border border-yellow-500/30 rounded-2xl p-5 text-center mb-4">
+                <div id="amb-balance" class="orbitron text-3xl font-black text-yellow-400">0</div>
+                <div class="text-[9px] text-gray-400 uppercase mt-1">Доступно к выводу</div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <div class="text-[9px] text-gray-400 uppercase mb-1">Рефералов</div>
+                    <div id="amb-uses" class="text-lg font-black text-white">0</div>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <div class="text-[9px] text-gray-400 uppercase mb-1">Всего заработано</div>
+                    <div id="amb-earned" class="text-lg font-black text-yellow-400">0</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ БЛОК 5: Создание кода ============ -->
+        <section id="create-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Придумайте промокод</h3>
+            <input type="text" id="code-input" maxlength="12"
+                class="w-full bg-white/5 border border-white/10 rounded-xl p-4 outline-none uppercase font-black text-white text-sm text-center tracking-widest focus:border-yellow-500/50 mb-4"
+                placeholder="НАПРИМЕР: VOVA777">
+            <p class="text-[9px] text-gray-500 uppercase text-center mb-5 leading-relaxed">
+                От 4 до 12 символов: только латинские буквы и цифры. За каждое пополнение приведённого
+                человека вы получаете 40% на баланс.
+            </p>
+            <button id="create-btn" onclick="createCode()" class="w-full btn-gold py-4 text-xs">СОЗДАТЬ ПРОМОКОД</button>
+        </section>
+
+        <!-- Мой код -->
+        <section id="code-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Ваш промокод</h3>
+            <div class="bg-black/30 border border-yellow-500/30 rounded-2xl p-5 text-center mb-4">
+                <span id="my-code" class="orbitron code-display text-2xl font-black text-yellow-400">------</span>
+            </div>
+            <button onclick="copyCode()" class="w-full btn-gold py-4 text-xs">СКОПИРОВАТЬ КОД</button>
+        </section>
+
+        <!-- ============ БЛОК 6: Стата по рефералам ============ -->
+        <section id="deposits-block" class="glass-card p-6 mb-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-4">Пополнения ваших рефералов</h3>
+            <div id="deposits-list" class="space-y-2"></div>
+        </section>
+
+        <section id="how-block" class="glass-card p-6" style="display:none;">
+            <h3 class="text-[10px] font-black uppercase text-yellow-400 tracking-widest mb-3">Как это работает</h3>
+            <ul class="text-[10px] text-gray-400 leading-relaxed space-y-2 list-disc pl-4">
+                <li>Каждый приведённый человек привязывается к вам один раз и навсегда.</li>
+                <li>С каждого его пополнения вы получаете 40% на баланс амбассадора.</li>
+                <li>60% от суммы пополнения идёт разработчикам проекта.</li>
+                <li>Активировать собственный промокод нельзя.</li>
+            </ul>
+        </section>
+    </div>
+
+<script>
+const tg = window.Telegram.WebApp;
+const userId = String(tg.initDataUnsafe?.user?.id || '8015661230');
+
+const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let myCode = null;
+let quizPlatform = null;
+let quizFollowers = null;
+
+// варианты подписчиков под каждую платформу
+const FOLLOWERS_OPTIONS = {
+    tiktok:    [['less_1k', 'Меньше 1 000'], ['1k_5k', 'Больше 1 000'], ['5k_plus', 'Больше 5 000']],
+    telegram:  [['less_5k', 'Меньше 5 000'], ['5k_10k', 'Больше 5 000'], ['10k_plus', 'Больше 10 000']],
+    youtube:   [['less_1k', 'Меньше 1 000'], ['1k_5k', 'Больше 1 000'], ['5k_plus', 'Больше 5 000']],
+    instagram: [['less_1k', 'Меньше 1 000'], ['1k_5k', 'Больше 1 000'], ['5k_plus', 'Больше 5 000']],
+};
+
+function hideAll() {
+    ['loading-block','intro-block','quiz-block','pending-block','balance-block',
+     'create-block','code-block','deposits-block','how-block'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+    });
+}
+
+async function init() {
+    tg.ready();
+    tg.expand();
+    hideAll();
+    document.getElementById('loading-block').style.display = 'block';
+
+    const { data: user, error } = await _supabase
+        .from('users')
+        .select('ambassador_access')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Ошибка загрузки пользователя:', error);
+    }
+
+    hideAll();
+
+    if (user && user.ambassador_access) {
+        // Доступ есть — показываем баланс/код/стату
+        await showDashboard();
+        return;
+    }
+
+    // Доступа нет — проверяем, отправлена ли уже анкета
+    const { data: quiz } = await _supabase
+        .from('ambassador_quiz')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (quiz) {
+        document.getElementById('pending-block').style.display = 'block';
+    } else {
+        document.getElementById('intro-block').style.display = 'block';
+    }
+}
+
+// ---------------- КВИЗ ----------------
+
+function startQuiz() {
+    hideAll();
+    document.getElementById('quiz-block').style.display = 'block';
+    goToStep(1);
+}
+
+function goToStep(step) {
+    document.querySelectorAll('.quiz-step').forEach(el => {
+        el.style.display = (Number(el.dataset.step) === step) ? 'block' : 'none';
+    });
+    const dots = document.getElementById('quiz-dots');
+    dots.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+        const d = document.createElement('div');
+        d.className = 'step-dot' + (i === step ? ' active' : '');
+        dots.appendChild(d);
+    }
+}
+
+function selectPlatform(platform, btn) {
+    quizPlatform = platform;
+    document.querySelectorAll('[data-step="1"] .quiz-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+
+    const container = document.getElementById('followers-options');
+    container.innerHTML = '';
+    FOLLOWERS_OPTIONS[platform].forEach(([value, label]) => {
+        const b = document.createElement('button');
+        b.className = 'quiz-opt';
+        b.dataset.value = value;
+        b.innerText = label;
+        b.onclick = () => selectFollowers(value, b);
+        container.appendChild(b);
+    });
+
+    setTimeout(() => goToStep(2), 150);
+}
+
+function selectFollowers(value, btn) {
+    quizFollowers = value;
+    document.querySelectorAll('#followers-options .quiz-opt').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    setTimeout(() => goToStep(3), 150);
+}
+
+function nextFromLink() {
+    const link = document.getElementById('quiz-link').value.trim();
+    if (!link) {
+        tg.showAlert('🛑 Укажите ссылку на вашу площадку');
+        return;
+    }
+    goToStep(4);
+}
+
+function nextFromAbout() {
+    const about = document.getElementById('quiz-about').value.trim();
+    if (about.length < 5) {
+        tg.showAlert('🛑 Расскажите о себе чуть подробнее');
+        return;
+    }
+    goToStep(5);
+}
+
+async function submitQuiz() {
+    const link = document.getElementById('quiz-link').value.trim();
+    const about = document.getElementById('quiz-about').value.trim();
+    const contact = document.getElementById('quiz-contact').value.trim();
+
+    if (!quizPlatform || !quizFollowers) {
+        tg.showAlert('🛑 Заполните все шаги анкеты');
+        return;
+    }
+    if (!contact) {
+        tg.showAlert('🛑 Укажите контактные данные');
+        return;
+    }
+
+    const btn = document.getElementById('quiz-submit-btn');
+    btn.disabled = true;
+    btn.innerText = 'ОТПРАВКА...';
+
+    try {
+        const { error } = await _supabase.from('ambassador_quiz').insert({
+            user_id: userId,
+            platform: quizPlatform,
+            followers_range: quizFollowers,
+            profile_link: link,
+            about_text: about,
+            contact: contact
+        });
+
+        if (error) {
+            tg.showAlert('❌ Не удалось отправить анкету: ' + error.message);
+            btn.disabled = false;
+            btn.innerText = 'ОТПРАВИТЬ ЗАЯВКУ';
+            return;
+        }
+
+        tg.showAlert('✅ Анкета отправлена, ожидайте рассмотрения!');
+        init();
+    } catch (e) {
+        tg.showAlert('❌ Произошла ошибка, попробуйте снова');
+        btn.disabled = false;
+        btn.innerText = 'ОТПРАВИТЬ ЗАЯВКУ';
+    }
+}
+
+// ---------------- ДАШБОРД (доступ уже открыт) ----------------
+
+async function showDashboard() {
+    document.getElementById('balance-block').style.display = 'block';
+    document.getElementById('how-block').style.display = 'block';
+
+    const { data: amb, error } = await _supabase
+        .from('ambassador_codes')
+        .select('*')
+        .eq('owner_id', userId)
+        .maybeSingle();
+
+    if (error) {
+        console.error('Ошибка загрузки кода амбассадора:', error);
+        return;
+    }
+
+    if (amb) {
+        myCode = amb;
+        document.getElementById('code-block').style.display = 'block';
+        document.getElementById('my-code').innerText = amb.code;
+        document.getElementById('amb-balance').innerText = Number(amb.balance || 0).toFixed(2);
+        document.getElementById('amb-earned').innerText = Number(amb.total_earned || 0).toFixed(2);
+        document.getElementById('amb-uses').innerText = amb.uses_count || 0;
+
+        await loadDeposits(amb.code);
+    } else {
+        document.getElementById('create-block').style.display = 'block';
+    }
+}
+
+function sanitizeCode(raw) {
+    return raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const input = document.getElementById('code-input');
+    if (input) {
+        input.addEventListener('input', (e) => { e.target.value = sanitizeCode(e.target.value); });
+    }
+});
+
+async function createCode() {
+    const input = document.getElementById('code-input');
+    const btn = document.getElementById('create-btn');
+    const code = sanitizeCode(input.value.trim());
+
+    if (code.length < 4) {
+        tg.showAlert('🛑 Код должен содержать минимум 4 символа (только заглавные латинские буквы и цифры)');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = 'СОЗДАНИЕ...';
+
+    try {
+        const { data: existing } = await _supabase
+            .from('ambassador_codes')
+            .select('code')
+            .eq('code', code)
+            .maybeSingle();
+
+        if (existing) {
+            tg.showAlert('❌ Этот код уже занят, попробуйте другой');
+            btn.disabled = false;
+            btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+            return;
+        }
+
+        const { error } = await _supabase.from('ambassador_codes').insert({
+            code: code,
+            owner_id: userId
+        });
+
+        if (error) {
+            tg.showAlert('❌ Не удалось создать промокод: ' + error.message);
+            btn.disabled = false;
+            btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+            return;
+        }
+
+        tg.showAlert('✅ Промокод амбассадора создан!');
+        init();
+    } catch (e) {
+        tg.showAlert('❌ Произошла ошибка, попробуйте снова');
+        btn.disabled = false;
+        btn.innerText = 'СОЗДАТЬ ПРОМОКОД';
+    }
+}
+
+async function loadDeposits(code) {
+    const { data: deposits, error } = await _supabase
+        .from('ambassador_deposits')
+        .select('id, activator_id, deposit_amount, commission_amount, created_at')
+        .eq('code', code)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Ошибка загрузки пополнений:', error);
+        return;
+    }
+
+    const block = document.getElementById('deposits-block');
+    const list = document.getElementById('deposits-list');
+    list.innerHTML = '';
+
+    if (!deposits || deposits.length === 0) {
+        block.style.display = 'block';
+        list.innerHTML = `<div class="text-center text-[10px] text-gray-500 uppercase tracking-widest py-2">Пока никто не пополнял</div>`;
+        return;
+    }
+
+    block.style.display = 'block';
+
+    const activatorIds = [...new Set(deposits.map(d => d.activator_id))];
+    const { data: profiles } = await _supabase
+        .from('users')
+        .select('user_id, username, avatar_url')
+        .in('user_id', activatorIds);
+
+    const profileMap = {};
+    (profiles || []).forEach(p => { profileMap[p.user_id] = p; });
+
+    deposits.forEach(d => {
+        const row = document.createElement('div');
+        row.className = 'deposit-row';
+        const date = new Date(d.created_at).toLocaleDateString('ru-RU');
+        const profile = profileMap[d.activator_id];
+        const displayName = profile?.username ? `@${profile.username}` : `ID ${d.activator_id}`;
+
+        row.innerHTML = `
+            <div class="flex flex-col">
+                <span class="text-[10px] text-gray-200 font-bold">${displayName}</span>
+                <span class="text-[9px] text-gray-500">${date} · пополнил ${d.deposit_amount}</span>
+            </div>
+            <span class="text-xs font-black text-yellow-400">+${Number(d.commission_amount).toFixed(2)}</span>
+        `;
+        list.appendChild(row);
+    });
+}
+
+function copyCode() {
+    if (!myCode) return;
+    navigator.clipboard.writeText(myCode.code).then(() => {
+        tg.showAlert('📋 Промокод скопирован!');
+    }).catch(() => {
+        tg.showAlert('Не удалось скопировать код.');
+    });
+}
+
+// --- Летающие частицы на фоне ---
+function initParticles() {
+    const canvas = document.getElementById('stars-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let w, h, particles;
+
+    function resize() { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; }
+
+    function makeParticles() {
+        const count = Math.floor((w * h) / 22000);
+        particles = Array.from({ length: count }, () => ({
+            x: Math.random() * w, y: Math.random() * h,
+            r: Math.random() * 1.3 + 0.3,
+            vy: Math.random() * 0.15 + 0.03, vx: (Math.random() - 0.5) * 0.08,
+            alpha: Math.random() * 0.5 + 0.2, twinkle: Math.random() * 0.02 + 0.005,
+            dir: Math.random() > 0.5 ? 1 : -1
+        }));
+    }
+
+    function tick() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+            p.alpha += p.twinkle * p.dir;
+            if (p.alpha >= 0.8 || p.alpha <= 0.15) p.dir *= -1;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
+            ctx.fill();
+            p.y -= p.vy; p.x += p.vx;
+            if (p.y < -5) { p.y = h + 5; p.x = Math.random() * w; }
+            if (p.x < -5) p.x = w + 5;
+            if (p.x > w + 5) p.x = -5;
+        });
+        requestAnimationFrame(tick);
+    }
+
+    resize(); makeParticles(); tick();
+    window.addEventListener('resize', () => { resize(); makeParticles(); });
+}
+
+window.onload = () => {
+    initParticles();
+    init();
+};
+</script>
+</body>
+</html>
