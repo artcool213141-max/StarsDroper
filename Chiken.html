@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Chicken Road — NowearSpin</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+        * { box-sizing: border-box; }
+        body {
+            background: #1a1a1a; color: #fff; font-family: 'Inter', sans-serif;
+            margin: 0; padding: 0; height: 100vh; overflow: hidden;
+            display: flex; flex-direction: column; user-select: none; -webkit-tap-highlight-color: transparent;
+        }
+        .balance-pill {
+            display: flex; align-items: center; gap: 6px; background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 8px 14px;
+            font-weight: 800; font-size: 15px; transition: background .2s;
+        }
+        .canvas-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #252525;
+            padding: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        canvas {
+            background-color: #333;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+        .diff-btn {
+            padding: 6px 14px; border-radius: 8px; font-weight: 800; font-size: 12px;
+            color: #a1a1aa; transition: all .15s; cursor: pointer; background: transparent; border: none;
+        }
+        .diff-btn.active { background: #3f3f46; color: #fff; }
+        .diff-btn:disabled { cursor: not-allowed; opacity: .5; }
+        button:disabled { opacity: .5; cursor: not-allowed; filter: grayscale(.3); }
+        input:disabled { opacity: .6; }
+        #btn-go, #btn-cashout { transition: transform .1s, filter .15s; }
+        #btn-go:active:not(:disabled), #btn-cashout:active:not(:disabled) { transform: scale(0.97); }
+        .toast {
+            position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+            background: rgba(20,20,20,0.95); border: 1px solid rgba(255,255,255,0.12);
+            padding: 10px 18px; border-radius: 10px; font-weight: 700; font-size: 13px;
+            opacity: 0; pointer-events: none; transition: opacity .25s, top .25s; z-index: 50;
+            white-space: nowrap;
+        }
+        .toast.show { opacity: 1; top: 24px; }
+        .toast.error { border-color: rgba(239,68,68,0.5); color: #fca5a5; }
+        .toast.success { border-color: rgba(52,211,153,0.5); color: #6ee7b7; }
+        #bet-amount::-webkit-outer-spin-button, #bet-amount::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        #bet-amount { -moz-appearance: textfield; }
+    </style>
+</head>
+<body>
+
+<header class="bg-[#222] border-b border-zinc-800 flex items-center justify-between h-[65px] px-4 shrink-0">
+    <div class="flex items-center gap-2">
+        <a href="games.html" class="text-zinc-400 hover:text-white mr-2">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        </a>
+        <span class="font-black text-xl tracking-tight text-white">CHICKEN <span class="text-red-500">2</span> ROAD</span>
+    </div>
+    <div class="flex gap-2">
+        <div class="balance-pill">⭐ <span id="my-stars">0</span></div>
+        <div class="balance-pill">💎 <span id="my-ton">0</span></div>
+    </div>
+</header>
+
+<div class="canvas-container">
+    <canvas id="gameCanvas" class="rounded-xl"></canvas>
+    <div id="toast" class="toast"></div>
+</div>
+
+<div class="bg-[#222] border-t border-zinc-800 p-4 shrink-0 flex flex-col gap-4">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 bg-[#1a1a1a] p-2 rounded-xl border border-zinc-800">
+            <button onclick="switchBetType('stars')" id="tab-stars" class="px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all">⭐ Stars</button>
+            <button onclick="switchBetType('ton')" id="tab-ton" class="px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all">💎 TON</button>
+            <input type="number" id="bet-amount" min="1" step="1" class="w-24 bg-transparent text-center font-black text-sm text-white outline-none ml-1" value="10">
+        </div>
+
+        <div class="flex gap-1.5">
+            <button id="btn-add10" onclick="addAmount(10)" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-3 py-2.5 rounded-lg">+10</button>
+            <button id="btn-add50" onclick="addAmount(50)" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-3 py-2.5 rounded-lg">+50</button>
+            <button id="btn-max" onclick="setMax()" class="bg-zinc-800 hover:bg-zinc-700 text-xs font-black px-4 py-2.5 rounded-lg">MAX</button>
+        </div>
+
+        <div class="flex items-center gap-1 bg-[#1a1a1a] p-1.5 rounded-xl">
+            <button class="diff-btn active" id="diff-easy" onclick="switchDifficulty('easy')">Easy</button>
+            <button class="diff-btn" id="diff-medium" onclick="switchDifficulty('medium')">Medium</button>
+            <button class="diff-btn" id="diff-hard" onclick="switchDifficulty('hard')">Hard</button>
+        </div>
+    </div>
+
+    <div class="flex gap-3">
+        <button id="btn-cashout" onclick="cashOut()" class="flex-1 bg-amber-400 hover:bg-amber-500 text-zinc-900 font-black py-4.5 rounded-xl text-center uppercase tracking-wider text-base hidden transition-all shadow-lg">
+            CASH OUT <span id="cashout-preview">0</span>
+        </button>
+        <button id="btn-go" onclick="pressGo()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-4.5 rounded-xl text-center uppercase tracking-widest text-xl transition-all shadow-lg">
+            PLAY
+        </button>
+    </div>
+</div>
+
+<script>
+const tg = window.Telegram.WebApp;
+tg.expand();
+
+const SUPABASE_URL = 'https://ypvvoqbvzfmirprevazq.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_nG0LGd9T2s1aOM6eTRdoJQ_DPwkMvXz';
+const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const userId = String(tg.initDataUnsafe?.user?.id || ('guest_' + Math.floor(Math.random()*100000)));
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// Virtual (logical) drawing resolution — actual canvas pixel size is scaled
+// by devicePixelRatio below so the game looks crisp on retina/mobile screens.
+const VW = 900, VH = 500;
+
+let betType = 'stars';
+let difficulty = 'easy';
+let myProfile = null;
+let currentGameId = null;
+let isPlaying = false;
+let isBusy = false;        // true while a bet is being placed / a step is animating — blocks double taps
+let currentStep = -1;      // last *confirmed* (safely passed) lane, -1 = not started
+let pendingStep = -1;      // lane currently being attempted (car mid-air), -1 = none
+let currentBet = 0;
+
+// Multiplier ladders + crash-chance curves per difficulty.
+const DIFFICULTIES = {
+    easy:   { multipliers: [1.03, 1.08, 1.15, 1.24, 1.35, 1.50, 1.70, 2.00], baseCrash: 0.08, crashStep: 0.020 },
+    medium: { multipliers: [1.10, 1.25, 1.45, 1.75, 2.15, 2.70, 3.50, 4.60], baseCrash: 0.14, crashStep: 0.032 },
+    hard:   { multipliers: [1.20, 1.50, 2.00, 2.70, 3.80, 5.50, 8.00, 12.0], baseCrash: 0.20, crashStep: 0.045 },
+};
+
+function activeConfig() { return DIFFICULTIES[difficulty]; }
+function multiplierAt(step) { return activeConfig().multipliers[step]; }
+function crashChanceAt(step) {
+    const c = activeConfig();
+    return Math.min(0.85, c.baseCrash + c.crashStep * step);
+}
+
+// --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
+const imgChicken = new Image();       imgChicken.src = 'img/chkenroad/chiken.png';
+const imgFriedChicken = new Image();  imgFriedChicken.src = 'img/chkenroad/fried_chicken.png';
+const imgLvl = new Image();           imgLvl.src = 'img/chkenroad/cryg.png';
+const imgBarrier = new Image();       imgBarrier.src = 'img/chkenroad/hatch.png';
+
+const carSources = [
+    'img/chkenroad/car1.png',
+    'img/chkenroad/car2.png',
+    'img/chkenroad/car3.png',
+    'img/chkenroad/car4.png'
+];
+const loadedCarImages = carSources.map(src => { const img = new Image(); img.src = src; return img; });
+const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
+
+let activeCar = { lane: -1, y: -150, targetY: 200, active: false, speed: 22, isCrash: false, imgIndex: 0 };
+
+// --- НАСТРОЙКИ СЕТКИ И ДИНАМИЧЕСКОЙ КАМЕРЫ ---
+const startZoneWidth = 120;
+const laneWidth = 140;
+
+// ---------- Canvas sizing (fixes blurry / stretched rendering on HiDPI) ----------
+function setupCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = VW * dpr;
+    canvas.height = VH * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+setupCanvas();
+window.addEventListener('resize', setupCanvas);
+
+// ---------- Toast helper (replaces blocking alert() calls) ----------
+let toastTimer = null;
+function showToast(message, type = 'info') {
+    const el = document.getElementById('toast');
+    el.textContent = message;
+    el.className = 'toast show ' + (type === 'error' ? 'error' : type === 'success' ? 'success' : '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2400);
+}
+
+function switchBetType(t) {
+    if (isPlaying || isBusy) return;
+    betType = t;
+    document.getElementById('tab-stars').className = t === 'stars' ? 'px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all' : 'px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all';
+    document.getElementById('tab-ton').className = t === 'ton' ? 'px-4 py-2 rounded-lg font-black text-xs bg-zinc-700 text-white transition-all' : 'px-4 py-2 rounded-lg font-black text-xs text-zinc-400 transition-all';
+}
+
+function switchDifficulty(d) {
+    if (isPlaying || isBusy) return;
+    difficulty = d;
+    ['easy', 'medium', 'hard'].forEach(k => {
+        document.getElementById('diff-' + k).classList.toggle('active', k === d);
+    });
+}
+
+function setControlsDisabled(disabled) {
+    document.getElementById('bet-amount').disabled = disabled;
+    document.getElementById('tab-stars').disabled = disabled;
+    document.getElementById('tab-ton').disabled = disabled;
+    document.getElementById('btn-add10').disabled = disabled;
+    document.getElementById('btn-add50').disabled = disabled;
+    document.getElementById('btn-max').disabled = disabled;
+    document.getElementById('diff-easy').disabled = disabled;
+    document.getElementById('diff-medium').disabled = disabled;
+    document.getElementById('diff-hard').disabled = disabled;
+}
+
+async function loadMe() {
+    try {
+        let { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+        if (error) throw error;
+
+        if (!data) {
+            // First time we see this user — create a default row instead of
+            // silently failing later when reading myProfile.stars/.balance.
+            const { data: created, error: insertErr } = await _supabase
+                .from('users')
+                .insert({ user_id: userId, stars: 0, balance: 0 })
+                .select()
+                .single();
+            if (insertErr) throw insertErr;
+            data = created;
+        }
+
+        myProfile = data;
+        document.getElementById('my-stars').textContent = Math.round(myProfile.stars || 0);
+        document.getElementById('my-ton').textContent = Number(myProfile.balance || 0).toFixed(2);
+    } catch (e) {
+        console.error(e);
+        showToast('Не удалось загрузить профиль', 'error');
+    }
+}
+
+function addAmount(v) {
+    const inp = document.getElementById('bet-amount');
+    const next = (parseFloat(inp.value) || 0) + v;
+    inp.value = betType === 'stars' ? Math.round(next) : Math.round(next * 100) / 100;
+}
+
+function setMax() {
+    if (!myProfile) return;
+    const inp = document.getElementById('bet-amount');
+    inp.value = betType === 'stars' ? Math.floor(myProfile.stars || 0) : Math.floor((myProfile.balance || 0) * 100) / 100;
+}
+
+function renderStaticFields() {
+    ctx.clearRect(0, 0, VW, VH);
+
+    // Camera follows whichever lane is furthest along — confirmed step or the one being attempted.
+    const focusStep = Math.max(currentStep, pendingStep);
+    let cameraX = 0;
+    if (focusStep >= 2) cameraX = (focusStep - 1) * laneWidth;
+
+    ctx.save();
+    ctx.translate(-cameraX, 0);
+
+    // Асфальт
+    ctx.fillStyle = '#3a3a3a';
+    ctx.fillRect(0, 0, startZoneWidth + 8 * laneWidth, VH);
+
+    // Газон старта
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, 0, startZoneWidth - 25, VH);
+
+    // Бордюр
+    ctx.fillStyle = '#666';
+    ctx.fillRect(startZoneWidth - 25, 0, 25, VH);
+
+    let maxVisibleLanes = isPlaying ? Math.min(8, focusStep + 3) : 3;
+
+    for (let i = 0; i < 8; i++) {
+        let x = startZoneWidth + i * laneWidth;
+        if (i >= maxVisibleLanes) continue;
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+        ctx.lineWidth = 6;
+        ctx.setLineDash([20, 20]);
+        ctx.beginPath();
+        ctx.moveTo(x + laneWidth, 0);
+        ctx.lineTo(x + laneWidth, VH);
+        ctx.stroke();
+
+        let hatchX = x + (laneWidth / 2) - 45;
+        let hatchY = VH / 2 - 45;
+
+        // Only reveal a lane as "cleared" once it is confirmed — never for the
+        // lane currently being gambled on, so the outcome isn't spoiled early.
+        const confirmed = currentStep >= i;
+
+        if (confirmed) {
+            ctx.fillStyle = '#fbbf24';
+            ctx.beginPath(); ctx.arc(hatchX + 45, hatchY + 45, 48, 0, Math.PI * 2); ctx.fill();
+        }
+
+        if (imgLvl.complete && imgLvl.naturalWidth) {
+            ctx.drawImage(imgLvl, hatchX, hatchY, 90, 90);
+        } else {
+            ctx.fillStyle = 'rgba(255,255,255,0.15)';
+            ctx.beginPath(); ctx.arc(hatchX + 45, hatchY + 45, 42, 0, Math.PI * 2); ctx.fill();
+        }
+
+        ctx.fillStyle = confirmed ? '#000' : '#fff';
+        ctx.font = 'black 20px Inter';
+        ctx.textAlign = 'center';
+        ctx.fillText(multiplierAt(i).toFixed(2) + 'x', hatchX + 45, hatchY + 53);
+    }
+
+    // Заборчики — only behind confirmed lanes
+    for (let i = 0; i <= currentStep; i++) {
+        if (i < 7) {
+            let barrierX = startZoneWidth + i * laneWidth + (laneWidth / 2) - 35;
+            let barrierY = 40;
+            if (imgBarrier.complete && imgBarrier.naturalWidth) {
+                ctx.drawImage(imgBarrier, barrierX, barrierY, 70, 40);
+            } else {
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(barrierX, barrierY, 70, 18);
+            }
+        }
+    }
+
+    // Машина
+    if (activeCar.active) {
+        let carX = startZoneWidth + activeCar.lane * laneWidth + (laneWidth / 2) - 35;
+        let currentCarImg = loadedCarImages[activeCar.imgIndex];
+        if (currentCarImg && currentCarImg.complete && currentCarImg.naturalWidth) {
+            ctx.drawImage(currentCarImg, carX, activeCar.y, 70, 140);
+        } else {
+            ctx.fillStyle = fallbackCarColors[activeCar.imgIndex] || '#ef4444';
+            ctx.fillRect(carX, activeCar.y, 70, 130);
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 11px Inter';
+            ctx.textAlign = 'center';
+            ctx.fillText('CAR ' + (activeCar.imgIndex + 1), carX + 35, activeCar.y + 65);
+        }
+    }
+
+    // Курица — sits on whichever lane is currently being attempted (or the
+    // last confirmed one if idle).
+    let chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
+    let chickenX = chickenLane >= 0 ? startZoneWidth + chickenLane * laneWidth + (laneWidth / 2) - 45 : 20;
+    let chickenY = VH / 2 - 45;
+
+    const showFried = activeCar.active && activeCar.isCrash && activeCar.y >= activeCar.targetY - 20;
+    if (showFried) {
+        if (imgFriedChicken.complete && imgFriedChicken.naturalWidth) {
+            ctx.drawImage(imgFriedChicken, chickenX, chickenY, 90, 90);
+        } else {
+            ctx.fillStyle = '#ff7800';
+            ctx.fillRect(chickenX, chickenY, 90, 90);
+        }
+    } else {
+        if (imgChicken.complete && imgChicken.naturalWidth) {
+            ctx.drawImage(imgChicken, chickenX, chickenY, 90, 90);
+        } else {
+            ctx.fillStyle = '#eab308';
+            ctx.fillRect(chickenX, chickenY, 90, 90);
+        }
+    }
+
+    ctx.restore();
+}
+
+function updateLoop() {
+    renderStaticFields();
+    requestAnimationFrame(updateLoop);
+}
+
+async function pressGo() {
+    if (isBusy || activeCar.active) return;
+
+    if (!isPlaying) {
+        isBusy = true;
+        try {
+            const inp = document.getElementById('bet-amount');
+            const amount = parseFloat(inp.value);
+
+            if (!amount || amount <= 0) { showToast('Введите ставку', 'error'); return; }
+
+            await loadMe();
+            if (!myProfile) return;
+
+            const field = betType === 'stars' ? 'stars' : 'balance';
+            if (amount > (myProfile[field] || 0)) { showToast('Недостаточно средств!', 'error'); return; }
+
+            const { error: updateErr } = await _supabase.from('users')
+                .update({ [field]: myProfile[field] - amount })
+                .eq('user_id', userId);
+            if (updateErr) throw updateErr;
+
+            const { data: gameSession, error: insertErr } = await _supabase.from('chicken_games').insert({
+                user_id: userId, bet_amount: amount, bet_type: betType, difficulty, status: 'playing'
+            }).select().single();
+            if (insertErr) throw insertErr;
+
+            currentGameId = gameSession.id;
+            currentBet = amount;
+            isPlaying = true;
+            currentStep = -1;
+            pendingStep = -1;
+
+            document.getElementById('btn-go').innerText = 'GO';
+            document.getElementById('btn-cashout').classList.remove('hidden');
+            document.getElementById('cashout-preview').innerText = '';
+            setControlsDisabled(true);
+
+            await loadMe();
+            triggerCarLogic(0);
+        } catch (e) {
+            console.error(e);
+            showToast('Ошибка соединения, попробуйте снова', 'error');
+        } finally {
+            isBusy = false;
+        }
+    } else {
+        if (currentStep < 7) {
+            triggerCarLogic(currentStep + 1);
+        }
+    }
+}
+
+function triggerCarLogic(step) {
+    isBusy = true;
+    pendingStep = step;
+    activeCar.lane = step;
+    activeCar.y = -150;
+    activeCar.active = true;
+    activeCar.imgIndex = Math.floor(Math.random() * carSources.length);
+
+    const isCrash = Math.random() < crashChanceAt(step);
+    activeCar.isCrash = isCrash;
+
+    function animate() {
+        if (!activeCar.active) return;
+        activeCar.y += activeCar.speed;
+
+        if (activeCar.y >= activeCar.targetY) {
+            activeCar.active = false;
+            if (activeCar.isCrash) {
+                handleCrash(step);
+            } else {
+                currentStep = step;
+                pendingStep = -1;
+                isBusy = false;
+                const currentMult = multiplierAt(currentStep);
+                document.getElementById('cashout-preview').innerText =
+                    `(${(currentBet * currentMult).toFixed(2)} ${betType === 'stars' ? '⭐' : '💎'})`;
+                if (currentStep === 7) {
+                    cashOut();
+                }
+            }
+            return;
+        }
+        requestAnimationFrame(animate);
+    }
+
+    tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+    animate();
+}
+
+async function handleCrash(step) {
+    isPlaying = false;
+    document.getElementById('btn-go').innerText = 'PLAY';
+    document.getElementById('btn-cashout').classList.add('hidden');
+    tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('error');
+    showToast('Курица не выжила 🐔🔥', 'error');
+
+    try {
+        await _supabase.from('chicken_games').update({
+            status: 'crashed', max_multiplier: multiplierAt(step)
+        }).eq('id', currentGameId);
+        await loadMe();
+    } catch (e) {
+        console.error(e);
+    } finally {
+        // Briefly leave the crash scene on screen, then reset the board so the
+        // next round starts clean instead of showing stale opened hatches.
+        setTimeout(() => {
+            currentStep = -1;
+            pendingStep = -1;
+            isBusy = false;
+            setControlsDisabled(false);
+        }, 1200);
+    }
+}
+
+async function cashOut() {
+    if (!isPlaying || activeCar.active) return;
+    isPlaying = false;
+    document.getElementById('btn-go').innerText = 'PLAY';
+    document.getElementById('btn-cashout').classList.add('hidden');
+
+    let finalMultiplier = multiplierAt(currentStep);
+    const winAmount = Math.round(currentBet * finalMultiplier * 100) / 100;
+
+    try {
+        await _supabase.from('chicken_games').update({
+            status: 'cashed_out', max_multiplier: finalMultiplier
+        }).eq('id', currentGameId);
+
+        const field = betType === 'stars' ? 'stars' : 'balance';
+        await _supabase.from('users').update({
+            [field]: (myProfile[field] || 0) + winAmount
+        }).eq('user_id', userId);
+
+        tg.HapticFeedback && tg.HapticFeedback.notificationOccurred('success');
+        showToast(`Забрано: ${winAmount.toFixed(2)} ${betType === 'stars' ? '⭐' : '💎'}`, 'success');
+        await loadMe();
+    } catch (e) {
+        console.error(e);
+        showToast('Ошибка при выводе средств', 'error');
+    } finally {
+        currentStep = -1;
+        pendingStep = -1;
+        isBusy = false;
+        setControlsDisabled(false);
+    }
+}
+
+updateLoop();
+loadMe();
+</script>
+
+</body>
+</html>
