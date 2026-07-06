@@ -132,6 +132,16 @@
 const tg = window.Telegram.WebApp;
 tg.expand();
 
+// Заранее подгружаем нужные начертания шрифта, иначе первые кадры canvas
+// рисуют текст стандартным системным шрифтом (то самое "некрасиво") —
+// пока веб-шрифт ещё не успел загрузиться через CSS @import.
+if (document.fonts && document.fonts.load) {
+    Promise.all([
+        document.fonts.load("800 25px Inter"),
+        document.fonts.load("900 16px Inter")
+    ]).catch(() => {});
+}
+
 const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo';
 const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -150,6 +160,7 @@ let myProfile = null;
 let currentGameId = null;
 let isPlaying = false;
 let isBusy = false;        // true while a bet is being placed / a step is animating — blocks double taps
+let showCrashChicken = false; // отдельный флаг: показывать задавленную курицу (живёт дольше, чем activeCar.active)
 let currentStep = -1;      // last *confirmed* (safely passed) lane, -1 = not started
 let pendingStep = -1;      // lane currently being attempted (car mid-air), -1 = none
 let currentBet = 0;
@@ -171,14 +182,13 @@ function crashChanceAt(step) {
 // --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
 // Картинки лежат в репозитории рядом с этим HTML-файлом (без подпапки).
 const imgChicken = new Image();       imgChicken.src = 'chiken.png';
-const imgFriedChicken = new Image();  imgFriedChicken.src = 'fried_chicken.png';
-// Задавленная машиной курица — показывается вместо обычной, когда происходит наезд.
-// ВАЖНО: имя файла ниже — предположение, уточни у себя в репозитории точный
-// путь/название файла и, если он другой, просто поправь строку ниже.
-const imgSquashedChicken = new Image(); imgSquashedChicken.src = 'squashed_chicken.png';
+// Задавленная машиной курица — показывается вместо обычной при аварии.
+const imgSquashedChicken = new Image(); imgSquashedChicken.src = 'diechik.png';
 const imgLvl = new Image();           imgLvl.src = 'cryg.png';
 const imgBarrier = new Image();       imgBarrier.src = 'hatch.png';
-const imgCoin = new Image();          imgCoin.src = 'coin.png'; // монетка на уже пройденных люках
+// Монетка на уже пройденных люках — в репозитории это файл fried_chicken.png
+// (несмотря на название, это именно золотая монета с курицей, а не сама курица).
+const imgCoin = new Image();          imgCoin.src = 'fried_chicken.png';
 
 const carSources = [
     'car1.png',
@@ -196,7 +206,8 @@ let chickenDisplayX = 20; // eased on-screen X position of the chicken, animates
 const startZoneWidth = 120;
 const laneWidth = 112;
 const hatchSize = 100;   // диаметр люка на дороге
-const hatchFont = 25;    // размер шрифта коэффициента на люке
+const hatchFont = 25;    // базовый (максимальный) размер шрифта коэффициента на люке — дальше подгоняется под ширину круга
+const HATCH_FONT_STACK = "'Inter', Arial, sans-serif";
 
 // --- ФОНОВЫЙ ТРАФИК ---
 // Машины теперь ездят постоянно на каждой полосе (а не только во время
@@ -349,7 +360,6 @@ const ZOOM = 1.7;
 
 function renderStaticFields() {
     ctx.clearRect(0, 0, VW, VH);
-    updateAmbientCars();
 
     // Camera follows whichever lane is furthest along — confirmed step or the one being attempted.
     const focusStep = Math.max(currentStep, pendingStep);
@@ -406,7 +416,7 @@ function renderStaticFields() {
                 ctx.strokeStyle = '#b45309'; ctx.lineWidth = 3;
                 ctx.beginPath(); ctx.arc(hatchX + hatchR, hatchY + hatchR, hatchR - 3, 0, Math.PI * 2); ctx.stroke();
                 ctx.fillStyle = '#92400e';
-                ctx.font = `bold ${Math.round(hatchSize * 0.42)}px Inter`;
+                ctx.font = `bold ${Math.round(hatchSize * 0.42)}px ${HATCH_FONT_STACK}`;
                 ctx.textAlign = 'center';
                 ctx.fillText('$', hatchX + hatchR, hatchY + hatchR + hatchSize * 0.14);
             }
@@ -426,46 +436,42 @@ function renderStaticFields() {
         }
 
         ctx.fillStyle = confirmed ? '#000' : '#fff';
-        ctx.font = `black ${hatchFont}px Inter`;
         ctx.textAlign = 'center';
-        ctx.fillText(multiplierAt(i).toFixed(2) + 'x', hatchX + hatchR, hatchY + hatchR + hatchFont * 0.32);
+        const label = multiplierAt(i).toFixed(2) + 'x';
+        const maxTextW = hatchSize * 0.78; // не должно вылезать за пределы люка
+        let fSize = hatchFont;
+        ctx.font = `800 ${fSize}px ${HATCH_FONT_STACK}`;
+        while (ctx.measureText(label).width > maxTextW && fSize > 12) {
+            fSize -= 1;
+            ctx.font = `800 ${fSize}px ${HATCH_FONT_STACK}`;
+        }
+        ctx.fillText(label, hatchX + hatchR, hatchY + hatchR + fSize * 0.32);
     }
 
     // Заборчики — only behind confirmed lanes
     for (let i = 0; i <= currentStep; i++) {
         if (i < 7) {
-            let barrierX = startZoneWidth + i * laneWidth + (laneWidth / 2) - 35;
-            let barrierY = 34;
+            const barrierW = laneWidth - 14;               // крупнее, во всю полосу — как на референсе
+            const barrierH = Math.round(barrierW * 0.57);
+            let barrierX = startZoneWidth + i * laneWidth + (laneWidth / 2) - barrierW / 2;
+            let barrierY = 28;
             if (imgBarrier.complete && imgBarrier.naturalWidth) {
-                ctx.drawImage(imgBarrier, barrierX, barrierY, 70, 40);
+                ctx.drawImage(imgBarrier, barrierX, barrierY, barrierW, barrierH);
             } else {
                 ctx.fillStyle = '#f59e0b';
-                ctx.fillRect(barrierX, barrierY, 70, 18);
+                ctx.fillRect(barrierX, barrierY, barrierW, Math.round(barrierH * 0.45));
             }
         }
     }
 
-    // Фоновый трафик — едет постоянно на каждой полосе, которая ещё не
-    // пройдена курицей. На уже пройденных (огороженных заборчиком) полосах
-    // машины больше не ездят — там безопасно. В полосе, где прямо сейчас
-    // едет "решающая" машина (activeCar), фоновую машину не рисуем, чтобы
-    // не было двух машин в одной полосе и не выглядело как случайность.
-    for (let i = 0; i < 8; i++) {
-        if (i <= currentStep) continue;                       // полоса уже пройдена и огорожена
-        if (activeCar.active && i === activeCar.lane) continue; // тут едет решающая машина
-        const car = ambientCars[i];
-        if (!car) continue;
-        let carX = startZoneWidth + i * laneWidth + (laneWidth / 2) - 33;
-        let img = loadedCarImages[car.imgIndex];
-        if (img && img.complete && img.naturalWidth) {
-            ctx.drawImage(img, carX, car.y, 66, 128);
-        } else {
-            ctx.fillStyle = fallbackCarColors[car.imgIndex] || '#ef4444';
-            ctx.fillRect(carX, car.y, 66, 118);
-        }
-    }
+    // Фоновый декоративный трафик убран: раньше на экране одновременно ездило
+    // много машин, из-за чего казалось, что курица "случайно" проходит сквозь
+    // них без последствий. Теперь на дороге видна ровно одна машина — та,
+    // что прямо сейчас решает исход текущего шага (см. ниже). Если наезда
+    // нет, машина будет видно проезжать МИМО курицы и дальше вниз за экран;
+    // если наезд есть — она остановится ровно на курице.
 
-    // Машина испытания (решает исход текущего шага) — рисуется поверх фонового трафика
+    // Машина испытания (решает исход текущего шага)
     if (activeCar.active) {
         let carX = startZoneWidth + activeCar.lane * laneWidth + (laneWidth / 2) - 35;
         let currentCarImg = loadedCarImages[activeCar.imgIndex];
@@ -475,17 +481,24 @@ function renderStaticFields() {
             ctx.fillStyle = fallbackCarColors[activeCar.imgIndex] || '#ef4444';
             ctx.fillRect(carX, activeCar.y, 70, 130);
             ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px Inter';
+            ctx.font = `800 11px ${HATCH_FONT_STACK}`;
             ctx.textAlign = 'center';
             ctx.fillText('CAR ' + (activeCar.imgIndex + 1), carX + 35, activeCar.y + 65);
         }
     }
 
     // Курица — sits on whichever lane is currently being attempted (or the
-    // last confirmed one if idle). We ease её X-position towards the target
-    // lane each frame and add a small hop (vertical bounce) while it's still
-    // travelling, so movement between manholes reads as a step, not a teleport.
-    let chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
+    // last confirmed one if idle). Пока в новой полосе едет машина, которая
+    // НЕ должна нас сбить, курица дожидается на старом месте — чтобы не
+    // получалось, что она стоит прямо там же, где едет машина, и "как бы"
+    // проходит сквозь неё. Если авария — курица уже стоит на месте, где её
+    // догонит машина.
+    let chickenLane;
+    if (activeCar.active && !activeCar.isCrash) {
+        chickenLane = currentStep;
+    } else {
+        chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
+    }
     let chickenTargetX = chickenLane >= 0 ? startZoneWidth + chickenLane * laneWidth + (laneWidth / 2) - 45 : 20;
     chickenDisplayX += (chickenTargetX - chickenDisplayX) * 0.18;
     if (Math.abs(chickenTargetX - chickenDisplayX) < 0.5) chickenDisplayX = chickenTargetX;
@@ -496,12 +509,10 @@ function renderStaticFields() {
     let chickenX = chickenDisplayX;
     let chickenY = viewH / 2 - 45 - hopOffset;
 
-    const showFried = activeCar.active && activeCar.isCrash && activeCar.y >= activeCar.targetY - 20;
+    const showFried = showCrashChicken;
     if (showFried) {
         if (imgSquashedChicken.complete && imgSquashedChicken.naturalWidth) {
             ctx.drawImage(imgSquashedChicken, chickenX, chickenY, 90, 90);
-        } else if (imgFriedChicken.complete && imgFriedChicken.naturalWidth) {
-            ctx.drawImage(imgFriedChicken, chickenX, chickenY, 90, 90);
         } else {
             ctx.fillStyle = '#ff7800';
             ctx.fillRect(chickenX, chickenY, 90, 90);
@@ -517,7 +528,7 @@ function renderStaticFields() {
         // Плавающий бейдж с текущим коэффициентом под курицей — как на референсе.
         if (isPlaying && currentStep >= 0 && !activeCar.active) {
             const label = multiplierAt(currentStep).toFixed(2) + 'x';
-            ctx.font = 'black 16px Inter';
+            ctx.font = `800 16px ${HATCH_FONT_STACK}`;
             const textW = ctx.measureText(label).width;
             const badgeW = textW + 24, badgeH = 30;
             const badgeX = chickenX + 45 - badgeW / 2;
@@ -613,15 +624,35 @@ function triggerCarLogic(step) {
     const isCrash = Math.random() < crashChanceAt(step);
     activeCar.isCrash = isCrash;
 
+    // Ряд, где стоят курица/люки — именно тут машина либо тормозит и давит
+    // курицу, либо (если не авария) на глазах проезжает мимо неё дальше вниз
+    // и уезжает за пределы экрана. Раньше машина всегда просто исчезала на
+    // этой же точке, из-за чего исход казался случайным, а не "физическим".
+    const hitY = (VH / ZOOM) / 2 - 55;
+    const passY = (VH / ZOOM) + 160;
+    activeCar.targetY = hitY;
+
+    let stepConfirmed = false;
+
     function animate() {
         if (!activeCar.active) return;
         activeCar.y += activeCar.speed;
 
-        if (activeCar.y >= activeCar.targetY) {
-            activeCar.active = false;
-            if (activeCar.isCrash) {
+        if (activeCar.isCrash) {
+            if (activeCar.y >= hitY) {
+                activeCar.y = hitY;
+                activeCar.active = false;
+                showCrashChicken = true;
                 handleCrash(step);
-            } else {
+                return;
+            }
+        } else {
+            // Курица дожидается, пока машина полностью проедет мимо и уедет
+            // за экран, и только тогда шаг засчитывается и курица прыгает —
+            // так видно, что машина реально проехала мимо, а не "сквозь".
+            if (activeCar.y >= passY) {
+                activeCar.active = false;
+                stepConfirmed = true;
                 currentStep = step;
                 pendingStep = -1;
                 isBusy = false;
@@ -631,8 +662,8 @@ function triggerCarLogic(step) {
                 if (currentStep === 7) {
                     cashOut();
                 }
+                return;
             }
-            return;
         }
         requestAnimationFrame(animate);
     }
@@ -662,6 +693,7 @@ async function handleCrash(step) {
             currentStep = -1;
             pendingStep = -1;
             chickenDisplayX = 20;
+            showCrashChicken = false;
             isBusy = false;
             setControlsDisabled(false);
         }, 1200);
