@@ -74,7 +74,8 @@
         }
         .crash-modal.show .crash-modal-card { transform: scale(1); }
         .crash-modal-img {
-            width: 100px; height: 100px; object-fit: contain; margin: 0 auto 14px; display: block;
+            max-width: 130px; max-height: 110px; width: auto; height: auto; object-fit: contain;
+            margin: 0 auto 14px; display: block;
             filter: drop-shadow(0 8px 12px rgba(0,0,0,0.45));
         }
         .crash-modal-title { font-weight: 900; font-size: 22px; color: #f87171; letter-spacing: .4px; }
@@ -108,7 +109,7 @@
 
     <div id="crash-modal" class="crash-modal">
         <div class="crash-modal-card">
-            <img src="diechik.png" alt="" class="crash-modal-img">
+            <img src="chiken.png" alt="" class="crash-modal-img">
             <div class="crash-modal-title">Курица сбита 🐔💥</div>
             <div class="crash-modal-subtitle">Удачи в следующий раз!</div>
         </div>
@@ -735,14 +736,33 @@ function triggerCarLogic(step) {
     const hitY = (VH / ZOOM) / 2 - 55;   // точка на дороге, где стоит курица
     const passAfterHitY = hitY + 40;     // насколько ниже курицы машина должна проехать, чтобы шаг засчитался
 
-    // Ищем машину из фонового потока на нужной полосе, ближе всех подъезжающую к курице.
-    let candidates = ambientCars.filter(c => c.lane === step && c.y < hitY + 200);
+    // Ищем машину из фонового потока на этой полосе. ВАЖНО: раньше, если
+    // подходящей "приближающейся" машины не находилось (например, машина
+    // этой полосы уже проехала точку курицы и сейчас едет ниже по экрану),
+    // мы СОЗДАВАЛИ новый объект машины — а старая при этом никуда не
+    // девалась. При возврате в ambientCars оба объекта оставались в массиве,
+    // и на полосе оказывалось две машины одновременно. Только одна из них
+    // (activeCar) участвует в проверке столкновения — вторая просто ехала
+    // по инерции и визуально "пролетала" сквозь курицу. Теперь мы ВСЕГДА
+    // забираем существующую машину полосы (splice), и только если на полосе
+    // машины нет вообще — создаём новую. Количество машин в игре больше не
+    // растёт со временем.
+    const laneCars = ambientCars.filter(c => c.lane === step);
     let resolvingCar;
-    if (candidates.length) {
-        resolvingCar = candidates.reduce((a, b) => (a.y > b.y ? a : b));
-        ambientCars.splice(ambientCars.indexOf(resolvingCar), 1); // временно управляем ей вручную
+    if (laneCars.length) {
+        const approaching = laneCars.filter(c => c.y < hitY + 200);
+        resolvingCar = approaching.length
+            ? approaching.reduce((a, b) => (a.y > b.y ? a : b))
+            : laneCars[0];
+        ambientCars.splice(ambientCars.indexOf(resolvingCar), 1);
+        if (!approaching.length) {
+            // Машина уже проехала точку курицы — переставляем её обратно
+            // наверх, чтобы было видно её приближение, а не мгновенное
+            // появление рядом с курицей.
+            resolvingCar.y = -150;
+        }
     } else {
-        // Полоса сейчас пустая — спавним машину сверху, чтобы было что показать.
+        // Крайне маловероятный случай — на полосе вообще нет машины.
         resolvingCar = { lane: step, y: -150, imgIndex: Math.floor(Math.random() * carSources.length) };
     }
 
