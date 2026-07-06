@@ -399,15 +399,22 @@ async function pressGo() {
             const field = betType === 'stars' ? 'stars' : 'balance';
             if (amount > (myProfile[field] || 0)) { showToast('Недостаточно средств!', 'error'); return; }
 
-            const { error: updateErr } = await _supabase.from('users')
-                .update({ [field]: myProfile[field] - amount })
-                .eq('user_id', userId);
-            if (updateErr) throw updateErr;
-
+            // 1) Сначала создаём запись игры. Если это не удастся — деньги
+            //    ещё не тронуты, значит их не потеряем.
             const { data: gameSession, error: insertErr } = await _supabase.from('chicken_games').insert({
                 user_id: userId, bet_amount: amount, bet_type: betType, difficulty, status: 'playing'
             }).select().single();
             if (insertErr) throw insertErr;
+
+            // 2) Теперь списываем ставку. Если списание не удастся — откатываем
+            //    созданную игру, чтобы не остаться с "висящей" записью.
+            const { error: updateErr } = await _supabase.from('users')
+                .update({ [field]: myProfile[field] - amount })
+                .eq('user_id', userId);
+            if (updateErr) {
+                await _supabase.from('chicken_games').delete().eq('id', gameSession.id);
+                throw updateErr;
+            }
 
             currentGameId = gameSession.id;
             currentBet = amount;
@@ -424,7 +431,8 @@ async function pressGo() {
             triggerCarLogic(0);
         } catch (e) {
             console.error(e);
-            showToast('Ошибка соединения, попробуйте снова', 'error');
+            const msg = (e && (e.message || e.details || e.hint)) || 'Ошибка соединения, попробуйте снова';
+            showToast(msg, 'error');
         } finally {
             isBusy = false;
         }
