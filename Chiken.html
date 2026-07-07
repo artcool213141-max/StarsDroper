@@ -9,6 +9,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+        /* Округлый "дружелюбный" шрифт для чисел-коэффициентов на люках —
+           как на референсе казино-игр (крупные жирные скруглённые цифры). */
+        @import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap');
         * { box-sizing: border-box; }
         body {
             background: #1a1a1a; color: #fff; font-family: 'Inter', sans-serif;
@@ -172,7 +175,9 @@ tg.expand();
 if (document.fonts && document.fonts.load) {
     Promise.all([
         document.fonts.load("800 25px Inter"),
-        document.fonts.load("900 16px Inter")
+        document.fonts.load("900 16px Inter"),
+        document.fonts.load("800 25px 'Baloo 2'"),
+        document.fonts.load("700 16px 'Baloo 2'")
     ]).catch(() => {});
 }
 
@@ -199,24 +204,19 @@ let currentStep = -1;      // last *confirmed* (safely passed) lane, -1 = not st
 let pendingStep = -1;      // lane currently being attempted (car mid-air), -1 = none
 let currentBet = 0;
 
-// Multiplier ladders + crash-chance curves per difficulty.
+// Лестницы выплат по сложности. ВАЖНО: смерть больше НЕ решается случайным
+// числом (см. triggerCarLogic ниже) — она зависит только от реального
+// положения машины на полосе в момент перехода. Сложность влияет на риск
+// косвенно — через скорость трафика (AMBIENT_SPEED_BY_DIFF), которая делает
+// безопасные "окна" между машинами короче.
 const DIFFICULTIES = {
-    // В Easy шансы на проигрыш начинаются с 12% и растут до 2.5x (примерно 5-6 шаг)
-    easy:   { multipliers: [1.03, 1.08, 1.15, 1.24, 1.35, 1.50, 1.70, 2.00], baseCrash: 0.12, crashStep: 0.050 },
-    
-    // В Medium шансы значительно выше, дойти до 4x (примерно 7 шаг) будет трудно
-    medium: { multipliers: [1.10, 1.25, 1.45, 1.75, 2.15, 2.70, 3.50, 4.60], baseCrash: 0.25, crashStep: 0.080 },
-    
-    // В Hard шансы на проигрыш сразу очень высокие, дойти до 5x (5 шаг) практически нереально
-    hard:   { multipliers: [1.20, 1.50, 2.00, 2.70, 3.80, 5.50, 8.00, 12.0], baseCrash: 0.45, crashStep: 0.150 },
+    easy:   { multipliers: [1.03, 1.08, 1.15, 1.24, 1.35, 1.50, 1.70, 2.00] },
+    medium: { multipliers: [1.10, 1.25, 1.45, 1.75, 2.15, 2.70, 3.50, 4.60] },
+    hard:   { multipliers: [1.20, 1.50, 2.00, 2.70, 3.80, 5.50, 8.00, 12.0] },
 };
 
 function activeConfig() { return DIFFICULTIES[difficulty]; }
 function multiplierAt(step) { return activeConfig().multipliers[step]; }
-function crashChanceAt(step) {
-    const c = activeConfig();
-    return Math.min(0.85, c.baseCrash + c.crashStep * step);
-}
 
 // --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
 // Картинки лежат в репозитории рядом с этим HTML-файлом (без подпапки).
@@ -247,7 +247,7 @@ const startZoneWidth = 120;
 const laneWidth = 112;
 const hatchSize = 100;   // диаметр люка на дороге
 const hatchFont = 25;    // базовый (максимальный) размер шрифта коэффициента на люке — дальше подгоняется под ширину круга
-const HATCH_FONT_STACK = "'Inter', Arial, sans-serif";
+const HATCH_FONT_STACK = "'Baloo 2', 'Inter', Arial, sans-serif";
 
 // --- ФОНОВЫЙ ТРАФИК ---
 // Машины теперь ездят постоянно на каждой полосе (а не только во время
@@ -571,7 +571,6 @@ function renderStaticFields() {
             ctx.beginPath(); ctx.arc(hatchX + hatchR, hatchY + hatchR, hatchR - 3, 0, Math.PI * 2); ctx.fill();
         }
 
-        ctx.fillStyle = confirmed ? '#000' : '#fff';
         ctx.textAlign = 'center';
         const label = multiplierAt(i).toFixed(2) + 'x';
         const maxTextW = hatchSize * 0.78; // не должно вылезать за пределы люка
@@ -581,7 +580,15 @@ function renderStaticFields() {
             fSize -= 1;
             ctx.font = `800 ${fSize}px ${HATCH_FONT_STACK}`;
         }
-        ctx.fillText(label, hatchX + hatchR, hatchY + hatchR + fSize * 0.32);
+        const labelX = hatchX + hatchR, labelY = hatchY + hatchR + fSize * 0.32;
+        // Обводка + заливка вместо плоского текста — то самое "приятное"
+        // написание коэффициента, как на референсе (округлый шрифт с контуром).
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = Math.max(3, fSize * 0.16);
+        ctx.strokeStyle = confirmed ? 'rgba(255,255,255,0.55)' : 'rgba(0,0,0,0.55)';
+        ctx.strokeText(label, labelX, labelY);
+        ctx.fillStyle = confirmed ? '#1a1a1a' : '#fff';
+        ctx.fillText(label, labelX, labelY);
     }
 
     // Заборчики — only behind confirmed lanes
@@ -634,17 +641,11 @@ function renderStaticFields() {
     }
 
     // Курица — sits on whichever lane is currently being attempted (or the
-    // last confirmed one if idle). Пока в новой полосе едет машина, которая
-    // НЕ должна нас сбить, курица дожидается на старом месте — чтобы не
-    // получалось, что она стоит прямо там же, где едет машина, и "как бы"
-    // проходит сквозь неё. Если авария — курица уже стоит на месте, где её
-    // догонит машина.
-    let chickenLane;
-    if (activeCar.active && !activeCar.isCrash) {
-        chickenLane = currentStep;
-    } else {
-        chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
-    }
+    // last confirmed one if idle). activeCar.active теперь выставляется
+    // ТОЛЬКО когда переход закончится столкновением (безопасные переходы
+    // подтверждаются мгновенно, без анимации activeCar) — поэтому курица
+    // сразу стоит там, где её должна догнать машина.
+    let chickenLane = pendingStep >= 0 ? pendingStep : currentStep;
     let chickenTargetX = chickenLane >= 0 ? startZoneWidth + chickenLane * laneWidth + (laneWidth / 2) - 45 : 20;
     chickenDisplayX += (chickenTargetX - chickenDisplayX) * 0.18;
     if (Math.abs(chickenTargetX - chickenDisplayX) < 0.5) chickenDisplayX = chickenTargetX;
@@ -683,8 +684,12 @@ function renderStaticFields() {
             ctx.beginPath();
             ctx.roundRect ? ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 8) : ctx.rect(badgeX, badgeY, badgeW, badgeH);
             ctx.fill();
-            ctx.fillStyle = '#fff';
             ctx.textAlign = 'center';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+            ctx.strokeText(label, chickenX + 45, badgeY + badgeH / 2 + 6);
+            ctx.fillStyle = '#fff';
             ctx.fillText(label, chickenX + 45, badgeY + badgeH / 2 + 6);
         }
     }
@@ -767,87 +772,73 @@ async function pressGo() {
     }
 }
 
-// Исход шага по-прежнему решает RNG (crashChanceAt) — честность/edge казино
-// не меняются. Но теперь визуально "решающая" машина берётся из уже едущего
-// фонового трафика на этой полосе, а не появляется из ниоткуда — так дорога
-// выглядит живой и правдоподобной, будто игрок реально ловит окно.
+// Исход шага больше НЕ решает Math.random(). Смерть происходит только если
+// машина на этой полосе реально ещё не проехала точку, где стоит курица —
+// т.е. если сейчас шагнуть, курица физически окажется прямо на пути машины.
+// Если машина этой полосы УЖЕ проехала точку курицы к моменту нажатия — переход
+// гарантированно безопасен, и это можно честно увидеть на экране заранее
+// (трафик едет постоянно, независимо от нажатий).
+//
+// Раньше здесь был отдельный баг: если "приближающейся" машины не находилось,
+// код искусственно телепортировал существующую машину обратно наверх (y=-150),
+// из-за чего игрок иногда видел, как машина уже "проехала мимо", а курица всё
+// равно погибала на следующем нажатии — потому что на самом деле смерть решал
+// не экран, а скрытый рандом. Теперь такого рассинхрона в принципе быть не
+// может: одна полоса — всегда ровно одна машина, её положение не подменяется,
+// и именно оно определяет исход.
 function triggerCarLogic(step) {
     isBusy = true;
     pendingStep = step;
 
-    const isCrash = Math.random() < crashChanceAt(step);
     const hitY = (VH / ZOOM) / 2 - 55;   // точка на дороге, где стоит курица
-    const passAfterHitY = hitY + 40;     // насколько ниже курицы машина должна проехать, чтобы шаг засчитался
+    const passAfterHitY = hitY + 40;     // машина должна проехать НИЖЕ этой линии, чтобы считаться "уже проехавшей"
 
-    // Ищем машину из фонового потока на этой полосе. ВАЖНО: раньше, если
-    // подходящей "приближающейся" машины не находилось (например, машина
-    // этой полосы уже проехала точку курицы и сейчас едет ниже по экрану),
-    // мы СОЗДАВАЛИ новый объект машины — а старая при этом никуда не
-    // девалась. При возврате в ambientCars оба объекта оставались в массиве,
-    // и на полосе оказывалось две машины одновременно. Только одна из них
-    // (activeCar) участвует в проверке столкновения — вторая просто ехала
-    // по инерции и визуально "пролетала" сквозь курицу. Теперь мы ВСЕГДА
-    // забираем существующую машину полосы (splice), и только если на полосе
-    // машины нет вообще — создаём новую. Количество машин в игре больше не
-    // растёт со временем.
-    const laneCars = ambientCars.filter(c => c.lane === step);
-    let resolvingCar;
-    if (laneCars.length) {
-        const approaching = laneCars.filter(c => c.y < hitY + 200);
-        resolvingCar = approaching.length
-            ? approaching.reduce((a, b) => (a.y > b.y ? a : b))
-            : laneCars[0];
-        ambientCars.splice(ambientCars.indexOf(resolvingCar), 1);
-        if (!approaching.length) {
-            // Машина уже проехала точку курицы — переставляем её обратно
-            // наверх, чтобы было видно её приближение, а не мгновенное
-            // появление рядом с курицей.
-            resolvingCar.y = -150;
-        }
-    } else {
-        // Крайне маловероятный случай — на полосе вообще нет машины.
-        resolvingCar = { lane: step, y: -150, imgIndex: Math.floor(Math.random() * carSources.length) };
+    const resolvingCar = ambientCars.find(c => c.lane === step);
+
+    // Реальная (не случайная!) проверка: машина ещё не миновала курицу?
+    // Если машины на полосе вообще нет (крайне маловероятный edge case —
+    // в норме на каждой полосе всегда ровно одна машина), считаем переход
+    // безопасным: сбивать курицу физически нечему.
+    const isCrash = !!resolvingCar && resolvingCar.y < passAfterHitY;
+
+    if (!isCrash) {
+        // Машина этой полосы уже позади — шаг безопасен сразу, без анимации
+        // "решающей" машины. Курица просто перебегает (плавный переход к
+        // новой полосе уже сделан через chickenDisplayX в рендере).
+        currentStep = step;
+        pendingStep = -1;
+        isBusy = false;
+
+        const currentMult = multiplierAt(currentStep);
+        document.getElementById('cashout-preview').innerText =
+            `(${(currentBet * currentMult).toFixed(2)} ${betType === 'stars' ? '⭐' : '💎'})`;
+        tg.HapticFeedback && tg.HapticFeedback.impactOccurred('light');
+        if (currentStep === 7) cashOut();
+        return;
     }
+
+    // Машина ещё не проехала курицу — забираем её из фонового потока и
+    // честно анимируем реальное столкновение на её текущих координатах.
+    // (resolvingCar здесь гарантированно существует: если бы её не было,
+    // isCrash уже был бы false и мы бы вышли выше через return.)
+    ambientCars.splice(ambientCars.indexOf(resolvingCar), 1);
 
     activeCar.lane = step;
     activeCar.y = resolvingCar.y;
     activeCar.imgIndex = resolvingCar.imgIndex;
     activeCar.active = true;
-    activeCar.isCrash = isCrash;
+    activeCar.isCrash = true;
     activeCar.sourceRef = resolvingCar;
 
     function animate() {
         if (!activeCar.active) return;
         activeCar.y += ambientSpeed(); // та же скорость, что у всего трафика — машина не выделяется
 
-        if (activeCar.isCrash) {
-            if (activeCar.y >= hitY) {
-                activeCar.y = hitY;
-                activeCar.active = false;
-                triggerImpact(step);
-                return;
-            }
-        } else {
-            // Курица дожидается, пока машина реально проедет мимо неё, и
-            // только тогда шаг засчитывается и курица прыгает дальше.
-            if (activeCar.y >= passAfterHitY) {
-                activeCar.active = false;
-                currentStep = step;
-                pendingStep = -1;
-                isBusy = false;
-
-                // Возвращаем машину обратно в общий поток — дорога не должна
-                // "терять" машины после каждого шага.
-                ambientCars.push({ lane: step, y: activeCar.y, imgIndex: activeCar.imgIndex });
-
-                const currentMult = multiplierAt(currentStep);
-                document.getElementById('cashout-preview').innerText =
-                    `(${(currentBet * currentMult).toFixed(2)} ${betType === 'stars' ? '⭐' : '💎'})`;
-                if (currentStep === 7) {
-                    cashOut();
-                }
-                return;
-            }
+        if (activeCar.y >= hitY) {
+            activeCar.y = hitY;
+            activeCar.active = false;
+            triggerImpact(step);
+            return;
         }
         requestAnimationFrame(animate);
     }
