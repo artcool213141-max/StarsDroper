@@ -119,7 +119,7 @@
 
     <div id="crash-modal" class="crash-modal">
         <div class="crash-modal-card">
-            <img src="diechik.png" alt="" class="crash-modal-img">
+            <img src="chikenroad/diechik.png" alt="" class="crash-modal-img">
             <div class="crash-modal-title">Курица сбита 🐔💥</div>
             <div class="crash-modal-subtitle">Удачи в следующий раз!</div>
         </div>
@@ -236,19 +236,19 @@ function multiplierAt(step) { return activeConfig().multipliers[step]; }
 
 // --- ИСТОЧНИКИ ГРАФИКИ КУРИЦЫ И ДЕКОРА ---
 // Картинки лежат в репозитории рядом с этим HTML-файлом (без подпапки).
-const imgChicken = new Image();       imgChicken.src = 'chiken.png';
+const imgChicken = new Image();       imgChicken.src = 'chikenroad/chiken.png';
 // Задавленная машиной курица — показывается вместо обычной при аварии.
-const imgSquashedChicken = new Image(); imgSquashedChicken.src = 'diechik.png';
-const imgLvl = new Image();           imgLvl.src = 'cryg.png';
-const imgBarrier = new Image();       imgBarrier.src = 'hatch.png';
+const imgSquashedChicken = new Image(); imgSquashedChicken.src = 'chikenroad/diechik.png';
+const imgLvl = new Image();           imgLvl.src = 'chikenroad/cryg.png';
+const imgBarrier = new Image();       imgBarrier.src = 'chikenroad/hatch.png';
 // Монетка на уже пройденных люках — в репозитории это файл fried_chicken.png
 // (несмотря на название, это именно золотая монета с курицей, а не сама курица).
-const imgCoin = new Image();          imgCoin.src = 'fried_chicken.png';
+const imgCoin = new Image();          imgCoin.src = 'chikenroad/fried_chicken.png';
 
 const carSources = [
-    'car1.png',
-    'car2.png',
-    'car3.png'
+    'chikenroad/car1.png',
+    'chikenroad/car2.png',
+    'chikenroad/car3.png'
 ];
 const loadedCarImages = carSources.map(src => { const img = new Image(); img.src = src; return img; });
 const fallbackCarColors = ['#ef4444', '#3b82f6', '#10b981', '#a855f7'];
