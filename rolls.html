@@ -9,7 +9,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
-:root{ --bg:#0d0a05; --accent:#d4af37; }
+:root{ --bg:#0d0a05; --accent:#a855f7; }
 *{box-sizing:border-box;}
 body{
   background:#0d0a05; color:#fff; font-family:'Inter',sans-serif;
@@ -17,28 +17,28 @@ body{
   display:flex; flex-direction:column; user-select:none; -webkit-tap-highlight-color:transparent;
 }
 header{
-  background:#0d0a05; border-bottom:2px solid rgba(212,175,55,0.3);
+  background:#0d0a05; border-bottom:2px solid rgba(168,85,247,0.3);
   padding:12px 20px; display:flex; align-items:center; gap:12px; height:65px; flex-shrink:0;
 }
 .logo{font-weight:900; font-size:1.3rem; text-transform:uppercase; font-style:italic;}
 .back-btn{
   display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:50%;
-  background:#111; border:1px solid rgba(212,175,55,0.3); flex-shrink:0;
+  background:#111; border:1px solid rgba(168,85,247,0.3); flex-shrink:0;
 }
 .back-btn:active{transform:scale(0.9);}
 .icon-cur{width:14px; height:14px; object-fit:contain; vertical-align:-2px;}
 
 .my-balance{margin-left:auto; display:flex; gap:8px;}
 .balance-pill{
-  display:flex; align-items:center; gap:5px; background:rgba(212,175,55,0.08);
-  border:1px solid rgba(212,175,55,0.3); border-radius:999px; padding:6px 10px;
+  display:flex; align-items:center; gap:5px; background:rgba(168,85,247,0.08);
+  border:1px solid rgba(168,85,247,0.3); border-radius:999px; padding:6px 10px;
   font-weight:800; font-size:13px; color:#fff;
 }
 
 .content{flex:1; overflow-y:auto; padding:16px 16px 110px 16px; -webkit-overflow-scrolling:touch;}
 .content::-webkit-scrollbar{display:none;}
 
-.pot-card{background:rgba(255,255,255,0.04); border:1px solid rgba(212,175,55,0.2); border-radius:16px; padding:12px; margin-bottom:16px; display:flex; justify-content:center; gap:18px;}
+.pot-card{background:rgba(255,255,255,0.04); border:1px solid rgba(168,85,247,0.2); border-radius:16px; padding:12px; margin-bottom:16px; display:flex; justify-content:center; gap:18px;}
 .pot-item{display:flex; align-items:center; gap:5px; font-weight:900; font-size:0.95rem;}
 
 .wheel-wrap{position:relative; width:270px; height:270px; margin:0 auto 18px auto;}
@@ -49,9 +49,9 @@ header{
 }
 .wheel{
   width:100%; height:100%; border-radius:50%; position:relative;
-  border:6px solid #1a1408; box-shadow:0 0 40px rgba(212,175,55,0.25), inset 0 0 20px rgba(0,0,0,0.5);
+  border:6px solid #180f26; box-shadow:0 0 40px rgba(168,85,247,0.25), inset 0 0 20px rgba(0,0,0,0.5);
   transition: transform 4.5s cubic-bezier(0.17,0.67,0.18,1);
-  background: conic-gradient(#1f1a10 0deg, #1f1a10 360deg);
+  background: conic-gradient(#1c1128 0deg, #1c1128 360deg);
 }
 .wedge-avatar{
   position:absolute; width:30px; height:30px; border-radius:50%; object-fit:cover;
@@ -61,7 +61,7 @@ header{
   position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
   width:92px; height:92px; border-radius:50%; background:#0d0a05; border:3px solid var(--accent);
   display:flex; align-items:center; justify-content:center; text-align:center; flex-direction:column;
-  z-index:4; box-shadow:0 0 20px rgba(212,175,55,0.4);
+  z-index:4; box-shadow:0 0 20px rgba(168,85,247,0.4);
 }
 .center-circle .timer{font-size:1.4rem; font-weight:900; color:#fff;}
 .center-circle .label{font-size:9px; color:var(--accent); text-transform:uppercase; font-weight:800; letter-spacing:0.5px;}
@@ -72,17 +72,17 @@ header{
   background:rgba(255,255,255,0.04); border:1.5px solid rgba(255,255,255,0.1); border-radius:12px;
   font-weight:800; font-size:12px; color:#999;
 }
-.type-tab.active{border-color:var(--accent); color:var(--accent); background:rgba(212,175,55,0.08);}
+.type-tab.active{border-color:var(--accent); color:var(--accent); background:rgba(168,85,247,0.08);}
 .type-tab img{width:16px; height:16px;}
 
-.bet-box{background:rgba(255,255,255,0.04); border:1px solid rgba(212,175,55,0.2); border-radius:18px; padding:14px; margin-bottom:18px;}
+.bet-box{background:rgba(255,255,255,0.04); border:1px solid rgba(168,85,247,0.2); border-radius:18px; padding:14px; margin-bottom:18px;}
 .amount-input{
-  width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(212,175,55,0.3); border-radius:12px;
+  width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(168,85,247,0.3); border-radius:12px;
   padding:14px; text-align:center; font-size:1.1rem; font-weight:900; color:#fff; outline:none; margin-bottom:10px;
 }
 .amount-input:focus{border-color:var(--accent);}
 .quick-row{display:flex; gap:6px; margin-bottom:10px;}
-.quick-btn{flex:1; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.25); color:var(--accent); font-weight:800; font-size:12px; padding:8px 0; border-radius:10px;}
+.quick-btn{flex:1; background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.25); color:var(--accent); font-weight:800; font-size:12px; padding:8px 0; border-radius:10px;}
 .quick-btn:active{transform:scale(0.95);}
 .btn-bet{
   width:100%; background:var(--accent); color:#0d0a05; font-weight:900; padding:15px; border-radius:14px;
@@ -93,10 +93,10 @@ header{
 
 .gifts-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; max-height:220px; overflow-y:auto; margin-bottom:6px;}
 .gift-slot{
-  aspect-ratio:1/1; background:rgba(255,255,255,0.05); border:1.5px solid rgba(212,175,55,0.2); border-radius:14px;
+  aspect-ratio:1/1; background:rgba(255,255,255,0.05); border:1.5px solid rgba(168,85,247,0.2); border-radius:14px;
   display:flex; align-items:center; justify-content:center; padding:6px; position:relative;
 }
-.gift-slot.selected{border-color:var(--accent); background:rgba(212,175,55,0.15);}
+.gift-slot.selected{border-color:var(--accent); background:rgba(168,85,247,0.15);}
 .gift-slot img{width:80%; height:80%; object-fit:contain;}
 .gift-price{position:absolute; bottom:2px; right:4px; font-size:8px; font-weight:800; color:var(--accent);}
 .gifts-empty{grid-column:1/-1; text-align:center; color:#666; font-size:12px; padding:20px 0;}
@@ -106,7 +106,7 @@ header{
   display:flex; align-items:center; gap:10px; background:rgba(255,255,255,0.03);
   border:1px solid rgba(255,255,255,0.06); border-radius:14px; padding:10px 12px; margin-bottom:8px;
 }
-.player-avatar{width:38px; height:38px; border-radius:50%; object-fit:cover; background:#222; border:2px solid var(--seg-color,#d4af37); flex-shrink:0;}
+.player-avatar{width:38px; height:38px; border-radius:50%; object-fit:cover; background:#222; border:2px solid var(--seg-color,#a855f7); flex-shrink:0;}
 .player-info{flex:1; min-width:0;}
 .player-name{font-size:13px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
 .player-percent{font-size:11px; color:var(--accent); font-weight:700;}
@@ -116,13 +116,13 @@ header{
 
 .winner-banner{
   position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:200;
-  background:#161109; border:2px solid var(--accent); border-radius:20px; padding:24px 30px;
-  text-align:center; box-shadow:0 0 40px rgba(212,175,55,0.5); display:none;
+  background:#160f1f; border:2px solid var(--accent); border-radius:20px; padding:24px 30px;
+  text-align:center; box-shadow:0 0 40px rgba(168,85,247,0.5); display:none;
 }
 .winner-banner.show{display:block; animation:pop 0.3s ease;}
 .winner-avatar{
   width:64px; height:64px; border-radius:50%; object-fit:cover; background:#222;
-  border:3px solid var(--accent); box-shadow:0 0 16px rgba(212,175,55,0.5);
+  border:3px solid var(--accent); box-shadow:0 0 16px rgba(168,85,247,0.5);
   display:block; margin:0 auto 10px auto;
 }
 .winner-amount img{width:14px; height:14px; vertical-align:-2px; margin-left:2px;}
@@ -133,11 +133,11 @@ header{
 
 <header>
   <a href="index.html" class="back-btn">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#d4af37" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>
     </svg>
   </a>
-  <div class="logo"><span class="text-[#d4af37]">ROLLS</span></div>
+  <div class="logo"><span class="text-[#a855f7]">ROLLS</span></div>
   <div class="my-balance">
     <span class="balance-pill"><img class="icon-cur" src="img/star.png" onerror="this.style.display='none'"><span id="my-stars">0</span></span>
     <span class="balance-pill"><img class="icon-cur" src="img/ton.png" onerror="this.style.display='none'"><span id="my-ton">0</span></span>
@@ -188,7 +188,7 @@ header{
 <div class="winner-banner" id="winner-banner">
   <img id="winner-avatar" class="winner-avatar" src="" onerror="this.src='https://img.icons8.com/fluency/96/user-male-circle.png'">
   <div style="font-size:11px;color:#999;text-transform:uppercase;font-weight:800;">Победитель</div>
-  <div id="winner-name" style="font-size:1.3rem;font-weight:900;color:#d4af37;margin:6px 0;"></div>
+  <div id="winner-name" style="font-size:1.3rem;font-weight:900;color:#a855f7;margin:6px 0;"></div>
   <div id="winner-amount" class="winner-amount" style="font-size:1rem;font-weight:800; display:flex; align-items:center; justify-content:center; gap:8px;"></div>
 </div>
 
@@ -284,8 +284,8 @@ const ITEMS = {
     "cymka.png": { name: "Loot Bag", price: 13500, img: "cymka.png" }
 };
 
-// цвета по типу ставки (hue) — звёзды золото, тон синий, подарок фиолетовый
-const TYPE_HUE = { stars: 45, ton: 205, gift: 280 };
+// цвета по типу ставки (hue) — звёзды и подарки фиолетовые оттенки, тон синий
+const TYPE_HUE = { stars: 270, ton: 205, gift: 300 };
 
 let betType = 'stars';
 let currentRound = null;
@@ -453,7 +453,7 @@ function renderAll(){
     wheelEl.querySelectorAll('.wedge-avatar').forEach(el=>el.remove());
 
     if(wedges.length===0 || total<=0){
-      wheelEl.style.background = 'conic-gradient(#1f1a10 0deg, #1f1a10 360deg)';
+      wheelEl.style.background = 'conic-gradient(#1c1128 0deg, #1c1128 360deg)';
     } else {
       let acc = 0;
       const stops = [];
