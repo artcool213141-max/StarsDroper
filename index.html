@@ -169,10 +169,18 @@
         }
         .scroll::-webkit-scrollbar { display: none; }
 
+.scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
 .mosaic {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    grid-auto-flow: dense; /* Включает авто-заполнение пустых мест */
+    grid-auto-flow: dense; /* Самое главное: сам убирает все дыры справа */
     gap: 12px;
     padding-bottom: 90px;
 }
