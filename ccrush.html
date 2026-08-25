@@ -76,18 +76,28 @@
         }
         .brand span { -webkit-text-fill-color: #fff; color: #fff; background: none; }
 
-        .balance-pill {
-            display: flex; align-items: center; gap: 6px;
-            background: linear-gradient(180deg, rgba(74,222,128,0.09) 0%, rgba(8,20,12,0.85) 100%);
-            border: 1px solid var(--border-gold);
-            padding: 6px 12px 6px 8px;
-            border-radius: 999px;
-            font-weight: 700;
-            font-size: 0.92rem;
-            color: #d8f5e0;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-        }
-        .currency-logo { width: 18px; height: 18px; object-fit: contain; border-radius: 50%; }
+.balance-pill {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: linear-gradient(180deg, rgba(74,222,128,0.09) 0%, rgba(8,20,12,0.85) 100%);
+    border: 1px solid var(--border-gold);
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #d8f5e0;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    white-space: nowrap;
+}
+
+.currency-logo { 
+    width: 14px; 
+    height: 14px; 
+    object-fit: contain; 
+    border-radius: 50%; 
+    flex-shrink: 0;
+}
 
         .game-container {
             position: relative;
@@ -319,28 +329,32 @@
 </head>
 <body>
 
-    <header>
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div onclick="location.href='index.html'" class="back-btn">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-                    </svg>
-                </div>
-                <div class="brand" onclick="location.href='index.html'">Nowear<span>Spin</span></div>
+<!-- ОБНОВЛЕННЫЙ HEADER -->
+<header>
+    <div class="flex items-center justify-between gap-2">
+        <!-- Левый блок: кнопка и название -->
+        <div class="flex items-center gap-2 min-w-0 flex-shrink">
+            <div onclick="location.href='index.html'" class="back-btn flex-shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
             </div>
-            <div class="flex gap-2">
-                <div class="balance-pill">
-                    <span id="val-stars" class="num">0</span>
-                    <img src="img/star.png" class="currency-logo" alt="star">
-                </div>
-                <div class="balance-pill">
-                    <span id="val-ton" class="num">0.00</span>
-                    <img src="img/ton.png" class="currency-logo" alt="ton">
-                </div>
+            <div class="brand truncate text-base sm:text-lg" onclick="location.href='index.html'">Nowear<span>Spin</span></div>
+        </div>
+
+        <!-- Правый блок: балансы -->
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+            <div class="balance-pill">
+                <span id="val-stars" class="num">0</span>
+                <img src="img/star.png" class="currency-logo" alt="star">
+            </div>
+            <div class="balance-pill">
+                <span id="val-ton" class="num">0.00</span>
+                <img src="img/ton.png" class="currency-logo" alt="ton">
             </div>
         </div>
-    </header>
+    </div>
+</header>
 
     <div id="main-scene" class="game-container">
         <div id="live-drop" class="live-drop"></div>
