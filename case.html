@@ -575,156 +575,298 @@ function getWin() {
 }
 
 function createRow(index, winItem) {
-    const container = document.getElementById('roulette-rows');
-    const row = document.createElement('div');
-    row.className = 'roulette-container animate-fade-in mb-4';
-    row.style.animationDelay = `${index * 0.06}s`;
-    row.innerHTML = `<div class="center-line"></div><div class="roulette-rail" id="rail-${index}"></div>`;
-    container.appendChild(row);
+    const wrapper = document.createElement('div');
+    wrapper.className = "roulette-container w-full mb-2";
+    wrapper.innerHTML = `
+        <div class="center-line"></div>
+        <div class="roulette-rail" id="rail-${index}"></div>
+    `;
+    document.getElementById('roulette-rows').appendChild(wrapper);
+
     const rail = document.getElementById(`rail-${index}`);
-    const winIndex = 30; 
-    for (let i = 0; i < 45; i++) {
-        const keys = Object.keys(ITEMS);
-        const randomItem = ITEMS[keys[Math.floor(Math.random() * keys.length)]];
-        const displayItem = (i === winIndex) ? winItem : randomItem;
-        rail.innerHTML += `<div class="roulette-item"><img src="img/${displayItem.img}"></div>`;
+    const itemsList = Object.values(ITEMS);
+    const winningIndex = 40;
+    const totalItems = 50;
+    let strip = [];
+    for (let i = 0; i < totalItems; i++) {
+        let item = (i === winningIndex) ? winItem : itemsList[Math.floor(Math.random() * itemsList.length)];
+        strip.push(item);
     }
+
+    rail.innerHTML = strip.map(it => `
+        <div class="roulette-item">
+            <img src="img/${it.img}">
+        </div>
+    `).join('');
+
     setTimeout(() => {
-        const itemWidth = 140;
-        const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
-        rail.style.transition = 'transform 6s cubic-bezier(0.15, 0, 0.05, 1)';
-        rail.style.transform = `translateX(-${offset}px)`;
+        const itemWidth = 140; 
+        const containerWidth = rail.parentElement.clientWidth;
+        const targetOffset = (winningIndex * itemWidth) - (containerWidth / 2) + (itemWidth / 2) + (Math.random() * 40 - 20);
+        rail.style.transition = 'transform 6s cubic-bezier(0.15, 0.85, 0.35, 1)';
+        rail.style.transform = `translateX(-${targetOffset}px)`;
+        
+        setTimeout(() => {
+            const children = rail.children;
+            if (children[winningIndex]) {
+                children[winningIndex].classList.add('win-glow');
+            }
+        }, 6000);
     }, 50);
 }
 
 function showWin(winners) {
-    document.getElementById('view-roulette').style.display = 'none';
-    document.getElementById('view-win').style.display = 'flex';
-    const winGrid = document.getElementById('win-grid');
-    winGrid.innerHTML = '';
-    let total = 0;
-    winners.forEach((item, i) => {
-        total += item.price;
-        winGrid.innerHTML += `<div class="flex flex-col items-center p-4 bg-white/5 rounded-3xl border border-amber-500/30 animate-fade-in" style="animation-delay:${i * 0.08}s"><img src="img/${item.img}" class="w-20 h-20 object-contain mb-2"><div class="text-amber-400 font-black orbitron text-xs">⭐${item.price}</div></div>`;
-    });
-    document.getElementById('win-total-price').innerText = total.toLocaleString();
-    if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
     isBusy = false;
+    document.getElementById('view-roulette').style.display = 'none';
+    const viewWin = document.getElementById('view-win');
+    viewWin.style.display = 'flex';
+    
+    const winGrid = document.getElementById('win-grid');
+    winGrid.innerHTML = winners.map(w => `
+        <div class="flex flex-col items-center bg-white/5 border border-white/10 rounded-2xl p-3 w-28">
+            <img src="img/${w.img}" class="w-16 h-16 object-contain mb-2">
+            <span class="text-[10px] text-gray-300 font-bold truncate w-full text-center">${w.name}</span>
+            <span class="text-blue-400 font-black text-xs mt-1">${w.price} ⭐️</span>
+        </div>
+    `).join('');
+
+    const totalPrice = winners.reduce((acc, w) => acc + w.price, 0);
+    document.getElementById('win-total-price').innerText = totalPrice;
 }
 
 async function sellAllAndClose() {
-    if (isBusy) return;
-    isBusy = true;
-    
-    const totalProfit = currentWinners.reduce((sum, item) => sum + item.price, 0);
-    const newBalance = balance.stars + totalProfit;
-
-    try {
-        const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
-            method: 'PATCH',
-            headers: { 
-                ...headers, 
-                'Prefer': 'return=representation'
-            },
-            body: JSON.stringify({ stars: newBalance })
-        });
-
-        if (res.ok) {
-            balance.stars = newBalance;
-            saveAndRefresh();
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            closeModal();
-            console.log("Успешно продано. Новый баланс:", balance.stars);
-        } else {
-            const errorData = await res.json();
-            alert("Ошибка при продаже: " + (errorData.message || "Unknown error"));
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Критическая ошибка сети при продаже");
-    } finally {
-        isBusy = false;
-    }
+    const totalPrice = currentWinners.reduce((acc, w) => acc + w.price, 0);
+    balance.stars += totalPrice;
+    saveAndRefresh();
+    await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
+    });
+    closeModal();
 }
 
 async function saveToInventoryAndClose() {
-    if (isBusy) return;
-    isBusy = true;
-
     try {
-        const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, { 
-            headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` } 
-        });
-        
-        if (!res.ok) throw new Error("Не удалось загрузить инвентарь");
-        
-        const userData = await res.json();
-        let currentInv = userData[0]?.inventory;
-        
-        if (!Array.isArray(currentInv)) {
-            currentInv = [];
+        const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, { headers });
+        const data = await res.json();
+        let inv = data[0]?.inventory || [];
+        if (typeof inv === 'string') inv = JSON.parse(inv);
+        for (const w of currentWinners) {
+            inv.push(w.img);
         }
-
-        const newItems = currentWinners.map(item => ({
-            id: Date.now() + Math.random(), 
-            name: item.name,
-            price: item.price,
-            img: `img/${item.img}`
-        }));
-
-        const updatedInventory = [...currentInv, ...newItems];
-
-        const saveRes = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
-            method: 'PATCH',
-            headers: { 
-                ...headers, 
-                'Prefer': 'return=representation' 
-            },
-            body: JSON.stringify({ inventory: updatedInventory })
+        await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+            method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
         });
-
-        if (saveRes.ok) {
-            console.log("Инвентарь обновлен");
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-            closeModal();
-            await syncData(); 
-        } else {
-            throw new Error("Ошибка сохранения на сервере");
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Не удалось сохранить предметы в инвентарь.");
-    } finally {
-        isBusy = false;
+    } catch(e) {
+        console.error("Inventory save error:", e);
     }
+    closeModal();
 }
 
 function closeModal() {
-    document.getElementById('case-modal').classList.remove('modal-open');
-    isBusy = false;
-    currentWinners = [];
     if (rollTimeoutId) { clearTimeout(rollTimeoutId); rollTimeoutId = null; }
+    isBusy = false;
+    document.getElementById('case-modal').classList.remove('modal-open');
+}
+
+function openRR(key) {
+    if (isBusy) return;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+    rrActive = ITEMS[key];
+    if (!rrActive) return;
+    
+    document.getElementById('rr-modal').classList.add('modal-open');
+    document.getElementById('rr-view-setup').style.display = 'flex';
+    document.getElementById('rr-view-spin').style.display = 'none';
+    document.getElementById('rr-view-result').style.display = 'none';
+
+    document.getElementById('rr-img').src = `img/${rrActive.img}`;
+    document.getElementById('rr-title').innerText = rrActive.name;
+    document.getElementById('rr-item-price').innerText = rrActive.price;
+    
+    document.getElementById('rr-slider').value = 50;
+    rrChance = 50;
+    updateRR();
+}
+
+function closeRR() {
+    if (rollTimeoutId) { clearTimeout(rollTimeoutId); rollTimeoutId = null; }
+    isBusy = false;
+    document.getElementById('rr-modal').classList.remove('modal-open');
+}
+
+function updateRR() {
+    rrChance = parseInt(document.getElementById('rr-slider').value);
+    document.getElementById('rr-chance-label').innerText = rrChance + '%';
+    const cost = Math.round(rrActive.price * (rrChance / 100));
+    document.getElementById('rr-cost-label').innerText = cost;
+}
+
+async function rollRR() {
+    if (isBusy || !rrActive) return;
+    const cost = Math.round(rrActive.price * (rrChance / 100));
+    if (balance.stars < cost) return alert("Недостаточно звезд!");
+
+    isBusy = true;
+    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+    balance.stars -= cost;
+    saveAndRefresh();
+
+    await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+        method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
+    });
+
+    document.getElementById('rr-view-setup').style.display = 'none';
+    document.getElementById('rr-view-spin').style.display = 'flex';
+    document.getElementById('rr-spin-title').innerText = rrActive.name;
+
+    const rail = document.getElementById('rr-rail');
+    rail.innerHTML = '';
+    const isWin = Math.random() * 100 < rrChance;
+
+    let strip = [];
+    const winningIndex = 30;
+    for (let i = 0; i < 40; i++) {
+        if (i === winningIndex) {
+            strip.push(isWin ? rrActive : { img: 'star.png', name: 'Empty', price: 0 });
+        } else {
+            strip.push(Math.random() < 0.5 ? rrActive : { img: 'star.png', name: 'Empty', price: 0 });
+        }
+    }
+
+    rail.innerHTML = strip.map(it => `
+        <div class="roulette-item">
+            <img src="img/${it.img}">
+        </div>
+    `).join('');
+
+    setTimeout(() => {
+        const itemWidth = 140;
+        const targetOffset = (winningIndex * itemWidth) - (rail.parentElement.clientWidth / 2) + (itemWidth / 2);
+        rail.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.35, 1)';
+        rail.style.transform = `translateX(-${targetOffset}px)`;
+
+        rollTimeoutId = setTimeout(() => showRRResult(isWin), 5200);
+    }, 50);
+}
+
+function skipRR() {
+    if (!isBusy || document.getElementById('rr-view-spin').style.display === 'none') return;
+    if (rollTimeoutId) { clearTimeout(rollTimeoutId); rollTimeoutId = null; }
+    const isWin = document.getElementById('rr-rail').children[30]?.classList.contains('win-glow') || Math.random() * 100 < rrChance;
+    showRRResult(isWin);
+}
+
+function showRRResult(isWin) {
+    isBusy = false;
+    document.getElementById('rr-view-spin').style.display = 'none';
+    const resView = document.getElementById('rr-view-result');
+    resView.style.display = 'flex';
+
+    const imgEl = document.getElementById('rr-result-img');
+    const emptyEl = document.getElementById('rr-result-empty');
+    const textEl = document.getElementById('rr-result-text');
+    const subEl = document.getElementById('rr-result-sub');
+
+    if (isWin) {
+        imgEl.src = `img/${rrActive.img}`;
+        imgEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+        textEl.innerText = "ПОБЕДА!";
+        textEl.style.color = "#4ade80";
+        subEl.innerText = `Приз добавлен в ваш инвентарь`;
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        
+        fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, { headers })
+            .then(res => res.json())
+            .then(data => {
+                let inv = data[0]?.inventory || [];
+                if (typeof inv === 'string') inv = JSON.parse(inv);
+                inv.push(rrActive.img);
+                return fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
+                });
+            }).catch(console.error);
+    } else {
+        imgEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        textEl.innerText = "ПРОИГРЫШ";
+        textEl.style.color = "#ef4444";
+        subEl.innerText = "Удача была не на вашей стороне";
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+    }
 }
 
 function renderLootPreview() {
-    document.getElementById('loot-display').innerHTML = activeCase.loot.map(attr => {
-        const itm = ITEMS[attr[0]];
-        return itm ? `<div class="bg-white/5 rounded-2xl p-2 flex flex-col items-center border border-white/5"><img src="img/${itm.img}" class="w-10 h-10 mb-1 object-contain"><div class="text-[8px] text-amber-400">⭐${itm.price}</div></div>` : '';
+    const container = document.getElementById('loot-display');
+    container.innerHTML = activeCase.loot.map(([img]) => {
+        const item = ITEMS[img];
+        if (!item) return '';
+        return `
+            <div class="flex flex-col items-center bg-white/5 border border-white/5 rounded-2xl p-2.5">
+                <img src="img/${item.img}" class="w-12 h-12 object-contain mb-1">
+                <span class="text-[9px] text-gray-300 font-bold truncate w-full text-center">${item.name}</span>
+                <span class="text-blue-400 font-black text-[10px] mt-0.5">${item.price} ⭐️</span>
+            </div>
+        `;
     }).join('');
 }
 
-function render() {
-    const tGrid = document.getElementById('tickets-container');
-    const mGrid = document.getElementById('main-grid');
-    tGrid.innerHTML = ''; mGrid.innerHTML = '';
-    CASES.forEach((c, idx) => {
-        if (c.type === 'tickets') {
-            tGrid.innerHTML = `<div class="case-card p-6 flex items-center justify-between border-2 border-amber-500/20" onclick="openCase(${idx})"><div class="flex items-center gap-6"><img src="img/${c.img}" class="w-24 h-24 object-contain"><div class="orbitron text-lg text-amber-400 font-black uppercase tracking-wide">${c.name}</div></div><div class="bg-amber-500 text-black px-5 py-3 rounded-2xl font-black text-sm flex items-center gap-2">${c.price} <img src="img/ticket.png" class="w-4 h-4"></div></div>`;
-        } else {
-            mGrid.innerHTML += `<div class="case-card p-4 flex flex-col items-center justify-between min-h-[280px]"><div onclick="openCase(${idx})" class="flex flex-col items-center"><img src="img/${c.img}" class="w-28 h-28 mb-2 object-contain"><div class="orbitron text-[10px] text-amber-400 font-black mb-4 uppercase text-center tracking-wide">${c.name}</div></div><div class="w-full flex flex-col gap-2"><button onclick="openCase(${idx})" class="tap-bounce w-full bg-white/5 py-2 rounded-xl text-[12px] font-bold border border-white/5">⭐ ${c.priceStars}</button><button onclick="openCase(${idx})" class="tap-bounce w-full bg-blue-500/10 py-2 rounded-xl text-[12px] font-bold text-blue-400">${c.priceTon} TON</button></div></div>`;
-        }
-    });
-}
+window.addEventListener('DOMContentLoaded', () => {
+    syncData();
+
+    const ticketsContainer = document.getElementById('tickets-container');
+    const ticketCase = CASES[0];
+    ticketsContainer.innerHTML = `
+        <div onclick="openCase(0)" class="case-card p-5 flex items-center justify-between cursor-pointer tap-bounce">
+            <div class="flex items-center gap-4">
+                <img src="img/${ticketCase.img}" class="w-20 h-20 object-contain">
+                <div>
+                    <h3 class="orbitron font-black text-sm uppercase">${ticketCase.name}</h3>
+                    <p class="text-[10px] text-gray-400 mt-1">Гарантированный приз за билеты</p>
+                    <div class="flex items-center gap-1 mt-2">
+                        <img src="img/ticket.png" class="w-4 h-4">
+                        <span class="text-yellow-400 font-black text-xs">${ticketCase.price} билетов</span>
+                    </div>
+                </div>
+            </div>
+            <div class="w-9 h-9 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">→</div>
+        </div>
+    `;
+
+    const mainGrid = document.getElementById('main-grid');
+    mainGrid.innerHTML = CASES.slice(1).map((c, idx) => `
+        <div onclick="openCase(${idx + 1})" class="case-card p-4 flex flex-col items-center cursor-pointer tap-bounce">
+            <img src="img/${c.img}" class="w-28 h-28 object-contain mb-3">
+            <h3 class="orbitron font-black text-xs uppercase text-center mb-1">${c.name}</h3>
+            <div class="flex items-center gap-2 mt-2">
+                <div class="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-xl border border-white/5">
+                    <img src="img/star.png" class="w-3.5 h-3.5">
+                    <span class="text-blue-400 font-black text-[10px]">${c.priceStars}</span>
+                </div>
+                <div class="flex items-center gap-1 bg-white/5 px-2.5 py-1 rounded-xl border border-white/5">
+                    <img src="img/ton.png" class="w-3.5 h-3.5">
+                    <span class="text-blue-300 font-black text-[10px]">${c.priceTon}</span>
+                </div>
+            </div>
+        </div>
+    `).join('');
+
+    const rrGrid = document.getElementById('rr-grid');
+    rrGrid.innerHTML = RR_KEYS.map(key => {
+        const item = ITEMS[key];
+        if (!item) return '';
+        return `
+            <div onclick="openRR('${key}')" class="case-card p-4 flex flex-col items-center cursor-pointer tap-bounce">
+                <img src="img/${item.img}" class="w-28 h-28 object-contain mb-3 drop-shadow-[0_0_15px_rgba(0,136,204,0.25)]">
+                <h3 class="orbitron font-black text-xs uppercase text-center mb-1">${item.name}</h3>
+                <div class="flex items-center gap-1 bg-white/5 px-3 py-1 rounded-xl border border-white/5 mt-2">
+                    <img src="img/star.png" class="w-3.5 h-3.5">
+                    <span class="text-blue-400 font-black text-[10px]">${item.price} ⭐️</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+});
 
 // ============ ЧЕСТНАЯ РУССКАЯ РУЛЕТКА ============
 
