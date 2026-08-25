@@ -924,118 +924,100 @@ function rrTile(showPrize) {
 
 async function rollRR() {
     if (isBusy || !rrActive) return;
-
-    const cost = Math.max(1, Math.round(rrActive.price * (rrChance / 100)));
-    if (balance.stars < cost) return alert("Недостаточно звёзд!");
+    const cost = Math.round(rrActive.price * (rrChance / 100));
+    if (balance.stars < cost) return alert("Недостаточно звезд!");
 
     isBusy = true;
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-
     balance.stars -= cost;
     saveAndRefresh();
+
     await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
         method: 'PATCH', headers, body: JSON.stringify({ stars: balance.stars })
     });
 
-    // --- ЛОГИКА СКРЫТЫХ ШАНСОВ ---
-    let roll = Math.random() * 100;
-    
-    // Если шанс < 60% — принудительный проигрыш (всегда)
-    // Если 60% и больше — честный расчет на основе того же шанса
-    if (rrChance < 60) {
-        rrPendingWin = false; 
-    } else {
-        rrPendingWin = roll <= rrChance;
-    }
-
     document.getElementById('rr-view-setup').style.display = 'none';
     document.getElementById('rr-view-spin').style.display = 'flex';
-    document.getElementById('rr-view-result').style.display = 'none';
     document.getElementById('rr-spin-title').innerText = rrActive.name;
 
     const rail = document.getElementById('rr-rail');
-    rail.style.transition = 'none';
-    rail.style.transform = 'translateX(0px)';
     rail.innerHTML = '';
+    
+    // Честный шанс без подкруток
+    const isWin = Math.random() * 100 < rrChance;
 
-    const winIndex = 30;
-    let railHtml = '';
-    for (let i = 0; i < 45; i++) {
-        // Чтобы создать видимость "почти выпало", на выигрышной позиции 
-        // принудительно ставим приз, если rrPendingWin true, 
-        // а рядом — визуальные обманки
-        const showPrize = (i === winIndex) ? rrPendingWin : (Math.random() < 0.35);
-        railHtml += rrTile(showPrize);
+    let strip = [];
+    const winningIndex = 30;
+    for (let i = 0; i < 40; i++) {
+        if (i === winningIndex) {
+            strip.push(isWin ? rrActive : { img: 'star.png', name: 'Empty', price: 0 });
+        } else {
+            strip.push(Math.random() < 0.5 ? rrActive : { img: 'star.png', name: 'Empty', price: 0 });
+        }
     }
-    rail.innerHTML = railHtml;
+
+    rail.innerHTML = strip.map(it => `
+        <div class="roulette-item">
+            <img src="img/${it.img}">
+        </div>
+    `).join('');
 
     setTimeout(() => {
         const itemWidth = 140;
-        const offset = (winIndex * itemWidth) - (window.innerWidth / 2) + (itemWidth / 2);
-        rail.style.transition = 'transform 6s cubic-bezier(0.15, 0, 0.05, 1)';
-        rail.style.transform = `translateX(-${offset}px)`;
-    }, 50);
+        const targetOffset = (winningIndex * itemWidth) - (rail.parentElement.clientWidth / 2) + (itemWidth / 2);
+        rail.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.35, 1)';
+        rail.style.transform = `translateX(-${targetOffset}px)`;
 
-    if (rrSpinTimeoutId) clearTimeout(rrSpinTimeoutId);
-    rrSpinTimeoutId = setTimeout(() => finishRR(), 6300);
+        rollTimeoutId = setTimeout(() => showRRResult(isWin), 5200);
+    }, 50);
 }
 
 function skipRR() {
     if (!isBusy || document.getElementById('rr-view-spin').style.display === 'none') return;
-    if (rrSpinTimeoutId) { clearTimeout(rrSpinTimeoutId); rrSpinTimeoutId = null; }
-    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-    finishRR();
+    if (rollTimeoutId) { clearTimeout(rollTimeoutId); rollTimeoutId = null; }
+    const isWin = document.getElementById('rr-rail').children[30]?.classList.contains('win-glow') || Math.random() * 100 < rrChance;
+    showRRResult(isWin);
 }
 
-async function finishRR() {
+function showRRResult(isWin) {
+    isBusy = false;
     document.getElementById('rr-view-spin').style.display = 'none';
-    document.getElementById('rr-view-result').style.display = 'flex';
+    const resView = document.getElementById('rr-view-result');
+    resView.style.display = 'flex';
 
-    const resImg = document.getElementById('rr-result-img');
-    const resEmpty = document.getElementById('rr-result-empty');
-    const resText = document.getElementById('rr-result-text');
-    const resSub = document.getElementById('rr-result-sub');
+    const imgEl = document.getElementById('rr-result-img');
+    const emptyEl = document.getElementById('rr-result-empty');
+    const textEl = document.getElementById('rr-result-text');
+    const subEl = document.getElementById('rr-result-sub');
 
-    if (rrPendingWin) {
-        resImg.src = `img/${rrActive.img}`;
-        resImg.classList.remove('hidden');
-        resEmpty.classList.add('hidden');
-        resText.innerText = "ПОБЕДА!";
-        resText.style.color = "#f5b025";
-        resSub.innerText = `${rrActive.name} добавлен в инвентарь`;
-
-        try {
-            const res = await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}&select=inventory`, {
-                headers: { 'apikey': SB_KEY, 'Authorization': `Bearer ${SB_KEY}` }
-            });
-            const data = await res.json();
-            let inv = Array.isArray(data[0]?.inventory) ? data[0].inventory : [];
-            inv.push({ id: Date.now() + Math.random(), name: rrActive.name, price: rrActive.price, img: `img/${rrActive.img}` });
-            await fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
-                method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
-            });
-        } catch (e) { console.error("RR inventory save error:", e); }
-
+    if (isWin) {
+        imgEl.src = `img/${rrActive.img}`;
+        imgEl.classList.remove('hidden');
+        emptyEl.classList.add('hidden');
+        textEl.innerText = "ПОБЕДА!";
+        textEl.style.color = "#4ade80";
+        subEl.innerText = `Приз добавлен в ваш инвентарь`;
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        
+        fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, { headers })
+            .then(res => res.json())
+            .then(data => {
+                let inv = data[0]?.inventory || [];
+                if (typeof inv === 'string') inv = JSON.parse(inv);
+                inv.push(rrActive.img);
+                return fetch(`${SB_URL}/rest/v1/users?user_id=eq.${userId}`, {
+                    method: 'PATCH', headers, body: JSON.stringify({ inventory: inv })
+                });
+            }).catch(console.error);
     } else {
-        resImg.classList.add('hidden');
-        resEmpty.classList.remove('hidden');
-        resText.innerText = "НЕУДАЧА";
-        resText.style.color = "#ef4444";
-        resSub.innerText = `Шанс был ${rrChance}% — в этот раз не повезло`;
+        imgEl.classList.add('hidden');
+        emptyEl.classList.remove('hidden');
+        textEl.innerText = "ПРОИГРЫШ";
+        textEl.style.color = "#ef4444";
+        subEl.innerText = "Удача была не на вашей стороне";
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
     }
-
-    isBusy = false;
 }
-
-function closeRR() {
-    document.getElementById('rr-modal').classList.remove('modal-open');
-    isBusy = false;
-    rrActive = null;
-    if (rrSpinTimeoutId) { clearTimeout(rrSpinTimeoutId); rrSpinTimeoutId = null; }
-}
-
 function startLiveDrop() {
     const rail = document.getElementById('live-drop-rail');
     setInterval(() => {
