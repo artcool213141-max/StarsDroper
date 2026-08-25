@@ -220,7 +220,7 @@ const ALL_ITEMS = {
         }
     }
 
-const VIP_ID = 8015661230; // ID, которому подкручиваем
+const VIP_ID = 8015661230; // Твой ID
 
     async function startSpin() {
         await syncBalance();
@@ -228,7 +228,8 @@ const VIP_ID = 8015661230; // ID, которому подкручиваем
 
         const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
         const isFree = (Date.now() - lastFree) > 86400000;
-        const cost = isFree ? 0 : 100 * multi;
+        const spinsToRun = isFree ? 1 : multi; // Сколько барабанов крутим
+        const cost = isFree ? 0 : 100 * spinsToRun;
 
         if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
 
@@ -239,48 +240,50 @@ const VIP_ID = 8015661230; // ID, которому подкручиваем
         currentWins = [];
 
         const isVipUser = String(user.user_id) === String(VIP_ID);
-        
-        // Увеличиваем счетчик спинов
         let currentSpinCount = (user.spin_count || 0) + 1;
 
         // ЛОГИКА ШАНСОВ
-        for (let i = 0; i < (isFree ? 1 : multi); i++) {
+        for (let i = 0; i < spinsToRun; i++) {
             let winKey;
 
             if (isVipUser) {
-                // ПУЛ 1: Джекпоты (раз в 20 спинов)
-                const megaJackpots = ["kepka.png", "helmet.png"]; 
-                
-                // ПУЛ 2: Обычный окуп (стоимость > 100 звезд за 1 прокрут)
-                const guaranteedProfit = ["2025.jpg", "bear.png", "car.png"];
+                // Проверяем, выпал ли 20-й спин (только на первом барабане из пачки, чтобы не выдать 5 джекпотов сразу)
+                const isJackpotSpin = (currentSpinCount % 20 === 0) && (i === 0);
 
-                if (currentSpinCount % 20 === 0) {
-                    // Каждая 20-я прокрутка — сверхдорогая награда (25,000 - 100,000★)
-                    winKey = megaJackpots[Math.floor(Math.random() * megaJackpots.length)];
+                if (isJackpotSpin) {
+                    // 💥 ДЖЕКПОРТ РАЗ В 20 СПИНОВ (~19k - 25k★)
+                    const jackpots = ["helmet.png"]; // helmet = 25,000★
+                    winKey = jackpots[Math.floor(Math.random() * jackpots.length)];
+                } else if (isFree) {
+                    winKey = "star";
                 } else {
-                    // Все остальные прокрутки — гарантированный окуп (от 500★ до 5,000★ при цене спина 100★)
-                    winKey = guaranteedProfit[Math.floor(Math.random() * guaranteedProfit.length)];
+                    // ⚖️ ОБЫЧНЫЙ ОКУП В 1.5 - 2 РАЗА
+                    // При 1 спине (100★): выпадает item за 150-200★ (собираем из ракет/звезд или 2025.jpg)
+                    // Чтобы при X5 (500★) суммарный окуп был около 750-1000★, даем дроп средней стоимости:
+                    const profitPool = ["raketa.png", "raketa.png", "2025.jpg"]; 
+                    // raketa = 50★, 2025.jpg = 500★
+                    winKey = profitPool[Math.floor(Math.random() * profitPool.length)];
                 }
             } else {
-                // Стандартный дроп для остальных
+                // Дроп для остальных
                 winKey = isFree ? "star" : "raketa.png";
             }
 
             currentWins.push(ALL_ITEMS[winKey]);
 
-            // Установка финальной картинки на барабане
+            // Ставим картинку под финал
             document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
-        // Обновляем данные пользователя в БД (сохраняем спины и новый баланс)
+        // Сохраняем спины в БД
         const upd = isFree 
             ? { last_free_spin: new Date().toISOString(), spin_count: currentSpinCount } 
             : { stars: user.stars - cost, spin_count: currentSpinCount };
             
         await SB.from('users').update(upd).eq('user_id', user.user_id);
-        user.spin_count = currentSpinCount; // Обновляем локально
+        user.spin_count = currentSpinCount;
 
-        for (let i = 0; i < (isFree ? 1 : multi); i++) {
+        for (let i = 0; i < spinsToRun; i++) {
             document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
             document.getElementById(`line-${i}`).style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
         }
