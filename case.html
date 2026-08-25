@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>NowearSpin Premium Edition | Gold</title>
+    <title>NowearSpin Premium Edition | Blue</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;600;700;900&display=swap');
         
         :root {
-            --bg-main: #0f0a02;
-            --neon-gold: #f5b025;
-            --neon-gold-dark: #c68c16;
+            --bg-main: #060d19;
+            --neon-gold: #0088cc;
+            --neon-gold-dark: #005580;
             --ton-blue: #0088cc;
         }
 
@@ -37,14 +37,15 @@
             align-items: flex-end;
             gap: 2px;
             background: rgba(0, 0, 0, 0.6);
-            padding: 10px 15px;
-            border-radius: 20px;
-            border: 1px solid rgba(245, 176, 37, 0.28);
+            padding: 6px 12px;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 136, 204, 0.28);
             backdrop-filter: blur(10px);
+            max-w: 160px;
         }
         .balance-item-v2 { display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
-        .balance-item-v2 img { width: 18px; height: 18px; }
-        .balance-item-v2 span { font-weight: 900; font-size: 0.9rem; }
+        .balance-item-v2 img { width: 16px; height: 16px; }
+        .balance-item-v2 span { font-weight: 900; font-size: 0.85rem; }
 
         .live-header { display: flex; align-items: center; padding: 20px 20px 10px; gap: 12px; }
         .live-label { font-family: 'Orbitron', sans-serif; font-size: 11px; color: var(--neon-gold); text-transform: uppercase; letter-spacing: 3px; }
@@ -53,14 +54,14 @@
 
         #live-drop-wrapper {
             width: 100%; height: 60px; overflow: hidden; position: relative;
-            background: linear-gradient(90deg, transparent, rgba(245, 176, 37, 0.05), transparent);
+            background: linear-gradient(90deg, transparent, rgba(0, 136, 204, 0.08), transparent);
         }
         .live-rail { display: flex; position: absolute; left: 0; top: 0; height: 100%; gap: 12px; padding: 10px; transition: transform 0.5s ease; }
 
         .roulette-container {
             position: relative; width: 100%; height: 160px; 
-            background: #231906; margin: 20px 0; overflow: hidden; 
-            border-top: 1px solid rgba(245, 176, 37, 0.18); border-bottom: 1px solid rgba(245, 176, 37, 0.18);
+            background: #081326; margin: 20px 0; overflow: hidden; 
+            border-top: 1px solid rgba(0, 136, 204, 0.25); border-bottom: 1px solid rgba(0, 136, 204, 0.25);
             border-radius: 20px;
         }
         .roulette-container::before, .roulette-container::after {
@@ -84,7 +85,7 @@
         
         .win-glow { 
             border-color: var(--neon-gold) !important; 
-            background: rgba(245, 176, 37, 0.15) !important; 
+            background: rgba(0, 136, 204, 0.18) !important; 
             animation: win-pulse 1s infinite ease-in-out; 
             z-index: 20;
         }
@@ -93,14 +94,14 @@
         }
 
         .case-card {
-            background: linear-gradient(145deg, #1c1405, #0f0a02);
-            border-radius: 35px; border: 1px solid rgba(245, 176, 37, 0.1);
+            background: linear-gradient(145deg, #0d1e38, #060d19);
+            border-radius: 35px; border: 1px solid rgba(0, 136, 204, 0.15);
             transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.2s ease;
         }
-        .case-card:active { transform: scale(0.94); border-color: rgba(245, 176, 37, 0.3); }
+        .case-card:active { transform: scale(0.94); border-color: rgba(0, 136, 204, 0.4); }
 
         .cnt-btn { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); color: white; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
-        .cnt-btn.active { background: var(--neon-gold); color: black; font-weight: 900; box-shadow: 0 0 12px rgba(245, 176, 37, 0.4); }
+        .cnt-btn.active { background: var(--neon-gold); color: white; font-weight: 900; box-shadow: 0 0 12px rgba(0, 136, 204, 0.5); }
         .cnt-btn:active { transform: scale(0.88); }
         
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
@@ -124,7 +125,7 @@
             border-radius: 999px;
             background: rgba(255,255,255,0.05);
             border: 1px solid rgba(255,255,255,0.12);
-            color: #d7cbb0;
+            color: #b0c4d7;
             font-size: 10px;
             font-weight: 800;
             text-transform: uppercase;
@@ -132,7 +133,7 @@
         }
         .skip-btn:active { background: rgba(255,255,255,0.1); }
 
-        /* --- Русская рулетка: честный слайдер --- */
+        /* --- Русская рулетка --- */
         .rr-spinning { animation: rrSpin 0.6s linear infinite; }
         @keyframes rrSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
@@ -148,16 +149,16 @@
             -webkit-appearance: none;
             width: 26px; height: 26px; border-radius: 50%;
             background: var(--neon-gold);
-            box-shadow: 0 0 12px rgba(245, 176, 37, 0.6);
+            box-shadow: 0 0 12px rgba(0, 136, 204, 0.7);
             cursor: pointer;
-            border: 3px solid #0f0a02;
+            border: 3px solid #060d19;
         }
         input[type="range"].rr-slider::-moz-range-thumb {
             width: 26px; height: 26px; border-radius: 50%;
             background: var(--neon-gold);
-            box-shadow: 0 0 12px rgba(245, 176, 37, 0.6);
+            box-shadow: 0 0 12px rgba(0, 136, 204, 0.7);
             cursor: pointer;
-            border: 3px solid #0f0a02;
+            border: 3px solid #060d19;
         }
 
         .section-label {
@@ -171,17 +172,17 @@
 </head>
 <body>
 
-    <header class="p-6 flex justify-between items-center sticky top-0 z-[100] bg-[#0f0a02]/90 backdrop-blur-xl border-b border-yellow-400/10">
-        <div class="flex items-center gap-4">
-            <button onclick="window.location.href='index.html'" class="tap-bounce flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10">
-                <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <header class="p-4 flex justify-between items-center sticky top-0 z-[100] bg-[#060d19]/90 backdrop-blur-xl border-b border-blue-500/10">
+        <div class="flex items-center gap-2 -ml-2">
+            <button onclick="window.location.href='index.html'" class="tap-bounce flex items-center justify-center w-9 h-9 rounded-full bg-white/5 border border-white/10 shrink-0">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
             </button>
-            <div class="orbitron text-2xl font-black italic">NOWEAR<span class="text-yellow-400">SPIN</span></div>
+            <div class="orbitron text-lg sm:text-xl font-black italic tracking-tighter whitespace-nowrap">NOWEAR<span class="text-blue-400">SPIN</span></div>
         </div>
-        <div class="balance-container-v2">
+        <div class="balance-container-v2 shrink-0">
             <div class="balance-item-v2 text-blue-400"><span id="header-ton">0.00</span><img src="img/ton.png"></div>
-            <div class="balance-item-v2 text-yellow-400"><span id="header-stars">0</span><img src="img/star.png"></div>
-            <div class="balance-item-v2 text-yellow-600"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
+            <div class="balance-item-v2 text-blue-300"><span id="header-stars">0</span><img src="img/star.png"></div>
+            <div class="balance-item-v2 text-blue-500"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
         </div>
     </header>
 
@@ -195,17 +196,17 @@
         <div class="grid grid-cols-2 gap-5" id="main-grid"></div>
 
         <div class="section-label px-1 mt-6">🎰 Русская рулетка</div>
-        <div class="text-[9px] text-gray-500 px-1 mb-1 uppercase tracking-wide leading-relaxed">
+        <div class="text-[9px] text-gray-400 px-1 mb-1 uppercase tracking-wide leading-relaxed">
             Шанс на слайдере = реальный шанс победы. Цена прокрута честно пересчитывается вместе с шансом — никаких скрытых порогов.
         </div>
         <div class="grid grid-cols-2 gap-5" id="rr-grid"></div>
 
     </div>
 
-    <div id="case-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#0f0a02]/98 backdrop-blur-2xl overflow-y-auto">
+    <div id="case-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#060d19]/98 backdrop-blur-2xl overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
-            <button id="back-btn" onclick="closeModal()" class="tap-bounce text-gray-500 font-bold text-xs uppercase tracking-widest">← Назад</button>
-            <div class="orbitron text-[10px] text-yellow-400 uppercase tracking-widest">System Ready</div>
+            <button id="back-btn" onclick="closeModal()" class="tap-bounce text-gray-400 font-bold text-xs uppercase tracking-widest">← Назад</button>
+            <div class="orbitron text-[10px] text-blue-400 uppercase tracking-widest">System Ready</div>
         </div>
 
         <div id="view-preview">
@@ -228,7 +229,7 @@
                 <div class="w-full flex flex-col items-center gap-2 mt-2">
                     <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Выберите способ открытия:</span>
                     <div class="grid grid-cols-2 gap-4 w-full" id="roll-buttons-container">
-                        <button id="btn-stars" onclick="startRoll('stars')" class="tap-bounce bg-yellow-400 text-black py-4 rounded-3xl font-black flex justify-center items-center gap-2 shadow-lg shadow-yellow-400/20">
+                        <button id="btn-stars" onclick="startRoll('stars')" class="tap-bounce bg-blue-500 text-white py-4 rounded-3xl font-black flex justify-center items-center gap-2 shadow-lg shadow-blue-500/20">
                             <img src="img/star.png" class="w-5 h-5"> <span id="p-stars">0</span>
                         </button>
                         <button id="btn-ton" onclick="startRoll('ton')" class="tap-bounce bg-[#0088cc] text-white py-4 rounded-3xl font-black flex justify-center items-center gap-2">
@@ -239,7 +240,7 @@
             </div>
 
             <div class="mb-3 pl-1">
-                <span class="text-[10px] uppercase text-yellow-400 font-black tracking-widest">Содержимое кейса:</span>
+                <span class="text-[10px] uppercase text-blue-400 font-black tracking-widest">Содержимое кейса:</span>
             </div>
             <div id="loot-display" class="grid grid-cols-3 gap-2 pb-10"></div>
         </div>
@@ -247,7 +248,7 @@
         <div id="view-roulette" class="hidden flex-col items-center">
             <div class="text-center mb-6">
                 <h2 id="roul-title" class="orbitron text-xl font-black uppercase text-white"></h2>
-                <div class="orbitron text-[10px] text-yellow-400 animate-pulse mt-1 uppercase tracking-widest">● Анализ вероятностей...</div>
+                <div class="orbitron text-[10px] text-blue-400 animate-pulse mt-1 uppercase tracking-widest">● Анализ вероятностей...</div>
             </div>
             <div id="roulette-rows" class="w-full"></div>
             <button onclick="skipRoll()" class="skip-btn tap-bounce">Пропустить ⏭</button>
@@ -259,41 +260,41 @@
                 <span class="text-gray-400 text-[10px] uppercase font-bold tracking-widest">Общая ценность:</span>
                 <div class="flex items-center gap-1">
                     <img src="img/star.png" class="w-4 h-4">
-                    <span id="win-total-price" class="orbitron text-yellow-400 font-black text-lg">0</span>
+                    <span id="win-total-price" class="orbitron text-blue-400 font-black text-lg">0</span>
                 </div>
             </div>
             <div class="w-full flex flex-col gap-3">
-                <button id="sell-all-btn" onclick="sellAllAndClose()" class="tap-bounce w-full bg-yellow-400 text-black py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-yellow-400/20">Продать</button>
+                <button id="sell-all-btn" onclick="sellAllAndClose()" class="tap-bounce w-full bg-blue-500 text-white py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-blue-500/20">Продать</button>
                 <button id="keep-all-btn" onclick="saveToInventoryAndClose()" class="tap-bounce w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs">В инвентарь</button>
             </div>
         </div>
     </div>
 
     <!-- ============ ЧЕСТНАЯ РУССКАЯ РУЛЕТКА ============ -->
-    <div id="rr-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#0f0a02]/98 backdrop-blur-2xl overflow-y-auto">
+    <div id="rr-modal" class="fixed inset-0 z-[200] flex flex-col p-6 bg-[#060d19]/98 backdrop-blur-2xl overflow-y-auto">
         <div class="flex justify-between items-center mb-8">
-            <button onclick="closeRR()" class="tap-bounce text-gray-500 font-bold text-xs uppercase tracking-widest">← Назад</button>
-            <div class="orbitron text-[10px] text-yellow-400 uppercase tracking-widest">Честный шанс</div>
+            <button onclick="closeRR()" class="tap-bounce text-gray-400 font-bold text-xs uppercase tracking-widest">← Назад</button>
+            <div class="orbitron text-[10px] text-blue-400 uppercase tracking-widest">Честный шанс</div>
         </div>
 
         <div id="rr-view-setup" class="flex flex-col items-center">
-            <img id="rr-img" src="" class="w-56 h-56 object-contain mb-4 drop-shadow-[0_0_20px_rgba(245,176,37,0.35)]">
+            <img id="rr-img" src="" class="w-56 h-56 object-contain mb-4 drop-shadow-[0_0_20px_rgba(0,136,204,0.35)]">
             <h1 id="rr-title" class="orbitron text-xl font-black mt-2 uppercase text-center tracking-wide mb-1"></h1>
             <div class="flex items-center gap-1 mb-8">
                 <span class="text-[10px] text-gray-400 uppercase tracking-widest">Ценность приза:</span>
                 <img src="img/star.png" class="w-4 h-4">
-                <span id="rr-item-price" class="text-yellow-400 font-black text-sm"></span>
+                <span id="rr-item-price" class="text-blue-400 font-black text-sm"></span>
             </div>
 
             <div class="w-full flex flex-col items-center gap-3 mb-8">
                 <span class="text-[10px] uppercase text-gray-400 font-bold tracking-widest">Твой шанс на победу</span>
-                <div id="rr-chance-label" class="orbitron text-5xl font-black text-yellow-400">50%</div>
+                <div id="rr-chance-label" class="orbitron text-5xl font-black text-blue-400">50%</div>
                 <input id="rr-slider" type="range" class="rr-slider" min="5" max="95" value="50" step="1" oninput="updateRR()">
-                <div class="flex justify-between w-full text-[9px] text-gray-500 font-bold uppercase tracking-widest px-1">
+                <div class="flex justify-between w-full text-[9px] text-gray-400 font-bold uppercase tracking-widest px-1">
                     <span>5% — дёшево, редко</span>
                     <span>95% — дорого, почти всегда</span>
                 </div>
-                <div class="text-[9px] text-gray-500 uppercase tracking-widest text-center mt-2">
+                <div class="text-[9px] text-gray-400 uppercase tracking-widest text-center mt-2">
                     Цена = цена приза × выбранный шанс. Реальный бросок использует ровно это число — без исключений.
                 </div>
             </div>
@@ -302,17 +303,17 @@
                 <span class="text-[11px] uppercase text-gray-400 font-bold">Цена прокрута</span>
                 <div class="flex items-center gap-2">
                     <img src="img/star.png" class="w-5 h-5">
-                    <span id="rr-cost-label" class="orbitron text-yellow-400 font-black text-lg">0</span>
+                    <span id="rr-cost-label" class="orbitron text-blue-400 font-black text-lg">0</span>
                 </div>
             </div>
 
-            <button onclick="rollRR()" class="tap-bounce w-full bg-yellow-400 text-black py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-yellow-400/20">Крутить</button>
+            <button onclick="rollRR()" class="tap-bounce w-full bg-blue-500 text-white py-5 rounded-3xl font-black uppercase text-sm shadow-lg shadow-blue-500/20">Крутить</button>
         </div>
 
         <div id="rr-view-spin" class="hidden flex-col items-center">
             <div class="text-center mb-6">
                 <h2 class="orbitron text-xl font-black uppercase text-white" id="rr-spin-title"></h2>
-                <div class="orbitron text-[10px] text-yellow-400 animate-pulse mt-1 uppercase tracking-widest">● Крутим...</div>
+                <div class="orbitron text-[10px] text-blue-400 animate-pulse mt-1 uppercase tracking-widest">● Крутим...</div>
             </div>
             <div class="roulette-container w-full">
                 <div class="center-line"></div>
@@ -325,7 +326,7 @@
             <img id="rr-result-img" src="" class="w-32 h-32 object-contain hidden">
             <div id="rr-result-empty" class="text-6xl font-black opacity-10 hidden">—</div>
             <div id="rr-result-text" class="orbitron text-3xl font-black uppercase"></div>
-            <div id="rr-result-sub" class="text-[10px] text-gray-500 uppercase tracking-widest text-center"></div>
+            <div id="rr-result-sub" class="text-[10px] text-gray-400 uppercase tracking-widest text-center"></div>
             <button onclick="closeRR()" class="tap-bounce w-full bg-white/5 border border-white/10 text-white py-4 rounded-3xl font-bold uppercase text-xs mt-6">Закрыть</button>
         </div>
     </div>
