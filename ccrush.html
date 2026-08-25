@@ -11,21 +11,19 @@
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Inter:wght@400;600;700;900&display=swap');
 
         :root {
-            /* Золотая премиум палитра */
-            --bg: #0a0805;
-            --bg-vignette: radial-gradient(120% 90% at 50% 0%, #1a1408 0%, #0a0805 60%);
-            --accent: #e9c760;
-            --accent-deep: #b8901f;
-            --accent-glow: rgba(233, 199, 96, 0.45);
-            --panel-bg: linear-gradient(180deg, #17110a 0%, #100c06 100%);
-            --card-bg: rgba(20, 16, 8, 0.75);
-            --border-gold: rgba(233, 199, 96, 0.22);
-            --border-gold-strong: rgba(233, 199, 96, 0.55);
+            --bg: #05100a;
+            --bg-vignette: radial-gradient(120% 90% at 50% 0%, #0f1f14 0%, #05100a 60%);
+            --accent: #4ade80;
+            --accent-deep: #16a34a;
+            --accent-glow: rgba(74, 222, 128, 0.45);
+            --panel-bg: linear-gradient(180deg, #0d1f14 0%, #081208 100%);
+            --border-gold: rgba(74, 222, 128, 0.22);
+            --border-gold-strong: rgba(74, 222, 128, 0.55);
             --danger: #ff5a5a;
             --success: #43d9a3;
-            --text-dim: #8f8672;
-            --grey-1: #4a463c;
-            --grey-2: #2a271f;
+            --text-dim: #7a9c86;
+            --grey-1: #3c463f;
+            --grey-2: #1f2a22;
             --safe-top: env(safe-area-inset-top, 0px);
             --safe-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -52,12 +50,9 @@
         .num { font-family: 'Manrope', 'Inter', sans-serif; font-variant-numeric: tabular-nums; }
 
         header {
-            padding-top: calc(14px + var(--safe-top));
-            padding-bottom: 14px;
-            padding-left: 18px;
-            padding-right: 18px;
-            background: linear-gradient(180deg, #0e0b06 0%, rgba(14,11,6,0.4) 100%);
-            border-bottom: 1px solid #1f1809;
+            padding: calc(14px + var(--safe-top)) 18px 14px;
+            background: linear-gradient(180deg, #060e08 0%, rgba(6,14,8,0.4) 100%);
+            border-bottom: 1px solid #0f1f14;
             position: relative;
             z-index: 110;
             flex: 0 0 auto;
@@ -66,30 +61,31 @@
         .back-btn {
             width: 34px; height: 34px; border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
-            background: rgba(233,199,96,0.06);
+            background: rgba(74,222,128,0.06);
             border: 1px solid var(--border-gold);
             color: var(--accent);
             transition: background 0.15s, transform 0.15s;
         }
-        .back-btn:active { transform: scale(0.92); background: rgba(233,199,96,0.15); }
+        .back-btn:active { transform: scale(0.92); background: rgba(74,222,128,0.15); }
 
         .brand {
             font-weight: 900; font-style: italic; letter-spacing: -0.03em;
             font-size: 1.35rem; text-transform: uppercase;
-            background: linear-gradient(180deg, #f5e3a8 0%, var(--accent) 55%, var(--accent-deep) 100%);
+            background: linear-gradient(180deg, #c8f5d8 0%, var(--accent) 55%, var(--accent-deep) 100%);
             -webkit-background-clip: text; background-clip: text; color: transparent;
         }
         .brand span { -webkit-text-fill-color: #fff; color: #fff; background: none; }
 
         .balance-pill {
             display: flex; align-items: center; gap: 6px;
-            background: var(--card-bg);
+            background: linear-gradient(180deg, rgba(74,222,128,0.09) 0%, rgba(8,20,12,0.85) 100%);
             border: 1px solid var(--border-gold);
             padding: 6px 12px 6px 8px;
             border-radius: 999px;
             font-weight: 700;
             font-size: 0.92rem;
-            color: #f2e6bf;
+            color: #d8f5e0;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
         .currency-logo { width: 18px; height: 18px; object-fit: contain; border-radius: 50%; }
 
@@ -100,8 +96,8 @@
             width: 100%;
             overflow: hidden;
             background-image:
-                linear-gradient(rgba(233, 199, 96, 0.06) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(233, 199, 96, 0.06) 1px, transparent 1px);
+                linear-gradient(rgba(74, 222, 128, 0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.06) 1px, transparent 1px);
             background-size: 46px 46px;
         }
 
@@ -114,7 +110,7 @@
         .game-container::after {
             content: '';
             position: absolute; inset: 0;
-            background: radial-gradient(circle at 50% 42%, rgba(233, 199, 96, 0.10) 0%, transparent 65%);
+            background: radial-gradient(circle at 50% 42%, rgba(74, 222, 128, 0.10) 0%, transparent 65%);
             pointer-events: none; z-index: 1;
         }
 
@@ -123,23 +119,35 @@
             z-index: 30;
             font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
             color: var(--text-dim);
-            background: rgba(10,8,5,0.55);
+            background: rgba(5,16,10,0.6);
             border: 1px solid var(--border-gold);
-            padding: 5px 14px;
+            padding: 5px 14px 5px 10px;
             border-radius: 999px;
-            backdrop-filter: blur(6px);
+            backdrop-filter: blur(8px);
             transition: color 0.2s, border-color 0.2s;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .status-strip::before {
+            content: '';
+            width: 6px; height: 6px; border-radius: 50%;
+            background: currentColor;
+            box-shadow: 0 0 8px currentColor;
         }
         .status-strip.is-live { color: var(--accent); border-color: var(--border-gold-strong); }
+        .status-strip.is-live::before { animation: dotPulse 1s ease-in-out infinite; }
         .status-strip.is-crash { color: var(--danger); border-color: rgba(255,90,90,0.4); }
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(0.7); }
+        }
 
         #rocket-wrap {
             position: absolute; left: -400px; bottom: -400px;
             z-index: 10; opacity: 0;
             transition: opacity 0.3s;
-            filter: drop-shadow(0 0 22px rgba(233,199,96,0.35));
+            filter: drop-shadow(0 0 22px rgba(74,222,128,0.35));
         }
-        #rocket-img { width: 190px; transform: rotate(-5deg); display: block; }
+        #rocket-img { width: 170px; transform: rotate(-5deg); display: block; }
         .engine-active { animation: vibration 0.09s infinite alternate; }
         @keyframes vibration { from { transform: translate(0,0); } to { transform: translate(2px, 2px); } }
 
@@ -147,23 +155,25 @@
         .paused { animation-play-state: paused !important; }
         @keyframes approach {
             from { left: -100px; bottom: -100px; }
-            to { left: 50%; bottom: 54%; transform: translate(-50%, 50%); }
+            to { left: 50%; bottom: 35%; transform: translate(-50%, 50%); }
         }
 
-        /* Правка 3: множитель поднят примерно на 1.5см (~60px), чтобы ракета
-           при подлёте его не перекрывала */
         #multiplier {
-            position: absolute; left: 50%;
-            top: calc(40% - 60px);
+            position: absolute;
+            left: 50%;
+            top: 25%;
             transform: translate(-50%, -50%);
-            font-size: clamp(3rem, 15vw, 4.6rem);
-            font-weight: 800; z-index: 20;
-            text-shadow: 0 0 50px var(--accent-glow);
+            font-size: clamp(3.2rem, 16vw, 5rem);
+            font-weight: 800;
+            z-index: 20;
+            text-shadow: 0 0 40px var(--accent-glow);
             color: #fff;
-            transition: color 0.2s;
+            transition: color 0.2s, transform 0.1s ease;
             letter-spacing: -0.02em;
+            pointer-events: none;
+            user-select: none;
         }
-        #multiplier.crashed { color: var(--danger); text-shadow: 0 0 50px rgba(255,90,90,0.5); }
+        #multiplier.crashed { color: var(--danger); text-shadow: 0 0 40px rgba(255,90,90,0.5); }
 
         .live-drop {
             position: absolute; left: 12px; top: 48px; z-index: 25;
@@ -171,8 +181,8 @@
             max-width: 84px;
         }
         .drop-item {
-            background: rgba(14, 11, 6, 0.85);
-            border: 1px solid #3a2d10;
+            background: rgba(8, 20, 12, 0.85);
+            border: 1px solid #1a3a26;
             padding: 6px 4px; border-radius: 8px; text-align: center;
             font-weight: 800; font-size: 12px;
             border-left: 3px solid var(--accent);
@@ -184,112 +194,122 @@
             width: 100%;
             background: var(--panel-bg);
             border-top: 1px solid var(--border-gold);
-            padding: 14px 16px calc(14px + var(--safe-bottom));
+            border-radius: 22px 22px 0 0;
+            padding: 22px 16px calc(16px + var(--safe-bottom));
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             z-index: 100;
-            box-shadow: 0 -10px 30px rgba(0,0,0,0.4);
+            box-shadow: 0 -14px 34px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04);
+            position: relative;
+        }
+        .ui-panel::before {
+            content: '';
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 36px; height: 4px; border-radius: 999px;
+            background: rgba(74,222,128,0.18);
         }
 
         .mode-row { display: flex; gap: 8px; }
         .currency-btn {
             flex: 1;
-            background: #1a140a;
+            background: #0e1a12;
             padding: 9px 0;
-            border: 1px solid #362a10;
+            border: 1px solid #1a3626;
             border-radius: 10px;
             cursor: pointer;
             text-align: center;
             font-size: 11px;
             font-weight: 800;
             letter-spacing: 0.04em;
-            color: #9c927a;
+            color: #7a9c86;
             display: flex; align-items: center; justify-content: center; gap: 6px;
             transition: all 0.15s;
         }
         .currency-btn img { width: 14px; height: 14px; }
         .currency-btn.active {
             border-color: var(--border-gold-strong);
-            background: linear-gradient(180deg, rgba(233,199,96,0.16), rgba(233,199,96,0.05));
+            background: linear-gradient(180deg, rgba(74,222,128,0.16), rgba(74,222,128,0.05));
             color: #fff;
-            box-shadow: 0 0 14px rgba(233, 199, 96, 0.15);
+            box-shadow: 0 0 14px rgba(74, 222, 128, 0.15);
         }
 
         .bet-row { display: flex; gap: 10px; align-items: stretch; }
 
         .bet-input-wrap {
             flex: 1;
-            background: #080603;
-            border: 1px solid #362a10;
-            border-radius: 12px;
-            padding: 8px 12px;
-            display: flex; flex-direction: column; justify-content: center;
-            transition: border-color 0.2s, opacity 0.2s;
+            position: relative;
+            background: linear-gradient(180deg, #0a1710 0%, #030805 100%);
+            border: 1px solid #1a3626;
+            border-radius: 14px;
+            padding: 10px 16px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), inset 0 0 22px rgba(0,0,0,0.35);
+            transition: border-color 0.2s, opacity 0.2s, box-shadow 0.2s;
+        }
+        .bet-input-wrap:focus-within {
+            border-color: var(--border-gold-strong);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), 0 0 0 3px rgba(74,222,128,0.08);
         }
         .bet-input-wrap .label {
-            font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
-            color: var(--text-dim); margin-bottom: 2px;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase;
+            color: var(--text-dim);
         }
+        .bet-input-inner { display: flex; flex-direction: column; gap: 2px; flex: 1; }
         input#input-bet {
             background: transparent; border: none; outline: none;
-            color: var(--accent); font-weight: 800; font-size: 1.4rem;
-            width: 100%; padding: 0;
+            color: var(--accent); font-weight: 800; font-size: 1.55rem;
+            width: 100%; padding: 0; letter-spacing: -0.01em;
         }
-        .bet-input-wrap.locked { opacity: 0.45; border-color: #241c0c; }
-
-        .stepper { display: flex; gap: 6px; }
-        .step-btn {
-            width: 34px; background: #1a140a; border: 1px solid #362a10; border-radius: 8px;
-            color: #cbbf9c; font-weight: 800; font-size: 1rem;
-            display: flex; align-items: center; justify-content: center;
-            transition: opacity 0.2s;
-        }
-        .step-btn:active { background: #2a2210; }
-
-        .quick-bets { display: flex; gap: 6px; transition: opacity 0.2s; }
-        .quick-btn {
-            flex: 1; background: #14100a; border: 1px solid #2a210e; border-radius: 8px;
-            color: #a99c78; font-size: 11px; font-weight: 700; padding: 6px 0;
-        }
-        .quick-btn:active { background: #241c0c; color: var(--accent); }
-        .quick-bets.locked, .stepper.locked { opacity: 0.35; pointer-events: none; }
+        .bet-input-wrap.locked { opacity: 0.5; border-color: #0c241a; }
 
         .btn-main {
-            background: linear-gradient(180deg, #f3d97e 0%, var(--accent) 45%, var(--accent-deep) 100%);
-            color: #1a1206;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(180deg, #7ef3a8 0%, var(--accent) 45%, var(--accent-deep) 100%);
+            color: #0a1a0e;
             font-weight: 900;
             width: 100%;
-            padding: 15px 0;
+            padding: 16px 0;
             border: none;
-            border-radius: 14px;
-            font-size: 1.05rem;
-            letter-spacing: 0.03em;
+            border-radius: 16px;
+            font-size: 1.08rem;
+            letter-spacing: 0.04em;
             text-transform: uppercase;
             transition: all 0.15s;
-            box-shadow: 0 6px 18px rgba(233, 199, 96, 0.3), inset 0 1px 0 rgba(255,255,255,0.4);
+            box-shadow: 0 8px 22px rgba(74, 222, 128, 0.32), inset 0 1px 0 rgba(255,255,255,0.4);
             display: flex; align-items: center; justify-content: center; gap: 8px;
         }
-        .btn-main:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(233,199,96,0.25); }
+        .btn-main::after {
+            content: '';
+            position: absolute; top: 0; left: -60%; width: 40%; height: 100%;
+            background: linear-gradient(115deg, transparent, rgba(255,255,255,0.35), transparent);
+            transform: skewX(-20deg);
+            animation: sheen 3.2s ease-in-out infinite;
+        }
+        @keyframes sheen {
+            0% { left: -60%; }
+            35% { left: 130%; }
+            100% { left: 130%; }
+        }
+        .btn-main:active { transform: scale(0.97); box-shadow: 0 3px 10px rgba(74,222,128,0.25); }
         .btn-main:disabled { filter: grayscale(0.7); opacity: 0.35; box-shadow: none; }
         .btn-main.is-live-cashout {
             background: linear-gradient(180deg, #6fe8bf 0%, var(--success) 55%, #23a97c 100%);
             box-shadow: 0 6px 18px rgba(67, 217, 163, 0.35), inset 0 1px 0 rgba(255,255,255,0.4);
         }
 
-        /* Правка 2: аккуратное серое состояние "ставка сделана" вместо блёклой
-           золотой кнопки с надписью "Готово" */
         .btn-main.is-bet-placed {
             background: linear-gradient(180deg, var(--grey-1) 0%, var(--grey-2) 100%);
-            color: #cfc9b8;
+            color: #c8d8cc;
             filter: none;
             opacity: 1;
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.15);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(74,222,128,0.15);
             animation: betPlacedPulse 1.6s ease-in-out infinite;
         }
         @keyframes betPlacedPulse {
-            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.15); }
-            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(233,199,96,0.4); }
+            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(74,222,128,0.15); }
+            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 0 0 1px rgba(74,222,128,0.4); }
         }
         .btn-main.is-bet-placed .check-ico {
             width: 16px; height: 16px; flex: 0 0 auto;
@@ -325,7 +345,7 @@
     <div id="main-scene" class="game-container">
         <div id="live-drop" class="live-drop"></div>
         <div id="status-strip" class="status-strip">Взлёт через 10с</div>
-        <div id="multiplier" class="num">1.00x</div>
+        <div id="multiplier" class="num">0.00x</div>
         <div id="rocket-wrap"><img id="rocket-img" src="crusher.png"></div>
     </div>
 
@@ -341,22 +361,11 @@
 
         <div class="bet-row">
             <div class="bet-input-wrap" id="bet-input-wrap">
-                <span class="label">Ставка</span>
-                <input type="number" id="input-bet" class="num" value="10">
+                <div class="bet-input-inner">
+                    <span class="label">Ставка</span>
+                    <input type="number" id="input-bet" class="num" value="10">
+                </div>
             </div>
-            <div class="stepper" id="stepper">
-                <div class="step-btn" onclick="stepBet(-1)">−</div>
-                <div class="step-btn" onclick="stepBet(1)">+</div>
-            </div>
-        </div>
-
-        <div class="quick-bets" id="quick-bets">
-            <div class="quick-btn" onclick="setBet(10)">10</div>
-            <div class="quick-btn" onclick="setBet(50)">50</div>
-            <div class="quick-btn" onclick="setBet(100)">100</div>
-            <div class="quick-btn" onclick="setBet(500)">500</div>
-            <div class="quick-btn" onclick="halveBet()">½</div>
-            <div class="quick-btn" onclick="doubleBet()">2×</div>
         </div>
 
         <button id="btn-main" onclick="onAction()" class="btn-main">Ставка</button>
@@ -368,27 +377,18 @@
     const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhqdWNhbHBhb3FscnRtb2ZtZGVuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0NDIzODcsImV4cCI6MjA5MjAxODM4N30.3jfEF1lSa1YTBYgc4O8ZtJVpfkJN9SBGmqYn8-Sn7Zo";
     const SB = supabase.createClient(SB_URL, SB_KEY);
 
-    // ---- Тайминги раунда (Правка 1) ----
-    // Раньше всё было завязано на фиксированный 20-секундный цикл по модулю
-    // системного времени. Так как теперь "взрыв" должен длиться РОВНО 3 секунды,
-    // а окно ставок — РОВНО 10 секунд, длительность полёта стала переменной
-    // (зависит от crashPoint), поэтому весь раунд больше не укладывается в
-    // фиксированный цикл. Вместо этого используется небольшая машина состояний
-    // на реальных временных метках (Date.now()), которая сама планирует
-    // следующую фазу через setTimeout.
-    const BET_WINDOW_MS = 10000;   // окно на ставки
-    const CRASH_DISPLAY_MS = 3000; // "взрыв" держится ровно 3с
+    const BET_WINDOW_MS = 10000;
+    const CRASH_DISPLAY_MS = 3000;
 
-    let currentUser = null, cur = 'stars', state = 'wait', mult = 1.00;
+    let currentUser = null, cur = 'stars', state = 'wait', mult = 0.00;
     let betQueued = false, betVal = 0, isCashedOut = false;
     let crashPoint = 2.00;
     let currentRoundId = Math.floor(Date.now() / 1000);
     let historyLogged = false;
 
-    let phaseStart = Date.now(); // момент начала текущей фазы (wait / fly / crash)
-    let roundTimer = null;       // ссылка на setTimeout текущей фазы
+    let phaseStart = Date.now();
+    let roundTimer = null;
 
-    // Кэш DOM-элементов
     const el = {
         mult: document.getElementById('multiplier'),
         rocketWrap: document.getElementById('rocket-wrap'),
@@ -397,8 +397,6 @@
         btn: document.getElementById('btn-main'),
         strip: document.getElementById('status-strip'),
         betWrap: document.getElementById('bet-input-wrap'),
-        stepper: document.getElementById('stepper'),
-        quickBets: document.getElementById('quick-bets'),
     };
 
     async function checkAuth() {
@@ -424,8 +422,6 @@
         } catch(e) {}
     }
 
-    // Читает текущее значение колонки и записывает currentValue + delta.
-    // delta отрицательный при списании ставки, положительный при выплате выигрыша.
     async function adjustBalance(delta) {
         const col = cur === 'stars' ? 'stars' : 'balance';
         try {
@@ -434,22 +430,21 @@
                 .select(col)
                 .eq('user_id', currentUser.user_id)
                 .single();
-            if (selErr) { console.error('select error', selErr); return false; }
+            if (selErr) return false;
 
             const currentVal = Number(data?.[col] || 0);
             const newVal = currentVal + delta;
-            if (newVal < 0) return false; // защита от ухода в минус на клиенте
+            if (newVal < 0) return false;
 
             const { error: updErr } = await SB
                 .from('users')
                 .update({ [col]: newVal })
                 .eq('user_id', currentUser.user_id);
-            if (updErr) { console.error('update error', updErr); return false; }
+            if (updErr) return false;
 
             syncBalances();
             return true;
         } catch(e) {
-            console.error('adjustBalance failed', e);
             return false;
         }
     }
@@ -458,15 +453,9 @@
         try {
             await SB.from('crash_history').insert({ multiplier: Number(value) });
             fetchHistory();
-        } catch(e) {
-            console.error('logCrashHistory failed', e);
-        }
+        } catch(e) {}
     }
 
-    // Простой детерминированный генератор (mulberry32), сидируется номером раунда.
-    // ВАЖНО: это НЕ защита от читерства — число всё ещё считается в браузере,
-    // и его можно вычислить через консоль разработчика. Для игры на реальные деньги
-    // такой расчёт должен идти на сервере (Supabase Edge Function), а не на клиенте.
     function seededRandom(seed) {
         let t = seed += 0x6D2B79F5;
         t = Math.imul(t ^ (t >>> 15), t | 1);
@@ -480,7 +469,6 @@
         return r > 0.93 ? (2 + r2 * 10).toFixed(2) : (1.01 + r2 * 1.5).toFixed(2);
     }
 
-    // ---- Фаза 1: окно ставок (10с) ----
     function startWaitPhase() {
         clearTimeout(roundTimer);
         state = 'wait';
@@ -497,14 +485,12 @@
         el.rocketImg.classList.remove('engine-active');
         el.scene.classList.remove('grid-moving');
         el.mult.classList.remove('crashed');
-        el.mult.innerText = "1.00x";
+        el.mult.innerText = "0.00x";
         el.strip.classList.remove('is-live', 'is-crash');
         el.btn.classList.remove('is-live-cashout', 'is-bet-placed');
         el.btn.innerHTML = "Ставка";
         el.btn.disabled = false;
         el.betWrap.classList.remove('locked');
-        el.stepper.classList.remove('locked');
-        el.quickBets.classList.remove('locked');
 
         fetchHistory();
         syncBalances();
@@ -512,7 +498,6 @@
         roundTimer = setTimeout(startFlightPhase, BET_WINDOW_MS);
     }
 
-    // ---- Фаза 2: полёт (переменная длительность до crashPoint) ----
     function startFlightPhase() {
         clearTimeout(roundTimer);
         state = 'fly';
@@ -524,15 +509,11 @@
         el.strip.innerText = 'В полёте';
         el.strip.classList.add('is-live');
         el.betWrap.classList.add('locked');
-        el.stepper.classList.add('locked');
-        el.quickBets.classList.add('locked');
 
-        // сколько секунд лететь до заданного crashPoint при формуле mult = 1.10^t
         const flightSeconds = Math.log(crashPoint) / Math.log(1.10);
         roundTimer = setTimeout(() => doCrash(crashPoint), flightSeconds * 1000);
     }
 
-    // ---- Фаза 3: взрыв (ровно 3с), затем новый раунд ----
     function doCrash(val) {
         clearTimeout(roundTimer);
         state = 'crash';
@@ -560,25 +541,30 @@
         roundTimer = setTimeout(startWaitPhase, CRASH_DISPLAY_MS);
     }
 
-    // tick() теперь только обновляет "живые" цифры (обратный отсчёт, множитель),
-    // а переключение фаз делает setTimeout-цепочка выше — так тайминги 10с/3с
-    // соблюдаются точно, а не зависят от округления модуля времени.
     function tick() {
         const elapsed = Date.now() - phaseStart;
 
         if (state === 'wait') {
             const secs = Math.max(0, Math.ceil((BET_WINDOW_MS - elapsed) / 1000));
             el.strip.innerText = `Взлёт через ${secs}с`;
+            el.mult.innerText = "0.00x";
         } else if (state === 'fly') {
             const flightTime = elapsed / 1000;
-            mult = Math.pow(1.10, flightTime);
+            
+            // Стартуем с 0.00x и за 0.5с разгоняемся до 1.00x, после чего идём по экспоненте
+            if (flightTime < 0.5) {
+                mult = flightTime * 2; 
+            } else {
+                mult = Math.pow(1.10, flightTime - 0.5);
+            }
+
             el.mult.innerText = mult.toFixed(2) + "x";
+            
             if (betQueued && !isCashedOut) {
                 el.btn.innerText = `Забрать ${(betVal * mult).toFixed(1)}`;
                 el.btn.classList.add('is-live-cashout');
             }
         }
-        // фаза 'crash' ничего не обновляет — просто ждёт свой setTimeout
     }
 
     async function onAction() {
@@ -603,15 +589,11 @@
             betQueued = true;
             el.btn.disabled = false;
 
-            // Правка 2: серая кнопка "Ставка сделана" вместо обычной "Готово"
             el.btn.classList.add('is-bet-placed');
             el.btn.innerHTML =
                 '<svg class="check-ico" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>Ставка сделана';
 
             el.betWrap.classList.add('locked');
-            el.stepper.classList.add('locked');
-            el.quickBets.classList.add('locked');
-
             tg.HapticFeedback?.impactOccurred('medium');
         } else if (state === 'fly' && betQueued && !isCashedOut) {
             isCashedOut = true;
@@ -625,27 +607,6 @@
 
             await adjustBalance(win);
         }
-    }
-
-    function setBet(v) {
-        if (state !== 'wait' || betQueued) return;
-        document.getElementById('input-bet').value = v;
-    }
-    function stepBet(dir) {
-        if (state !== 'wait' || betQueued) return;
-        const input = document.getElementById('input-bet');
-        const v = Math.max(1, Number(input.value || 0) + dir);
-        input.value = v;
-    }
-    function doubleBet() {
-        if (state !== 'wait' || betQueued) return;
-        const input = document.getElementById('input-bet');
-        input.value = Math.max(1, Number(input.value || 0) * 2);
-    }
-    function halveBet() {
-        if (state !== 'wait' || betQueued) return;
-        const input = document.getElementById('input-bet');
-        input.value = Math.max(1, Math.floor(Number(input.value || 0) / 2));
     }
 
     async function fetchHistory() {
@@ -673,7 +634,7 @@
 
     checkAuth();
     startWaitPhase();
-    setInterval(tick, 100);
+    setInterval(tick, 50);
 </script>
 </body>
 </html>
