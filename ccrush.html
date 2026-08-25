@@ -76,13 +76,28 @@
     background: rgba(74,222,128,0.15); 
 }
 
-        .brand {
-            font-weight: 900; font-style: italic; letter-spacing: -0.03em;
-            font-size: 1.35rem; text-transform: uppercase;
-            background: linear-gradient(180deg, #c8f5d8 0%, var(--accent) 55%, var(--accent-deep) 100%);
-            -webkit-background-clip: text; background-clip: text; color: transparent;
-        }
-        .brand span { -webkit-text-fill-color: #fff; color: #fff; background: none; }
+.brand {
+    font-weight: 900; 
+    font-style: italic; 
+    letter-spacing: -0.03em;
+    font-size: 1.15rem; 
+    text-transform: uppercase;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    background: linear-gradient(180deg, #c8f5d8 0%, var(--accent) 55%, var(--accent-deep) 100%);
+    -webkit-background-clip: text; 
+    background-clip: text; 
+    color: transparent;
+}
+
+.brand span { 
+    color: #ffffff; 
+    -webkit-text-fill-color: #ffffff; 
+    background: none; 
+    -webkit-background-clip: initial;
+    background-clip: initial;
+}
 
 .balance-pill {
     display: flex;
@@ -337,19 +352,17 @@
 </head>
 <body>
 
-<!-- ОБНОВЛЕННЫЙ HEADER -->
 <header>
     <div class="flex items-center justify-between gap-2">
-<div class="flex items-center gap-2 min-w-0 flex-shrink">
-    <div onclick="location.href='index.html'" class="back-btn flex-shrink-0 cursor-pointer">
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 18px; height: 18px; display: block;">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-        </svg>
-    </div>
-    <div class="brand truncate text-base sm:text-lg cursor-pointer" onclick="location.href='index.html'">Nowear<span>Spin</span></div>
-</div>
+        <div class="flex items-center gap-2 min-w-0 flex-shrink">
+            <div onclick="location.href='index.html'" class="back-btn flex-shrink-0 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" style="width: 18px; height: 18px; display: block;">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                </svg>
+            </div>
+            <div class="brand cursor-pointer text-sm sm:text-base" onclick="location.href='index.html'">NOWEAR<span>SPIN</span></div>
+        </div>
 
-        <!-- Правый блок: балансы -->
         <div class="flex items-center gap-1.5 flex-shrink-0">
             <div class="balance-pill">
                 <span id="val-stars" class="num">0</span>
