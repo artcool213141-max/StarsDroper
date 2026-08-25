@@ -220,8 +220,7 @@ const ALL_ITEMS = {
         }
     }
 
-// Укажи здесь нужный ID, которому подкручиваем шансы
-    const VIP_ID = 8015661230; 
+const VIP_ID = 8015661230; // ID, которому подкручиваем
 
     async function startSpin() {
         await syncBalance();
@@ -239,30 +238,32 @@ const ALL_ITEMS = {
         document.getElementById('skip-wrap').classList.add('show');
         currentWins = [];
 
-        // Проверяем, является ли текущий игрок VIP
         const isVipUser = String(user.user_id) === String(VIP_ID);
+        
+        // Увеличиваем счетчик спинов
+        let currentSpinCount = (user.spin_count || 0) + 1;
 
         // ЛОГИКА ШАНСОВ
-        for(let i=0; i<(isFree ? 1 : multi); i++) {
+        for (let i = 0; i < (isFree ? 1 : multi); i++) {
             let winKey;
 
             if (isVipUser) {
-                // --- НАГРАДЫ ДЛЯ VIP ID (ПОДPhysical КРУТКА) ---
-                if (isFree) {
-                    // На халявном спине подкручиваем дорогой предмет (например, car.png или bear.png)
-                    winKey = "car.png"; 
+                // ПУЛ 1: Джекпоты (раз в 20 спинов)
+                const megaJackpots = ["kepka.png", "helmet.png"]; 
+                
+                // ПУЛ 2: Обычный окуп (стоимость > 100 звезд за 1 прокрут)
+                const guaranteedProfit = ["2025.jpg", "bear.png", "car.png"];
+
+                if (currentSpinCount % 20 === 0) {
+                    // Каждая 20-я прокрутка — сверхдорогая награда (25,000 - 100,000★)
+                    winKey = megaJackpots[Math.floor(Math.random() * megaJackpots.length)];
                 } else {
-                    // На платных спинах выпадают топ-предметы (рандом между Кепкой, Шлемом и Машиной)
-                    const vipLoot = ["kepka.png", "helmet.png", "car.png"];
-                    winKey = vipLoot[Math.floor(Math.random() * vipLoot.length)];
+                    // Все остальные прокрутки — гарантированный окуп (от 500★ до 5,000★ при цене спина 100★)
+                    winKey = guaranteedProfit[Math.floor(Math.random() * guaranteedProfit.length)];
                 }
             } else {
-                // --- НАГРАДЫ ДЛЯ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ ---
-                if (isFree) {
-                    winKey = "star"; 
-                } else {
-                    winKey = "raketa.png";
-                }
+                // Стандартный дроп для остальных
+                winKey = isFree ? "star" : "raketa.png";
             }
 
             currentWins.push(ALL_ITEMS[winKey]);
@@ -271,10 +272,15 @@ const ALL_ITEMS = {
             document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
-        const upd = isFree ? { last_free_spin: new Date().toISOString() } : { stars: user.stars - cost };
+        // Обновляем данные пользователя в БД (сохраняем спины и новый баланс)
+        const upd = isFree 
+            ? { last_free_spin: new Date().toISOString(), spin_count: currentSpinCount } 
+            : { stars: user.stars - cost, spin_count: currentSpinCount };
+            
         await SB.from('users').update(upd).eq('user_id', user.user_id);
+        user.spin_count = currentSpinCount; // Обновляем локально
 
-        for(let i=0; i<(isFree ? 1 : multi); i++) {
+        for (let i = 0; i < (isFree ? 1 : multi); i++) {
             document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
             document.getElementById(`line-${i}`).style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
         }
