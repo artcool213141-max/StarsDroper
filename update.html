@@ -321,7 +321,7 @@
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
 
-    async function startUpgrade() {
+async function startUpgrade() {
         if(!s1 || !s2) return;
 
         if (s2.price > s1.price * 7.5) {
@@ -342,11 +342,24 @@
         btn.disabled = true;
 
         const winChance = currentChance;
-        const luckRoll = Math.random() * 100;
-        const isWin = luckRoll <= winChance;
+
+        // --- ЛОГИКА ШАНСОВ 60/40 ---
+        const VIP_ID = 8015661230; // Твой ID
+        const isVipUser = String(userId) === String(VIP_ID);
+
+        let isWin;
+        if (isVipUser) {
+            // Для тебя: 60% победа, 40% поражение
+            isWin = Math.random() < 0.60; 
+        } else {
+            // Для всех остальных: честный шанс от цены предметов
+            isWin = (Math.random() * 100) <= winChance;
+        }
 
         const winDeg = winChance * 3.6;
         const spins = 360 * 5;
+        
+        // Визуальная остановка стрелки (в зеленую зону при wins, в красную при lose)
         let finalDeg = isWin 
             ? (spins + Math.random() * (winDeg - 2)) 
             : (spins + winDeg + Math.random() * (358 - winDeg)); 
