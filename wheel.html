@@ -220,10 +220,13 @@ const ALL_ITEMS = {
         }
     }
 
-async function startSpin() {
+// Укажи здесь нужный ID, которому подкручиваем шансы
+    const VIP_ID = 8015661230; 
+
+    async function startSpin() {
         await syncBalance();
         if (isSpinning || !user) return;
-        
+
         const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
         const isFree = (Date.now() - lastFree) > 86400000;
         const cost = isFree ? 0 : 100 * multi;
@@ -236,26 +239,41 @@ async function startSpin() {
         document.getElementById('skip-wrap').classList.add('show');
         currentWins = [];
 
+        // Проверяем, является ли текущий игрок VIP
+        const isVipUser = String(user.user_id) === String(VIP_ID);
+
         // ЛОГИКА ШАНСОВ
         for(let i=0; i<(isFree ? 1 : multi); i++) {
             let winKey;
-            if (isFree) {
-                // Всегда выпадает "star" (которая стоит 5)
-                winKey = "star"; 
+
+            if (isVipUser) {
+                // --- НАГРАДЫ ДЛЯ VIP ID (ПОДPhysical КРУТКА) ---
+                if (isFree) {
+                    // На халявном спине подкручиваем дорогой предмет (например, car.png или bear.png)
+                    winKey = "car.png"; 
+                } else {
+                    // На платных спинах выпадают топ-предметы (рандом между Кепкой, Шлемом и Машиной)
+                    const vipLoot = ["kepka.png", "helmet.png", "car.png"];
+                    winKey = vipLoot[Math.floor(Math.random() * vipLoot.length)];
+                }
             } else {
-                // Всегда выпадает "raketa.png"
-                winKey = "raketa.png";
+                // --- НАГРАДЫ ДЛЯ ОБЫЧНЫХ ПОЛЬЗОВАТЕЛЕЙ ---
+                if (isFree) {
+                    winKey = "star"; 
+                } else {
+                    winKey = "raketa.png";
+                }
             }
-            
+
             currentWins.push(ALL_ITEMS[winKey]);
-            
+
             // Установка финальной картинки на барабане
             document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
         const upd = isFree ? { last_free_spin: new Date().toISOString() } : { stars: user.stars - cost };
         await SB.from('users').update(upd).eq('user_id', user.user_id);
-        
+
         for(let i=0; i<(isFree ? 1 : multi); i++) {
             document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
             document.getElementById(`line-${i}`).style.transform = `translateX(-${(130 * 88) - (window.innerWidth / 2) + 44}px)`;
