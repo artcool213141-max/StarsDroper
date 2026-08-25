@@ -898,7 +898,7 @@ function startLiveDrop() {
     setInterval(() => {
         const keys = Object.keys(ITEMS);
         const it = ITEMS[keys[Math.floor(Math.random()*keys.length)]];
-        const el = document.createElement('div');
+const el = document.createElement('div');
         el.className = 'flex-shrink-0 flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/5 animate-fade-in';
         el.innerHTML = `<img src="img/${it.img}" class="w-6 h-6 object-contain"><span class="text-[10px] font-bold text-gray-300">${it.name.split(' ')[0]}</span>`;
         rail.prepend(el);
@@ -906,7 +906,59 @@ function startLiveDrop() {
     }, 3000);
 }
 
-window.onload = () => { startLiveDrop(); render(); renderRR(); syncData(); tg.expand(); };
+function applyBlueTheme() {
+    // 1. Перезаписываем CSS-переменные
+    if (!document.getElementById('blue-theme-styles')) {
+        const rootStyle = document.createElement('style');
+        rootStyle.id = 'blue-theme-styles';
+        rootStyle.innerHTML = `
+            :root {
+                --bg-main: #060d19 !important;
+                --neon-gold: #0088cc !important;
+                --neon-gold-dark: #005580 !important;
+                --ton-blue: #0088cc !important;
+            }
+        `;
+        document.head.appendChild(rootStyle);
+    }
+
+    // 2. Меняем классы
+    const colorReplacements = {
+        'text-yellow-400': 'text-blue-400',
+        'text-yellow-500': 'text-blue-500',
+        'text-yellow-600': 'text-blue-600',
+        'bg-yellow-400': 'bg-blue-500',
+        'bg-yellow-500': 'bg-blue-600',
+        'border-yellow-400': 'border-blue-500',
+        'border-yellow-400/10': 'border-blue-500/10',
+        'border-yellow-400/20': 'border-blue-500/20',
+        'shadow-yellow-400/10': 'shadow-blue-500/10',
+        'shadow-yellow-400/20': 'shadow-blue-500/20',
+        'shadow-yellow-400/50': 'shadow-blue-500/50'
+    };
+
+    document.querySelectorAll('*').forEach(el => {
+        Object.entries(colorReplacements).forEach(([oldClass, newClass]) => {
+            if (el.classList.contains(oldClass)) {
+                el.classList.remove(oldClass);
+                el.classList.add(newClass);
+            }
+        });
+    });
+}
+
+// ЗапускаемTheme ПОСЛЕ того, как сгенерировалась верстка в DOM
+window.onload = () => { 
+    startLiveDrop(); 
+    render(); 
+    renderRR(); 
+    syncData(); 
+    tg.expand(); 
+    
+    // Применяем тему и ставим слежку за динамическими элементами
+    applyBlueTheme();
+    setTimeout(applyBlueTheme, 100); 
+};
 </script>
 </body>
 </html>
