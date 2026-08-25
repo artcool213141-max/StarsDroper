@@ -102,7 +102,7 @@
                 <polyline points="12 19 5 12 12 5"></polyline>
             </svg>
         </a>
-        <div class="text-[11px] font-black text-[#4ade80] tracking-widest uppercase">Модернизация</div>
+        <div class="text-[11px] font-black text-[#4ade80] tracking-widest uppercase">Апгрейд</div>
     </div>
 
     <div class="wheel-container">
@@ -225,7 +225,7 @@
 
     let userInventory = [];
     let s1 = null; let s2 = null;
-    let currentChance = 0; // единственный источник правды для шанса — им пользуются и колесо, и бросок
+    let currentChance = 0;
 
     async function loadFromDB() {
         try {
@@ -240,39 +240,60 @@
         }
     }
 
-function render() {
-    const mList = document.getElementById('mine-list');
-    const tList = document.getElementById('target-list');
+    function render() {
+        const mList = document.getElementById('mine-list');
+        const tList = document.getElementById('target-list');
 
-    mList.innerHTML = userInventory.map((it, i) => {
-        const imgPath = (typeof it === 'string' ? it : (it?.img || '')).toString();
-        if (!imgPath) return '';
+        mList.innerHTML = userInventory.map((it, i) => {
+            const imgPath = (typeof it === 'string' ? it : (it?.img || '')).toString();
+            if (!imgPath) return '';
+            
+            const file = imgPath.split('/').pop();
+            const info = ITEMS_DATA[file] || { name: file || "Item", price: 0 };
+            const src = imgPath.startsWith('img/') ? imgPath : 'img/' + imgPath;
+            return `
+                <div class="item-card ${s1?.idx === i ? 'active' : ''}" onclick="sel1(${i},'${src}','${info.name}', ${info.price})">
+                    <img src="${src}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
+                    <div class="overflow-hidden">
+                        <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
+                        <div class="text-[7px] opacity-50 text-[#7a9c86]">${info.price} ⭐</div>
+                    </div>
+                </div>`;
+        }).join('');
+
+        tList.innerHTML = Object.entries(ITEMS_DATA)
+            .filter(([file, info]) => !s1 || info.price > s1.price)
+            .sort((a,b) => a[1].price - b[1].price)
+            .map(([file, info]) => `
+                <div class="item-card ${s2?.name === info.name ? 'active' : ''}" onclick="sel2('img/${file}','${info.name}', ${info.price})">
+                    <img src="img/${file}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
+                    <div class="overflow-hidden">
+                        <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
+                        <div class="text-[7px] text-[#4ade80] font-bold">${info.price} ⭐</div>
+                    </div>
+                </div>`).join('');
+    }
+
+    // ВОТ ФУНКЦИЯ КОТОРАЯ ПОТЕРЯЛАСЬ И ЛОМАЛА КОД
+    function updateUI() {
+        const btn = document.getElementById('upg-btn');
+        const info = document.getElementById('info-chance');
+        const wheel = document.getElementById('wheel-progress');
         
-        const file = imgPath.split('/').pop();
-        const info = ITEMS_DATA[file] || { name: file || "Item", price: 0 };
-        const src = imgPath.startsWith('img/') ? imgPath : 'img/' + imgPath;
-        return `
-            <div class="item-card ${s1?.idx === i ? 'active' : ''}" onclick="sel1(${i},'${src}','${info.name}', ${info.price})">
-                <img src="${src}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
-                <div class="overflow-hidden">
-                    <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
-                    <div class="text-[7px] opacity-50 text-[#7a9c86]">${info.price} ⭐</div>
-                </div>
-            </div>`;
-    }).join('');
+        if(s1 && s2) {
+            let chance = (s1.price / s2.price) * 100 * 0.8;
+            chance = Math.min(Math.max(chance, 10), 85);
+            currentChance = chance;
 
-    tList.innerHTML = Object.entries(ITEMS_DATA)
-        .filter(([file, info]) => !s1 || info.price > s1.price)
-        .sort((a,b) => a[1].price - b[1].price)
-        .map(([file, info]) => `
-            <div class="item-card ${s2?.name === info.name ? 'active' : ''}" onclick="sel2('img/${file}','${info.name}', ${info.price})">
-                <img src="img/${file}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
-                <div class="overflow-hidden">
-                    <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
-                    <div class="text-[7px] text-[#4ade80] font-bold">${info.price} ⭐</div>
-                </div>
-            </div>`).join('');
-}
+            info.innerText = `ШАНС НА УСПЕХ: ${chance.toFixed(1)}%`;
+            wheel.style.background = `conic-gradient(#4ade80 ${chance * 3.6}deg, transparent 0deg)`;
+            btn.disabled = false;
+        } else {
+            btn.disabled = true;
+            wheel.style.background = `conic-gradient(#4ade80 0deg, transparent 0deg)`;
+            info.innerText = s1 ? "ВЫБЕРИ ЦЕЛЬ УЛУЧШЕНИЯ" : "ВЫБЕРИ СВОЙ ПРЕДМЕТ";
+        }
+    }
 
     function sel1(idx, img, name, price) {
         s1 = {idx, img, name, price};
@@ -300,69 +321,69 @@ function render() {
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
 
-async function startUpgrade() {
-    if(!s1 || !s2) return;
+    async function startUpgrade() {
+        if(!s1 || !s2) return;
 
-    if (s2.price > s1.price * 7.5) {
-        const info = document.getElementById('info-chance');
-        info.innerText = "❌ СЛИШКОМ ДОРОГО";
-        info.style.color = "#ef4444";
-        
-        setTimeout(() => {
-            info.style.color = "#4ade80";
-            updateUI(); 
-        }, 2000);
-        return;
+        if (s2.price > s1.price * 7.5) {
+            const info = document.getElementById('info-chance');
+            info.innerText = "❌ СЛИШКОМ ДОРОГО";
+            info.style.color = "#ef4444";
+            
+            setTimeout(() => {
+                info.style.color = "#4ade80";
+                updateUI(); 
+            }, 2000);
+            return;
+        }
+
+        const btn = document.getElementById('upg-btn');
+        const pointer = document.getElementById('pointer-wrapper');
+        const resMsg = document.getElementById('res-msg');
+        btn.disabled = true;
+
+        const winChance = currentChance;
+        const luckRoll = Math.random() * 100;
+        const isWin = luckRoll <= winChance;
+
+        const winDeg = winChance * 3.6;
+        const spins = 360 * 5;
+        let finalDeg = isWin 
+            ? (spins + Math.random() * (winDeg - 2)) 
+            : (spins + winDeg + Math.random() * (358 - winDeg)); 
+
+        pointer.style.transform = `rotate(${finalDeg}deg)`;
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+
+        setTimeout(async () => {
+            document.getElementById('center-ui').style.opacity = "0";
+            resMsg.style.display = "block";
+
+            let newInv = userInventory.map(it => typeof it === 'string' ? it : (it?.img || it));
+            const targetFile = s2.img.split('/').pop();
+
+            if (isWin) {
+                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#4ade80";
+                if(s1.idx >= 0 && s1.idx < newInv.length) {
+                    newInv[s1.idx] = targetFile;
+                }
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+            } else {
+                resMsg.innerText = "СЛОМАЛСЯ"; resMsg.style.color = "#ef4444";
+                if(s1.idx >= 0 && s1.idx < newInv.length) {
+                    newInv.splice(s1.idx, 1);
+                }
+                if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
+            }
+
+            try {
+                await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
+            } catch(e) {
+                console.error("Ошибка сохранения в базу:", e);
+            }
+            
+            setTimeout(() => location.reload(), 2500);
+        }, 3600);
     }
-
-    const btn = document.getElementById('upg-btn');
-    const pointer = document.getElementById('pointer-wrapper');
-    const resMsg = document.getElementById('res-msg');
-    btn.disabled = true;
-
-    const winChance = currentChance;
-    const luckRoll = Math.random() * 100;
-    const isWin = luckRoll <= winChance;
-
-    const winDeg = winChance * 3.6;
-    const spins = 360 * 5;
-    let finalDeg = isWin 
-        ? (spins + Math.random() * (winDeg - 2)) 
-        : (spins + winDeg + Math.random() * (358 - winDeg)); 
-
-    pointer.style.transform = `rotate(${finalDeg}deg)`;
-    if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-
-    setTimeout(async () => {
-        document.getElementById('center-ui').style.opacity = "0";
-        resMsg.style.display = "block";
-
-        let newInv = userInventory.map(it => typeof it === 'string' ? it : (it?.img || it));
-        const targetFile = s2.img.split('/').pop();
-
-        if (isWin) {
-            resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#4ade80";
-            if(s1.idx >= 0 && s1.idx < newInv.length) {
-                newInv[s1.idx] = targetFile;
-            }
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-        } else {
-            resMsg.innerText = "СЛОМАЛСЯ"; resMsg.style.color = "#ef4444";
-            if(s1.idx >= 0 && s1.idx < newInv.length) {
-                newInv.splice(s1.idx, 1);
-            }
-            if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
-        }
-
-        try {
-            await _supabase.from('users').update({ inventory: newInv }).eq('user_id', userId);
-        } catch(e) {
-            console.error("Ошибка сохранения в базу:", e);
-        }
-        
-        setTimeout(() => location.reload(), 2500);
-    }, 3600);
-}
 
     window.onload = () => { if(tg.expand) tg.expand(); loadFromDB(); };
 </script>
