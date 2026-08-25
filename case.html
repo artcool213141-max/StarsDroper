@@ -521,9 +521,6 @@ function setMul(n) {
     updatePriceButtons();
 }
 
-// Вкажи свой Telegram user_id
-const MY_TARGET_ID = 123456789; // <-- ЗАМЕНИ НА СВОЙ ID
-
 async function startRoll(type) {
     if (isBusy) return;
     const priceAttr = type === 'stars' ? 'priceStars' : (type === 'ton' ? 'priceTon' : 'price');
@@ -542,31 +539,20 @@ async function startRoll(type) {
         method: 'PATCH', headers, body: JSON.stringify({ [dbField]: balance[balanceKey] })
     });
 
-    // --- БЛОК ОПРЕДЕЛЕНИЯ ВЫИГРЫША ---
+    document.getElementById('back-btn').style.display = 'none';
+    document.getElementById('view-preview').style.display = 'none';
+    document.getElementById('view-roulette').style.display = 'flex';
+    document.getElementById('roulette-rows').innerHTML = '';
+
     currentWinners = [];
-    
-    // Проверяем: твой ли это ID и открывается ли ОБЫЧНЫЙ кейс (не Русская рулетка)
-    const isMyBoostActive = (String(userId) === String(MY_TARGET_ID)) && (activeCase.type !== 'rr');
-
-    for (let count = 0; count < mul; count++) {
-        let winItem;
-
-        if (isMyBoostActive) {
-            // ЛОГИКА ДЛЯ ТВОЕГО ID (Обычные кейсы):
-            // Берем только дорогие / редкие предметы из activeCase.items (например, топ-3 по ценности)
-            const sortedItems = [...activeCase.items].sort((a, b) => (b.price || 0) - (a.price || 0));
-            // Выбираем случайный предмет из ТОП-2 ценных
-            winItem = sortedItems[Math.floor(Math.random() * Math.min(2, sortedItems.length))];
-        } else {
-            // СТАНДАРТНАЯ ЛОГИКА (Для всех остальных и для Русской рулетки):
-            winItem = getRandomItemByChance(activeCase.items);
-        }
-
-        currentWinners.push(winItem);
+    for (let i = 0; i < mul; i++) {
+        const win = getWin();
+        currentWinners.push(win);
+        createRow(i, win);
     }
 
-    // Запуск визуальной рулетки / показа выигрыша
-    runRouletteAnimation();
+    if (rollTimeoutId) clearTimeout(rollTimeoutId);
+    rollTimeoutId = setTimeout(() => showWin(currentWinners), 7000);
 }
 
 function skipRoll() {
