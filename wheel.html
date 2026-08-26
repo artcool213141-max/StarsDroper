@@ -34,7 +34,6 @@
             backdrop-filter: blur(10px);
         }
 
-        /* --- Единая тап-анимация --- */
         .tap-bounce { transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease, box-shadow 0.15s ease, color 0.15s ease; }
         .tap-bounce:active { transform: scale(0.92); }
 
@@ -155,8 +154,8 @@
     tg.enableClosingConfirmation();
 
     // rarity: 0 - нищий дроп (1, 15, 50), 1 - ценный
-const ALL_ITEMS = {
-        "star_cheap": { price: 1, img: "star.png", rarity: 0 }, // Исправил ключ
+    const ALL_ITEMS = {
+        "star_cheap": { price: 1, img: "star.png", rarity: 0 },
         "star": { price: 5, img: "star.png", rarity: 0 },
         "raketa.png": { price: 50, img: "raketa.png", rarity: 0 },
         "2025.jpg": { price: 500, img: "2025.jpg", rarity: 1 },
@@ -220,7 +219,7 @@ const ALL_ITEMS = {
         }
     }
 
-const VIP_ID = 1373624995; // Твой ID
+    const VIP_ID = 1373624995;
 
     async function startSpin() {
         await syncBalance();
@@ -228,7 +227,7 @@ const VIP_ID = 1373624995; // Твой ID
 
         const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
         const isFree = (Date.now() - lastFree) > 86400000;
-        const spinsToRun = isFree ? 1 : multi; // Сколько барабанов крутим
+        const spinsToRun = isFree ? 1 : multi;
         const cost = isFree ? 0 : 100 * spinsToRun;
 
         if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
@@ -242,46 +241,45 @@ const VIP_ID = 1373624995; // Твой ID
         const isVipUser = String(user.user_id) === String(VIP_ID);
         let currentSpinCount = (user.spin_count || 0) + 1;
 
-        // ЛОГИКА ШАНСОВ
         for (let i = 0; i < spinsToRun; i++) {
             let winKey;
-
             if (isVipUser) {
-                // Проверяем, выпал ли 20-й спин (только на первом барабане из пачки, чтобы не выдать 5 джекпотов сразу)
                 const isJackpotSpin = (currentSpinCount % 20 === 0) && (i === 0);
-
                 if (isJackpotSpin) {
-                    // 💥 ДЖЕКПОРТ РАЗ В 20 СПИНОВ (~19k - 25k★)
-                    const jackpots = ["helmet.png"]; // helmet = 25,000★
+                    const jackpots = ["helmet.png"];
                     winKey = jackpots[Math.floor(Math.random() * jackpots.length)];
                 } else if (isFree) {
                     winKey = "star";
                 } else {
-                    // ⚖️ ОБЫЧНЫЙ ОКУП В 1.5 - 2 РАЗА
-                    // При 1 спине (100★): выпадает item за 150-200★ (собираем из ракет/звезд или 2025.jpg)
-                    // Чтобы при X5 (500★) суммарный окуп был около 750-1000★, даем дроп средней стоимости:
-                    const profitPool = ["raketa.png", "raketa.png", "2025.jpg"]; 
-                    // raketa = 50★, 2025.jpg = 500★
+                    const profitPool = ["raketa.png", "raketa.png", "2025.jpg"];
                     winKey = profitPool[Math.floor(Math.random() * profitPool.length)];
                 }
             } else {
-                // Дроп для остальных
                 winKey = isFree ? "star" : "raketa.png";
             }
-
             currentWins.push(ALL_ITEMS[winKey]);
-
-            // Ставим картинку под финал
             document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
         }
 
-        // Сохраняем спины в БД
+        // Обновляем пользователя
         const upd = isFree 
             ? { last_free_spin: new Date().toISOString(), spin_count: currentSpinCount } 
             : { stars: user.stars - cost, spin_count: currentSpinCount };
             
         await SB.from('users').update(upd).eq('user_id', user.user_id);
         user.spin_count = currentSpinCount;
+
+        // ✅ ЕСЛИ ЭТО БЕСПЛАТНЫЙ СПИН И У ПОЛЬЗОВАТЕЛЯ ЕСТЬ АКТИВИРОВАННЫЙ ПРОМОКОД → ОТМЕЧАЕМ free_spin_done
+        if (isFree && user.activated_referral_code) {
+            try {
+                const { error: actErr } = await SB
+                    .from('userss_promo_activations')
+                    .update({ free_spin_done: true })
+                    .eq('activator_id', user.user_id)
+                    .eq('code', user.activated_referral_code);
+                if (actErr) console.error('Ошибка обновления free_spin_done:', actErr);
+            } catch(e) { console.error(e); }
+        }
 
         for (let i = 0; i < spinsToRun; i++) {
             document.getElementById(`line-${i}`).style.transition = `transform ${7 + (i * 0.4)}s cubic-bezier(0.1, 0, 0, 1)`;
@@ -334,7 +332,7 @@ const VIP_ID = 1373624995; // Твой ID
     }
     window.addEventListener('focus', syncBalance);
 
-    // --- Летающие частицы на фоне (как на остальных страницах) ---
+    // --- Летающие частицы на фоне ---
     function initParticles() {
         const canvas = document.getElementById('stars-canvas');
         if (!canvas) return;
