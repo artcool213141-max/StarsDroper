@@ -204,16 +204,10 @@
 
     // --- Функция рандома по весу (rarity) ---
     function getRandomItemKey(isFree = false) {
+        // С бесплатного спина всегда падает фикс. приз — 5 звёзд
+        if (isFree) return "star";
+
         let pool = { ...ALL_ITEMS };
-        
-        // Если бесплатный спин, урезаем шанс дорогих предметов, чтобы падала мелочь
-        if (isFree) {
-            pool["2025.jpg"].rarity = 1;
-            pool["bear.png"].rarity = 0;
-            pool["car.png"].rarity = 0;
-            pool["helmet.png"].rarity = 0;
-            pool["kepka.png"].rarity = 0;
-        }
 
         const totalWeight = Object.values(pool).reduce((sum, item) => sum + item.rarity, 0);
         let randomNum = Math.random() * totalWeight;
