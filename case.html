@@ -527,7 +527,11 @@ async function startRoll(type) {
     const cost = activeCase[priceAttr] * mul;
     const balanceKey = type === 'ton' ? 'ton' : type;
 
-    if (balance[balanceKey] < cost) return alert("Недостаточно средств!");
+    // ЗАМЕНА ALERT НА КАСТОМНЫЙ ТОСТ
+    if (balance[balanceKey] < cost) {
+        showToast("Недостаточно средств!");
+        return;
+    }
 
     isBusy = true;
     if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
@@ -553,6 +557,47 @@ async function startRoll(type) {
 
     if (rollTimeoutId) clearTimeout(rollTimeoutId);
     rollTimeoutId = setTimeout(() => showWin(currentWinners), 7000);
+}
+
+// Функция для вывода маленького всплывающего окошка снизу
+function showToast(text) {
+    let toast = document.getElementById('custom-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'custom-toast';
+        // Стиль маленького окошка внизу экрана
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-family: sans-serif;
+            z-index: 99999;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        `;
+        document.body.appendChild(toast);
+    }
+    
+    toast.innerText = text;
+    // Показываем с анимацией появления
+    setTimeout(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+    }, 10);
+
+    // Скрываем обратно через 2 секунды
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+    }, 2000);
 }
 
 function skipRoll() {
