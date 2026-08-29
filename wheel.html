@@ -83,12 +83,23 @@
         }
         .skip-btn:active { background: rgba(255,255,255,0.1); }
 
-        #win-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
+        #win-modal, #sub-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
         .modal-box { background: rgba(20,20,20,0.9); border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(245, 176, 37, 0.2); animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
         .win-item-card { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .sub-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: linear-gradient(135deg, #34b7f1, #1c93cf); color: #fff; font-weight: 900;
+            border-radius: 16px; padding: 14px 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em;
+            box-shadow: 0 5px 20px rgba(52, 183, 241, 0.25); border: 1px solid rgba(255,255,255,0.1);
+        }
+        .confirm-btn {
+            background: var(--accent-gradient); color: #000; font-weight: 900; border-radius: 16px;
+            padding: 14px 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;
+        }
         
         ::-webkit-scrollbar { display: none; }
     </style>
@@ -145,6 +156,23 @@
         </div>
     </div>
 
+    <!-- Модалка подписки на канал (только для бесплатного спина) -->
+    <div id="sub-modal">
+        <div class="modal-box">
+            <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-[#34b7f1]/15 flex items-center justify-center border border-[#34b7f1]/30">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="#34b7f1"><path d="M21.9 2.7c.3-1.2-.6-1.9-1.5-1.5L1.3 9.4c-.9.4-.9 1.9.1 2.1l4.7 1.5 1.8 5.8c.2.7 1.1.9 1.6.4l2.6-2.4 4.8 3.6c.7.5 1.7.1 1.9-.8L21.9 2.7z"/></svg>
+            </div>
+            <h2 class="text-lg font-black italic uppercase text-white tracking-wider">Почти готово!</h2>
+            <p class="text-[12px] text-gray-400 mt-2 mb-5 leading-relaxed">Чтобы получить <span class="text-[#f5b025] font-bold">бесплатный спин</span>, подпишись на наш канал — там дропы, промокоды и новости проекта.</p>
+
+            <button onclick="openChannel()" class="sub-btn tap-bounce w-full mb-3">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 2.7c.3-1.2-.6-1.9-1.5-1.5L1.3 9.4c-.9.4-.9 1.9.1 2.1l4.7 1.5 1.8 5.8c.2.7 1.1.9 1.6.4l2.6-2.4 4.8 3.6c.7.5 1.7.1 1.9-.8L21.9 2.7z"/></svg>
+                Подписаться
+            </button>
+            <button onclick="confirmSubscription()" class="confirm-btn tap-bounce w-full">Я подписался</button>
+        </div>
+    </div>
+
 <script>
     const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
     const SB_KEY = "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx";
@@ -153,6 +181,10 @@
 
     tg.expand();
     tg.enableClosingConfirmation();
+
+    const CHANNEL_URL = "https://t.me/nowear_free";
+    const SUB_KEY = "nowearspin_sub_confirmed_at";
+    const SUB_TTL = 86400000; // 24 часа — совпадает с окном бесплатного спина
 
     // rarity: 0 - нищий дроп (1, 15, 50), 1 - ценный
 const ALL_ITEMS = {
@@ -169,6 +201,35 @@ const ALL_ITEMS = {
     const ALL_KEYS = Object.keys(ALL_ITEMS);
     let user = null, isSpinning = false, multi = 1, currentWins = [];
     let spinTimeoutId = null;
+
+    // --- Подписка на канал ---
+    function isSubConfirmed() {
+        const raw = localStorage.getItem(SUB_KEY);
+        if (!raw) return false;
+        return (Date.now() - parseInt(raw, 10)) < SUB_TTL;
+    }
+
+    function openChannel() {
+        if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        if (tg.openTelegramLink) tg.openTelegramLink(CHANNEL_URL);
+        else window.open(CHANNEL_URL, '_blank');
+    }
+
+    function showSubModal() {
+        document.getElementById('sub-modal').style.display = 'flex';
+    }
+
+    function hideSubModal() {
+        document.getElementById('sub-modal').style.display = 'none';
+    }
+
+    function confirmSubscription() {
+        localStorage.setItem(SUB_KEY, Date.now().toString());
+        if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        hideSubModal();
+        // Продолжаем именно тот спин, ради которого показали модалку (всегда бесплатный)
+        runSpin();
+    }
 
     async function syncBalance() {
         if (!user) return;
@@ -222,8 +283,26 @@ const ALL_ITEMS = {
 
 const VIP_ID = 1373624995; // Твой ID
 
+    // Точка входа: нажатие на кнопку. Решает, нужно ли сперва показать модалку подписки.
     async function startSpin() {
         await syncBalance();
+        if (isSpinning || !user) return;
+
+        const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
+        const isFree = (Date.now() - lastFree) > 86400000;
+
+        if (isFree && !isSubConfirmed()) {
+            // Бесплатный спин без подтверждённой подписки — сначала модалка
+            showSubModal();
+            return;
+        }
+
+        runSpin();
+    }
+
+    // Сам спин запускается либо сразу (платный / уже подтверждённая подписка),
+    // либо после нажатия «Я подписался» в модалке.
+    async function runSpin() {
         if (isSpinning || !user) return;
 
         const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
