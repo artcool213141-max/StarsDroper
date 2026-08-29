@@ -405,6 +405,23 @@
         <button id="btn-main" onclick="onAction()" class="btn-main">Ставка</button>
     </div>
 
+    <!-- Модальное окно: Недостаточно средств -->
+<div id="modal-insufficient" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(5,16,10,0.85); backdrop-filter: blur(8px); align-items: center; justify-content: center; padding: 20px;">
+    <div style="background: var(--panel-bg); border: 1px solid var(--border-gold-strong); border-radius: 22px; width: 100%; max-width: 320px; padding: 24px; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.6);">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,90,90,0.1); border: 1px solid rgba(255,90,90,0.3); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="var(--danger)" style="width: 24px; height: 24px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+        </div>
+        <div style="font-weight: 800; font-size: 1.1rem; margin-bottom: 8px; color: #fff;">Недостаточно средств</div>
+        <div style="font-size: 0.85rem; color: var(--text-dim); margin-bottom: 20px;">Пополните баланс, чтобы продолжить игру.</div>
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeInsufficientModal()" style="flex: 1; background: rgba(255,255,255,0.06); border: 1px solid var(--border-gold); color: #fff; font-weight: 700; padding: 12px 0; border-radius: 12px; cursor: pointer;">Закрыть</button>
+            <button onclick="closeInsufficientModal()" class="btn-main" style="flex: 1; padding: 12px 0; font-size: 0.95rem;">Пополнить</button>
+        </div>
+    </div>
+</div>
+
 <script>
     const tg = window.Telegram.WebApp;
     const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
@@ -455,6 +472,15 @@
             }
         } catch(e) {}
     }
+
+    function showInsufficientModal() {
+    document.getElementById('modal-insufficient').style.display = 'flex';
+    tg.HapticFeedback?.notificationOccurred('error');
+}
+
+function closeInsufficientModal() {
+    document.getElementById('modal-insufficient').style.display = 'none';
+}
 
     async function adjustBalance(delta) {
         const col = cur === 'stars' ? 'stars' : 'balance';
@@ -611,13 +637,12 @@
 
             const ok = await adjustBalance(-amount);
 
-            if (!ok) {
-                el.btn.disabled = false;
-                el.btn.innerText = "Ставка";
-                tg.HapticFeedback?.notificationOccurred('error');
-                alert('Недостаточно средств');
-                return;
-            }
+if (!ok) {
+        el.btn.disabled = false;
+        el.btn.innerText = "Ставка";
+        showInsufficientModal(); // <--- вместо alert
+        return;
+    }
 
             betVal = amount;
             betQueued = true;
