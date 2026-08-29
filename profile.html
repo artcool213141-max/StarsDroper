@@ -583,7 +583,7 @@ async function withdrawToBot() {
 
     const idxToRemove = selectedIdx;
 
-    tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 30 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
+    tg.showConfirm(`Вывести предмет? Потребуется подтверждение оплатой 1 ⭐ с вашего Telegram-аккаунта.`, async (ok) => {
         if (!ok) return;
 
         isProcessing = true;
@@ -631,7 +631,7 @@ async function withdrawToBot() {
         }
     });
 }
-
+    
 async function sellItem() {
     if (!user || !userId || selectedIdx === -1 || isProcessing) return;
 
