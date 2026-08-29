@@ -325,19 +325,6 @@ def create_stars_pay():
     return jsonify(resp), 400
 
 
-@app.route('/webhook', methods=['POST'])
-def webhook():
-    try:
-        update = request.get_json() or {}
-
-        # 1. PreCheckout
-        if 'pre_checkout_query' in update:
-            query_id = update['pre_checkout_query']['id']
-            requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerPreCheckoutQuery",
-                          json={"pre_checkout_query_id": query_id, "ok": True}, timeout=10)
-            return "OK", 200
-
-        # 2. Успешный платеж
         if 'message' in update and 'successful_payment' in update['message']:
             payment = update['message']['successful_payment']
             user_id = str(update['message']['from']['id'])
@@ -353,8 +340,8 @@ def webhook():
             if not user_data:
                 return "OK", 200
 
-            if amount == 30:
-                # это верификационный платёж за вывод подарка (30 ⭐ с телеграм-аккаунта)
+            if amount == 1:
+                # это верификационный платёж за вывод подарка (ТЕСТ: 1 ⭐ вместо 30)
                 pending_item = user_data.get('pending_item')
                 inv = user_data.get('inventory', []) or []
 
@@ -362,7 +349,7 @@ def webhook():
                     new_inv = []
                     removed = False
                     for item in inv:
-                        if not removed and pending_item in item:
+                        if not removed and item == pending_item:
                             removed = True
                             continue
                         new_inv.append(item)
@@ -386,7 +373,6 @@ def webhook():
                     "is_paid_75": True
                 }).eq("user_id", uid_str).execute()
 
-                # начисляем комиссию амбассадору, если юзер привязан к чьему-то коду
                 credit_ambassador_commission(uid_str, amount, source="stars")
 
             print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
