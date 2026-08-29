@@ -184,22 +184,47 @@
 
     const CHANNEL_URL = "https://t.me/nowear_free";
     const SUB_KEY = "nowearspin_sub_confirmed_at";
-    const SUB_TTL = 86400000; // 24 часа — совпадает с окном бесплатного спина
+    const SUB_TTL = 86400000; // 24 часа
 
-    // rarity: 0 - нищий дроп (1, 15, 50), 1 - ценный
-const ALL_ITEMS = {
-        "star": { price: 5, img: "img/star.png", rarity: 55 },
-        "raketa.png": { price: 50, img: "raketa.png", rarity: 30 },
-        "2025.jpg": { price: 500, img: "2025.jpg", rarity: 10 },
-        "bear.png": { price: 3500, img: "bear.png", rarity: 3 },
-        "car.png": { price: 5000, img: "car.png", rarity: 1.5 },
-        "helmet.png": { price: 25000, img: "helmet.png", rarity: 0.4 },
+    const ALL_ITEMS = {
+        "star": { price: 5, img: "star.png", rarity: 1.6 },
+        "raketa.png": { price: 50, img: "raketa.png", rarity: 93 },
+        "2025.jpg": { price: 500, img: "2025.jpg", rarity: 5 },
+        "bear.png": { price: 3500, img: "bear.png", rarity: 0.1 },
+        "car.png": { price: 5000, img: "car.png", rarity: 0.1 },
+        "helmet.png": { price: 25000, img: "helmet.png", rarity: 0.1 },
         "kepka.png": { price: 100000, img: "kepka.png", rarity: 0.1 }
     };
 
     const ALL_KEYS = Object.keys(ALL_ITEMS);
     let user = null, isSpinning = false, multi = 1, currentWins = [];
     let spinTimeoutId = null;
+    const VIP_ID = 1373624995;
+
+    // --- Функция рандома по весу (rarity) ---
+    function getRandomItemKey(isFree = false) {
+        let pool = { ...ALL_ITEMS };
+        
+        // Если бесплатный спин, урезаем шанс дорогих предметов, чтобы падала мелочь
+        if (isFree) {
+            pool["2025.jpg"].rarity = 1;
+            pool["bear.png"].rarity = 0;
+            pool["car.png"].rarity = 0;
+            pool["helmet.png"].rarity = 0;
+            pool["kepka.png"].rarity = 0;
+        }
+
+        const totalWeight = Object.values(pool).reduce((sum, item) => sum + item.rarity, 0);
+        let randomNum = Math.random() * totalWeight;
+
+        for (const key of Object.keys(pool)) {
+            if (randomNum < pool[key].rarity) {
+                return key;
+            }
+            randomNum -= pool[key].rarity;
+        }
+        return "star"; // Дефолт на крайний случай
+    }
 
     // --- Подписка на канал ---
     function isSubConfirmed() {
@@ -226,7 +251,6 @@ const ALL_ITEMS = {
         localStorage.setItem(SUB_KEY, Date.now().toString());
         if (tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
         hideSubModal();
-        // Продолжаем именно тот спин, ради которого показали модалку (всегда бесплатный)
         runSpin();
     }
 
@@ -274,15 +298,13 @@ const ALL_ITEMS = {
             let content = '';
             for(let j=0; j<140; j++) {
                 const k = ALL_KEYS[Math.floor(Math.random()*ALL_KEYS.length)];
-                content += `<div class="item"><img src="img/${ALL_ITEMS[k].img}" onerror="this.src='img/star.png'"></div>`;
+                const imgName = ALL_ITEMS[k].img.startsWith('img/') ? ALL_ITEMS[k].img : `img/${ALL_ITEMS[k].img}`;
+                content += `<div class="item"><img src="${imgName}" onerror="this.src='img/star.png'"></div>`;
             }
             container.innerHTML += `<div class="wheel-track"><div class="pointer"></div><div class="wheel-line" id="line-${i}">${content}</div></div>`;
         }
     }
 
-const VIP_ID = 1373624995; // Твой ID
-
-    // Точка входа: нажатие на кнопку. Решает, нужно ли сперва показать модалку подписки.
     async function startSpin() {
         await syncBalance();
         if (isSpinning || !user) return;
@@ -291,7 +313,6 @@ const VIP_ID = 1373624995; // Твой ID
         const isFree = (Date.now() - lastFree) > 86400000;
 
         if (isFree && !isSubConfirmed()) {
-            // Бесплатный спин без подтверждённой подписки — сначала модалка
             showSubModal();
             return;
         }
@@ -299,14 +320,12 @@ const VIP_ID = 1373624995; // Твой ID
         runSpin();
     }
 
-    // Сам спин запускается либо сразу (платный / уже подтверждённая подписка),
-    // либо после нажатия «Я подписался» в модалке.
     async function runSpin() {
         if (isSpinning || !user) return;
 
         const lastFree = user.last_free_spin ? new Date(user.last_free_spin).getTime() : 0;
         const isFree = (Date.now() - lastFree) > 86400000;
-        const spinsToRun = isFree ? 1 : multi; // Сколько барабанов крутим
+        const spinsToRun = isFree ? 1 : multi; 
         const cost = isFree ? 0 : 100 * spinsToRun;
 
         if (!isFree && user.stars < cost) return tg.showAlert("Мало звезд!");
@@ -317,43 +336,19 @@ const VIP_ID = 1373624995; // Твой ID
         document.getElementById('skip-wrap').classList.add('show');
         currentWins = [];
 
-        const isVipUser = String(user.user_id) === String(VIP_ID);
         let currentSpinCount = (user.spin_count || 0) + 1;
 
-        // ЛОГИКА ШАНСОВ
+        // Генерация призов по честным шансам из ALL_ITEMS
         for (let i = 0; i < spinsToRun; i++) {
-            let winKey;
-
-            if (isVipUser) {
-                // Проверяем, выпал ли 20-й спин (только на первом барабане из пачки, чтобы не выдать 5 джекпотов сразу)
-                const isJackpotSpin = (currentSpinCount % 20 === 0) && (i === 0);
-
-                if (isJackpotSpin) {
-                    // 💥 ДЖЕКПОРТ РАЗ В 20 СПИНОВ (~19k - 25k★)
-                    const jackpots = ["helmet.png"]; // helmet = 25,000★
-                    winKey = jackpots[Math.floor(Math.random() * jackpots.length)];
-                } else if (isFree) {
-                    winKey = "star";
-                } else {
-                    // ⚖️ ОБЫЧНЫЙ ОКУП В 1.5 - 2 РАЗА
-                    // При 1 спине (100★): выпадает item за 150-200★ (собираем из ракет/звезд или 2025.jpg)
-                    // Чтобы при X5 (500★) суммарный окуп был около 750-1000★, даем дроп средней стоимости:
-                    const profitPool = ["raketa.png", "raketa.png", "2025.jpg"]; 
-                    // raketa = 50★, 2025.jpg = 500★
-                    winKey = profitPool[Math.floor(Math.random() * profitPool.length)];
-                }
-            } else {
-                // Дроп для остальных
-                winKey = isFree ? "star" : "raketa.png";
-            }
-
+            const winKey = getRandomItemKey(isFree);
             currentWins.push(ALL_ITEMS[winKey]);
 
-            // Ставим картинку под финал
-            document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = `img/${ALL_ITEMS[winKey].img}`;
+            // Установка картинки на финальное 130-е место в треке рулетки
+            const targetImgPath = ALL_ITEMS[winKey].img.startsWith('img/') ? ALL_ITEMS[winKey].img : `img/${ALL_ITEMS[winKey].img}`;
+            document.getElementById(`line-${i}`).querySelectorAll('img')[130].src = targetImgPath;
         }
 
-        // Сохраняем спины в БД
+        // Сохранение в БД
         const upd = isFree 
             ? { last_free_spin: new Date().toISOString(), spin_count: currentSpinCount } 
             : { stars: user.stars - cost, spin_count: currentSpinCount };
@@ -384,7 +379,8 @@ const VIP_ID = 1373624995; // Твой ID
         let total = 0;
         currentWins.forEach((w, i) => {
             total += w.price;
-            container.innerHTML += `<div class="win-item-card bg-white/5 p-2 rounded-xl border border-[#f5b025]/20" style="animation-delay:${i * 0.08}s"><img src="img/${w.img}" class="w-10 h-10 mx-auto"><p class="text-[10px] font-black text-[#f5b025] mt-1">${w.price}★</p></div>`;
+            const itemImgPath = w.img.startsWith('img/') ? w.img : `img/${w.img}`;
+            container.innerHTML += `<div class="win-item-card bg-white/5 p-2 rounded-xl border border-[#f5b025]/20" style="animation-delay:${i * 0.08}s"><img src="${itemImgPath}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'"><p class="text-[10px] font-black text-[#f5b025] mt-1">${w.price}★</p></div>`;
         });
         document.getElementById('total-win-price').innerText = total;
         document.getElementById('win-modal').style.display = 'flex';
@@ -412,7 +408,7 @@ const VIP_ID = 1373624995; // Твой ID
     }
     window.addEventListener('focus', syncBalance);
 
-    // --- Летающие частицы на фоне (как на остальных страницах) ---
+    // --- Летающие частицы на фоне ---
     function initParticles() {
         const canvas = document.getElementById('stars-canvas');
         if (!canvas) return;
