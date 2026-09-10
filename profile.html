@@ -11,7 +11,8 @@
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@900&family=Inter:wght@400;700;900&display=swap');
         :root {
             --bg-dark: #000000;
-            --accent-gold: #f5b025;
+            --accent-blue: #1e9bff;
+            --accent-blue-dark: #0b5cab;
             --panel-bg: rgba(20, 20, 20, 0.75);
         }
         body { background: var(--bg-dark); color: white; font-family: 'Inter', sans-serif; margin: 0; overflow-x: hidden; -webkit-user-select: none; user-select: none; }
@@ -24,10 +25,10 @@
         }
 
         .orbitron { font-family: 'Orbitron', sans-serif; }
-        .glass-card { background: var(--panel-bg); border: 1px solid rgba(245, 176, 37, 0.22); backdrop-filter: blur(20px); border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
+        .glass-card { background: var(--panel-bg); border: 1px solid rgba(30, 155, 255, 0.22); backdrop-filter: blur(20px); border-radius: 32px; box-shadow: 0 15px 35px rgba(0,0,0,0.6); }
 
-        .btn-gold { background: var(--accent-gold); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 #c68c16; transition: 0.1s; outline: none; border: none; }
-        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 #c68c16; }
+        .btn-gold { background: var(--accent-blue); color: #000; font-weight: 900; text-transform: uppercase; border-radius: 20px; box-shadow: 0 6px 0 var(--accent-blue-dark); transition: 0.1s; outline: none; border: none; }
+        .btn-gold:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--accent-blue-dark); }
         .btn-gold:disabled { opacity: 0.4; box-shadow: none; }
 
         /* --- Меню-строки (Инвентарь / Промокоды / Амбассадор) --- */
@@ -37,14 +38,14 @@
             transition: background 0.2s ease;
             border-radius: 20px;
         }
-        .menu-row:active { background: rgba(245, 176, 37, 0.06); }
+        .menu-row:active { background: rgba(30, 155, 255, 0.06); }
         .menu-row.disabled { cursor: default; opacity: 0.55; }
         .menu-row.disabled:active { background: transparent; }
         .menu-icon-wrap {
             width: 42px; height: 42px; border-radius: 14px;
             display: flex; align-items: center; justify-content: center;
-            background: rgba(245, 176, 37, 0.08);
-            border: 1px solid rgba(245, 176, 37, 0.18);
+            background: rgba(30, 155, 255, 0.08);
+            border: 1px solid rgba(30, 155, 255, 0.18);
             font-size: 19px; flex-shrink: 0;
         }
         .menu-label { flex: 1; font-size: 13px; font-weight: 800; letter-spacing: 0.01em; }
@@ -61,35 +62,74 @@
         .menu-arrow { color: rgba(255,255,255,0.25); flex-shrink: 0; }
         .menu-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 0 10px; }
 
+        /* Скрытые пункты меню (код остаётся рабочим, но не показывается в интерфейсе) */
+        .menu-hidden { display: none !important; }
+
         /* --- Раскрывающиеся секции под меню --- */
         .collapsible { max-height: 0; overflow: hidden; transition: max-height 0.35s ease; }
         .collapsible.open { max-height: 2000px; }
         .collapsible-inner { padding-top: 18px; }
 
         .inventory-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-        .inventory-slot { aspect-ratio: 1/1; background: rgba(245, 176, 37, 0.04); border: 1px dashed rgba(245, 176, 37, 0.18); border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; overflow: hidden; }
-        .active-item { border: 1.5px solid var(--accent-gold); background: rgba(245, 176, 37, 0.08); cursor: pointer; }
-        .active-item img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(245, 176, 37, 0.35)); }
+        .inventory-slot { aspect-ratio: 1/1; background: rgba(30, 155, 255, 0.04); border: 1px dashed rgba(30, 155, 255, 0.18); border-radius: 24px; display: flex; align-items: center; justify-content: center; transition: 0.3s; overflow: hidden; }
+        .active-item { border: 1.5px solid var(--accent-blue); background: rgba(30, 155, 255, 0.08); cursor: pointer; }
+        .active-item img { width: 70%; height: 70%; object-fit: contain; filter: drop-shadow(0 5px 15px rgba(30, 155, 255, 0.35)); }
 
         #item-modal, #settings-modal { position: fixed; inset: 0; z-index: 10000; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.92); backdrop-filter: blur(15px); }
 
-        /* ===== DOCK =====
-           Плавающая капсула поверх контента, как на главном экране.
-           Не занимает место в раскладке — по бокам нет "чёрных полей",
-           при скролле вниз плавно уезжает вниз и прячется полностью,
-           при скролле вверх — плавно возвращается. Кнопки: Главная и Профиль. */
-        .dock-bar {
+        /* ===== TOP-10 ЛИДЕРБОРД ===== */
+        .lb-card { padding-bottom: 6px; }
+        .lb-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 4px; }
+        .lb-title { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
+        .lb-subtitle { font-size: 9px; color: #7fb8ff; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
+        .lb-list { display: flex; flex-direction: column; padding: 4px 10px 10px; gap: 4px; }
+        .lb-row {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 10px; border-radius: 14px;
+            background: rgba(255,255,255,0.02);
+            transition: background 0.2s ease;
+        }
+        .lb-row.lb-me {
+            background: rgba(30, 155, 255, 0.14);
+            border: 1px solid rgba(30, 155, 255, 0.35);
+        }
+        .lb-rank {
+            width: 22px; text-align: center; font-size: 12px; font-weight: 900;
+            color: #9fb0c8; flex-shrink: 0;
+        }
+        .lb-row:nth-child(1) .lb-rank { font-size: 15px; }
+        .lb-row:nth-child(2) .lb-rank { font-size: 15px; }
+        .lb-row:nth-child(3) .lb-rank { font-size: 15px; }
+        .lb-name {
+            flex: 1; min-width: 0; font-size: 11px; font-weight: 800;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .lb-total {
+            font-size: 11px; font-weight: 900; color: var(--accent-blue); flex-shrink: 0;
+            display: flex; align-items: center; gap: 3px;
+        }
+        .lb-total img { width: 11px; height: 11px; object-fit: contain; }
+        .lb-me-box { padding: 0 10px 12px; }
+        .lb-me-divider { height: 1px; background: rgba(30,155,255,0.15); margin: 2px 10px 8px; }
+        .lb-empty, .lb-loading {
+            padding: 18px 10px; text-align: center; font-size: 10px; font-weight: 700;
+            color: #667; text-transform: uppercase; letter-spacing: 0.08em;
+        }
+
+        /* ===== DOCK (такой же, как на главной) =====
+           Плавающая капсула, прячется при скролле вниз, появляется при скролле вверх. */
+        .dock {
             position: fixed;
             left: 50%;
             bottom: max(14px, env(safe-area-inset-bottom));
             transform: translateX(-50%);
             width: calc(100% - 56px);
-            max-width: 300px;
+            max-width: 360px;
             background: rgba(15,15,15,0.85);
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
             border-radius: 999px;
-            border: 1px solid rgba(245, 176, 37, 0.18);
+            border: 1px solid rgba(255,255,255,0.08);
             display: flex;
             justify-content: space-around;
             align-items: center;
@@ -99,36 +139,70 @@
             z-index: 1000;
             transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
         }
-        .dock-bar.dock-hidden {
+        .dock.dock-hidden {
             transform: translateX(-50%) translateY(160%);
             opacity: 0;
             pointer-events: none;
         }
         .dock-btn {
-            flex: 1;
+            position: relative;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 3px;
-            color: #8c8375;
+            gap: 2px;
+            color: #555;
+            cursor: pointer;
+            padding: 8px 6px;
+            border-radius: 999px;
+            transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease, background 0.3s ease, box-shadow 0.3s ease;
+            flex: 1;
             text-decoration: none;
-            transition: all 0.2s ease;
         }
-        .dock-btn span { font-size: 9px; font-weight: 800; letter-spacing: 0.03em; text-transform: uppercase; }
-        .dock-btn svg { width: 22px; height: 22px; transition: transform 0.2s ease; fill: currentColor; }
-        .dock-btn:active svg { transform: scale(0.88); }
-        .dock-btn.active { color: var(--accent-gold); filter: drop-shadow(0 0 6px rgba(245, 176, 37, 0.4)); }
+        .dock-btn.pressed { transform: scale(0.86); }
+        .dock-btn .d-icon { width: 19px; height: 19px; transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); display: block; fill: none; stroke: currentColor; }
+        .dock-btn .d-label {
+            font-size: 6.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+        }
+        .dock-btn.active {
+            color: #fff;
+            background: linear-gradient(135deg, #2fa4ff 0%, #0b5cab 100%);
+            box-shadow: 0 6px 16px rgba(30, 155, 255, 0.45), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .dock-btn.active .d-icon { transform: scale(1.08); }
+        .dock-btn.active .d-label {
+            max-height: 10px;
+            opacity: 1;
+            margin-top: 1px;
+        }
+        .ripple {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.35);
+            transform: scale(0);
+            pointer-events: none;
+            animation: rippleAnim 0.6s ease-out forwards;
+            z-index: 5;
+        }
+        @keyframes rippleAnim { to { transform: scale(1); opacity: 0; } }
 
         .toggle-switch { position: relative; width: 46px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; flex-shrink: 0; }
-        .toggle-switch.on { background: var(--accent-gold); }
+        .toggle-switch.on { background: var(--accent-blue); }
         .toggle-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: 0.2s; }
         .toggle-switch.on::after { transform: translateX(20px); }
 
         .lang-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
         .lang-radio { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.25); flex-shrink: 0; position: relative; }
-        .lang-radio.selected { border-color: var(--accent-gold); }
-        .lang-radio.selected::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-gold); }
+        .lang-radio.selected { border-color: var(--accent-blue); }
+        .lang-radio.selected::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent-blue); }
 
         /* --- Модалка пополнения (TON / Stars), как на главном экране --- */
         .vault-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 20000; display: none; align-items: flex-end; justify-content: center; }
@@ -165,7 +239,7 @@
             outline: none;
         }
         .stars-pay-btn {
-            background: var(--accent-gold);
+            background: var(--accent-blue);
             color: #000;
             border: none;
             border-radius: 10px;
@@ -185,12 +259,27 @@
             flex-direction: column; align-items: center; justify-content: center;
             background: var(--bg-dark); text-align: center; padding: 40px 24px;
         }
-        #tg-error-screen h2 { color: #f5b025; font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 12px; }
+        #tg-error-screen h2 { color: var(--accent-blue); font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 12px; }
         #tg-error-screen p { color: #b8ac8e; font-size: 13px; line-height: 1.6; max-width: 320px; }
+
+        /* Загрузчик поверх экрана — чтобы профиль ощущался быстрым */
+        #loader {
+            position: fixed; inset: 0; background: #000; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            transition: opacity 0.35s ease;
+        }
+        #loader.hidden { opacity: 0; pointer-events: none; }
+        .loader-ring { width: 28px; height: 28px; border: 2px solid rgba(30,155,255,0.15); border-top: 2px solid var(--accent-blue); border-radius: 50%; animation: spin 0.7s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
     <canvas id="stars-canvas"></canvas>
+
+    <div id="loader">
+        <div class="loader-ring"></div>
+        <div style="margin-top: 10px; font-size: 10px; font-weight: 800; color: #7fb8ff; letter-spacing: 2px;">ПРОФИЛЬ</div>
+    </div>
 
     <div id="tg-error-screen">
         <h2>Не удалось загрузить профиль</h2>
@@ -200,8 +289,8 @@
     <div class="main-wrapper">
         <header class="flex flex-col items-center mt-2 mb-6 relative">
             <div class="relative">
-                <img id="u-avatar" src="" class="w-24 h-24 rounded-full border-4 border-yellow-500/40 bg-gray-900 object-cover shadow-2xl">
-                <div class="absolute bottom-1 right-1 w-6 h-6 bg-yellow-500 border-4 border-black rounded-full shadow-[0_0_10px_#f5b025]"></div>
+                <img id="u-avatar" src="" class="w-24 h-24 rounded-full border-4 border-blue-500/40 bg-gray-900 object-cover shadow-2xl">
+                <div class="absolute bottom-1 right-1 w-6 h-6 bg-blue-500 border-4 border-black rounded-full shadow-[0_0_10px_#1e9bff]"></div>
             </div>
             <h2 id="u-name" class="orbitron text-xl font-black italic mt-4 tracking-tighter text-white">@ЗАГРУЗКА...</h2>
             <div id="u-id-label" class="mt-2 text-[9px] text-white/30 font-mono tracking-widest uppercase">ID: ЗАГРУЗКА...</div>
@@ -227,9 +316,21 @@
                 </div>
                 <div class="bg-black/40 border border-white/10 px-3 py-2 rounded-2xl flex items-center gap-2">
                     <img src="img/ticket.png" class="w-4 h-4">
-                    <span id="u-tickets" class="text-xs font-black text-yellow-600">0</span>
+                    <span id="u-tickets" class="text-xs font-black text-blue-500">0</span>
                 </div>
             </div>
+        </section>
+
+        <!-- ===== ТОП-10 ИГРОКОВ (по стоимости подарков в звёздах) ===== -->
+        <section class="glass-card lb-card mb-6">
+            <div class="lb-header">
+                <div class="lb-title">🏆 Топ игроков</div>
+                <div class="lb-subtitle">По стоимости подарков</div>
+            </div>
+            <div class="lb-list" id="lb-list">
+                <div class="lb-loading">Загрузка рейтинга...</div>
+            </div>
+            <div class="lb-me-box" id="lb-me-box"></div>
         </section>
 
         <section class="glass-card p-2 mb-6">
@@ -243,26 +344,26 @@
             <div class="collapsible" id="inventory-section">
                 <div class="collapsible-inner px-2 pb-3">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-[9px] font-black text-yellow-400 bg-yellow-500/10 px-3 py-1 rounded-full" id="inv-count">0 ПРЕДМЕТОВ</span>
+                        <span class="text-[9px] font-black text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full" id="inv-count">0 ПРЕДМЕТОВ</span>
                     </div>
                     <div id="grid" class="inventory-grid"></div>
                 </div>
             </div>
 
-            <div class="menu-divider"></div>
+            <div class="menu-divider menu-hidden"></div>
 
-            <!-- Промокоды -->
-            <div class="menu-row" onclick="toggleSection('promo-section', this)">
+            <!-- Промокоды: скрыты из интерфейса по запросу, логика сохранена -->
+            <div class="menu-row menu-hidden" onclick="toggleSection('promo-section', this)">
                 <div class="menu-icon-wrap">🎟️</div>
                 <div class="menu-label">Промокоды</div>
-                <div class="menu-badge" id="ref-badge" style="background:rgba(245,176,37,0.15); color:var(--accent-gold);">0</div>
+                <div class="menu-badge" id="ref-badge" style="background:rgba(30,155,255,0.15); color:var(--accent-blue);">0</div>
                 <svg class="menu-arrow chevron" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
             </div>
-            <div class="collapsible" id="promo-section">
+            <div class="collapsible menu-hidden" id="promo-section">
                 <div class="collapsible-inner px-2 pb-3">
                     <p class="text-[9px] text-gray-400 uppercase tracking-widest mb-3">Активировать промокод</p>
                     <div class="flex gap-2 mb-5">
-                        <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-yellow-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
+                        <input type="text" id="promo-input" class="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 outline-none uppercase font-bold text-white text-xs focus:border-blue-500/50" placeholder="ВВЕДИТЕ ПРОМОКОД">
                         <button onclick="handlePromo()" class="btn-gold px-6 text-[10px]">ОК</button>
                     </div>
 
@@ -275,15 +376,13 @@
                     </div>
                 </div>
             </div>
-
-            <div class="menu-divider"></div>
         </section>
 
         <div id="item-modal">
-            <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-yellow-500/30">
-                <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(245,176,37,0.4)]">
+            <div class="glass-card p-8 w-[85%] max-w-[340px] text-center border-blue-500/30">
+                <img id="modal-img" src="" class="w-32 h-32 mx-auto mb-6 object-contain drop-shadow-[0_0_15px_rgba(30,155,255,0.4)]">
                 <h2 id="modal-name" class="orbitron text-xl font-black italic mb-1 uppercase text-white"></h2>
-                <p class="text-yellow-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Лимитированный дроп</p>
+                <p class="text-blue-400 text-[9px] font-bold uppercase mb-8 tracking-[0.3em]">Лимитированный дроп</p>
                 <div class="flex flex-col gap-3">
                     <button id="withdraw-btn" onclick="withdrawToBot()" class="w-full btn-gold py-4 text-xs">ВЫВЕСТИ</button>
                     <button id="sell-btn" onclick="sellItem()" class="w-full bg-white/5 border border-white/10 py-4 rounded-2xl font-black uppercase text-[10px] hover:bg-white/10">ПРОДАТЬ</button>
@@ -318,19 +417,25 @@
             </div>
         </div>
 
-        <!-- Плавающий док-капсула: только Главная и Профиль (без Кошелька) -->
-        <nav class="dock-bar" id="dockBar">
-            <a href="index.html" class="dock-btn">
-                <svg viewBox="0 0 24 24">
-                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+        <!-- Плавающий док, как на главной: Главная / Рефералы / Профиль -->
+        <nav class="dock" id="dockBar">
+            <a href="index.html" class="dock-btn press-fx">
+                <svg class="d-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75"/>
                 </svg>
-                <span>Главная</span>
+                <span class="d-label">Главная</span>
             </a>
-            <div class="dock-btn active">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+            <a href="Promocode.html" class="dock-btn press-fx">
+                <svg class="d-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0112.75 0zM15.75 8.25a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM19.5 8.25a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0z"/>
                 </svg>
-                <span>Профиль</span>
+                <span class="d-label">Рефералы</span>
+            </a>
+            <div class="dock-btn active press-fx">
+                <svg class="d-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span class="d-label">Профиль</span>
             </div>
         </nav>
     </div>
@@ -343,9 +448,11 @@ const tg = window.Telegram.WebApp;
 
 // Вызываем ready() СРАЗУ, до чтения любых данных
 tg.ready();
+tg.expand();
 
 // --- Надёжное ожидание данных юзера от Telegram (защита от гонки загрузки) ---
-function waitForTelegramUser(maxAttempts = 30, interval = 100) {
+// Интервал уменьшен, чтобы профиль подхватывал данные максимально быстро
+function waitForTelegramUser(maxAttempts = 40, interval = 50) {
     return new Promise((resolve) => {
         let attempts = 0;
         const check = () => {
@@ -380,12 +487,18 @@ let user = null;
 let selectedIdx = -1;
 let isProcessing = false;
 
+function hideLoader() {
+    const l = document.getElementById('loader');
+    if (l) l.classList.add('hidden');
+}
+
 async function loadUser() {
     try {
         const tgUser = await waitForTelegramUser();
 
         if (!tgUser) {
             // Так и не получили данные от Telegram — показываем понятный экран
+            hideLoader();
             document.getElementById('tg-error-screen').style.display = 'flex';
             return;
         }
@@ -398,13 +511,17 @@ async function loadUser() {
 
         const photoUrl = tgUser.photo_url;
         if (document.getElementById('u-avatar')) {
-            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=513e11&color=fff`;
+            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=0b5cab&color=fff`;
         }
+
+        // Топ-10 запускаем параллельно, не дожидаясь его — профиль не должен из-за него тормозить
+        loadLeaderboard();
 
         const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
 
         if (error) {
             console.error("Ошибка при загрузке из БД:", error);
+            hideLoader();
             return;
         }
 
@@ -435,6 +552,7 @@ async function loadUser() {
             if (insErr) {
                 console.error("Ошибка создания пользователя:", insErr);
                 document.getElementById('u-name').innerText = "ОШИБКА СОЗДАНИЯ ПРОФИЛЯ";
+                hideLoader();
                 return;
             }
 
@@ -449,9 +567,11 @@ async function loadUser() {
         document.getElementById('ref-badge').innerText = user.referral_count || 0;
         document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
         renderGrid();
+        hideLoader();
 
     } catch (e) {
         console.error("Критическая ошибка:", e);
+        hideLoader();
     }
 }
 
@@ -472,6 +592,83 @@ function renderGrid() {
         slot.innerHTML = `<img src="img/${imgName}" onerror="this.src='img/star.png'">`;
         grid.appendChild(slot);
     });
+}
+
+// ===== ТОП-10 ИГРОКОВ =====
+// Стоимость подарков каждого игрока считается через ту же таблицу ITEMS (items.js),
+// что используется в инвентаре и при продаже — суммируем цену всех предметов в инвентаре.
+function giftFileName(it) {
+    const imgPath = typeof it === 'string' ? it : (it?.img || 'star.png');
+    return imgPath.split('/').pop();
+}
+
+function giftValue(fileName) {
+    const info = (typeof ITEMS !== 'undefined' && ITEMS[fileName]) ? ITEMS[fileName] : { price: 100 };
+    return Number(info.price || 0);
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = String(str ?? '');
+    return div.innerHTML;
+}
+
+function lbRowHtml(rank, name, total, isMe) {
+    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    return `
+    <div class="lb-row ${isMe ? 'lb-me' : ''}">
+        <div class="lb-rank">${medal}</div>
+        <div class="lb-name">${escapeHtml(name)}</div>
+        <div class="lb-total"><img src="img/star.png" onerror="this.style.display='none'">${total}</div>
+    </div>`;
+}
+
+async function loadLeaderboard() {
+    const listEl = document.getElementById('lb-list');
+    const meBox = document.getElementById('lb-me-box');
+    if (!listEl) return;
+
+    try {
+        // Тянем из базы только нужные поля, чтобы не грузить лишнее и не тормозить профиль
+        const { data: allUsers, error } = await _supabase
+            .from('users')
+            .select('user_id, username, first_name, inventory')
+            .limit(500);
+
+        if (error) throw error;
+
+        const ranked = (allUsers || [])
+            .map(u => {
+                const inv = Array.isArray(u.inventory) ? u.inventory : [];
+                const total = inv.reduce((sum, it) => sum + giftValue(giftFileName(it)), 0);
+                return {
+                    id: String(u.user_id),
+                    name: u.username ? `@${u.username}` : (u.first_name || 'Игрок'),
+                    total
+                };
+            })
+            .filter(u => u.total > 0)
+            .sort((a, b) => b.total - a.total);
+
+        if (ranked.length === 0) {
+            listEl.innerHTML = '<div class="lb-empty">Пока никто не заработал звёзды</div>';
+            meBox.innerHTML = '';
+            return;
+        }
+
+        const top10 = ranked.slice(0, 10);
+        listEl.innerHTML = top10.map((u, i) => lbRowHtml(i + 1, u.name, u.total, u.id === userId)).join('');
+
+        const myIndex = ranked.findIndex(u => u.id === userId);
+        if (myIndex === -1 || myIndex < 10) {
+            meBox.innerHTML = '';
+        } else {
+            meBox.innerHTML = `<div class="lb-me-divider"></div>` + lbRowHtml(myIndex + 1, ranked[myIndex].name, ranked[myIndex].total, true);
+        }
+    } catch (e) {
+        console.error('Ошибка загрузки топа игроков:', e);
+        listEl.innerHTML = '<div class="lb-empty">Не удалось загрузить рейтинг</div>';
+    }
 }
 
 async function handlePromo() {
@@ -854,6 +1051,38 @@ function toggleSection(id, rowEl) {
     }, { passive: true });
 })();
 
+// --- Тактильный отклик + рябь для дока (как на главной) ---
+function spawnRipple(el, x, y) {
+    const rect = el.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    ripple.className = 'ripple';
+    const size = Math.max(rect.width, rect.height) * 1.4;
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (x - rect.left - size / 2) + 'px';
+    ripple.style.top = (y - rect.top - size / 2) + 'px';
+    if (getComputedStyle(el).position === 'static') el.style.position = 'relative';
+    el.style.overflow = el.style.overflow || 'hidden';
+    el.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+function attachPressFx() {
+    document.querySelectorAll('.press-fx').forEach(el => {
+        if (el.dataset.fxBound) return;
+        el.dataset.fxBound = '1';
+        const press = (clientX, clientY) => {
+            el.classList.add('pressed');
+            spawnRipple(el, clientX, clientY);
+            try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {}
+        };
+        const release = () => setTimeout(() => el.classList.remove('pressed'), 120);
+        el.addEventListener('pointerdown', (e) => press(e.clientX, e.clientY));
+        el.addEventListener('pointerup', release);
+        el.addEventListener('pointerleave', release);
+        el.addEventListener('pointercancel', release);
+    });
+}
+
 // --- Летающие частицы на фоне ---
 function initParticles() {
     const canvas = document.getElementById('stars-canvas');
@@ -888,7 +1117,7 @@ function initParticles() {
 
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
+            ctx.fillStyle = `rgba(30, 155, 255, ${p.alpha})`;
             ctx.fill();
 
             p.y -= p.vy;
@@ -912,6 +1141,7 @@ window.onload = () => {
     }
     initParticles();
     renderTonPacks();
+    attachPressFx();
     loadUser();
 };
 </script>
