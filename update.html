@@ -11,15 +11,15 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
     
     :root {
-        --accent: #4ade80;
-        --accent-hover: #16a34a;
-        --bg: #05100a;
-        --card-bg: rgba(74, 222, 128, 0.03);
-        --border-gold: rgba(74, 222, 128, 0.2);
+        --accent: #38bdf8;
+        --accent-hover: #0284c7;
+        --bg: #050b14;
+        --card-bg: rgba(56, 189, 248, 0.03);
+        --border-gold: rgba(56, 189, 248, 0.2);
     }
 
     body { 
-        background: radial-gradient(120% 90% at 50% 0%, #0f1f14 0%, #05100a 60%); 
+        background: radial-gradient(120% 90% at 50% 0%, #0c1a2c 0%, #050b14 60%); 
         color: white; 
         font-family: 'Inter', sans-serif; 
         height: 100vh; 
@@ -31,12 +31,12 @@
     .wheel-container { 
         width: 190px; height: 190px; 
         border-radius: 50%; 
-        background: #081208; 
+        background: #080f18; 
         border: 2px solid var(--border-gold); 
         margin: 10px auto; 
         position: relative; 
         display: flex; align-items: center; justify-content: center;
-        box-shadow: 0 0 30px rgba(74, 222, 128, 0.15);
+        box-shadow: 0 0 30px rgba(56, 189, 248, 0.15);
     }
     
     #wheel-progress { 
@@ -52,7 +52,7 @@
 
     .scroll-area { 
         height: 220px; overflow-y: auto; 
-        background: #0d1f14; 
+        background: #0c1828; 
         border-radius: 16px; padding: 10px; 
         border: 1px solid var(--border-gold); 
     }
@@ -63,28 +63,28 @@
         border-radius: 12px; background: rgba(255,255,255,0.02); 
         border: 1px solid transparent; transition: 0.2s;
     }
-    .item-card.active { border-color: var(--accent); background: rgba(74, 222, 128, 0.1); }
+    .item-card.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.1); }
 
     .slot { 
         width: 100%; height: 75px; 
-        background: #0d1f14; 
+        background: #0c1828; 
         border: 1px solid var(--border-gold); 
         border-radius: 18px; 
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         transition: 0.3s;
     }
-    .slot.filled { border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.05); }
+    .slot.filled { border-color: rgba(56, 189, 248, 0.5); background: rgba(56, 189, 248, 0.05); }
 
     .btn-main { 
-        background: linear-gradient(180deg, #7ef3a8 0%, var(--accent) 45%, #16a34a 100%); 
-        color: #0a1a0e; 
+        background: linear-gradient(180deg, #7dd3fc 0%, var(--accent) 45%, #0284c7 100%); 
+        color: #080f18; 
         font-weight: 900; width: 100%; 
         padding: 18px; border-radius: 16px; 
-        box-shadow: 0 4px 20px rgba(74, 222, 128, 0.25); 
+        box-shadow: 0 4px 20px rgba(56, 189, 248, 0.25); 
         transition: 0.3s; 
         border: none;
     }
-    .btn-main:disabled { background: #1f2a22; color: #555; box-shadow: none; opacity: 0.5; }
+    .btn-main:disabled { background: #152238; color: #555; box-shadow: none; opacity: 0.5; }
     .btn-main:active { transform: scale(0.98); }
 
     #res-msg { position: absolute; font-size: 26px; font-weight: 900; z-index: 40; display: none; text-align: center; width: 100%; letter-spacing: 2px; }
@@ -96,7 +96,7 @@
 <body class="p-5">
 
     <div class="flex justify-between items-center mb-4">
-        <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#0d1f14] border border-[#1a3a26] active:scale-90 transition-transform text-[#4ade80]">
+        <a href="index.html" class="flex items-center justify-center w-8 h-8 rounded-full bg-[#0c1828] border border-[#172e4c] active:scale-90 transition-transform text-[#38bdf8]">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="19" y1="12" x2="5" y2="12"></line>
                 <polyline points="12 19 5 12 12 5"></polyline>
@@ -109,31 +109,31 @@
         <div id="pointer-wrapper"><div id="pointer"></div></div>
         <div id="res-msg"></div>
         <div id="center-ui" class="relative z-10 text-center">
-            <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(74,222,128,0.4)]">
-            <div id="view-empty" class="text-5xl font-black opacity-10 text-[#4ade80]">?</div>
+            <img id="view-target" src="" class="w-20 h-20 object-contain hidden mx-auto drop-shadow-[0_0_15px_rgba(56,189,248,0.4)]">
+            <div id="view-empty" class="text-5xl font-black opacity-10 text-[#38bdf8]">?</div>
         </div>
     </div>
 
-    <div id="info-chance" class="text-center text-[#4ade80] font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите предмет</div>
+    <div id="info-chance" class="text-center text-[#38bdf8] font-bold text-[11px] mb-4 uppercase tracking-widest">Выберите предмет</div>
 
     <div class="grid grid-cols-2 gap-4 mb-5">
         <div class="slot" id="slot-1">
             <img id="img-1" src="" class="w-10 h-10 object-contain hidden">
-            <div class="text-[8px] font-bold opacity-40 mt-1 uppercase tracking-tighter text-[#7a9c86]">Твой предмет</div>
+            <div class="text-[8px] font-bold opacity-40 mt-1 uppercase tracking-tighter text-[#7aa3c2]">Твой предмет</div>
         </div>
         <div class="slot" id="slot-2">
             <img id="img-2" src="" class="w-10 h-10 object-contain hidden">
-            <div class="text-[8px] font-bold opacity-40 mt-1 uppercase tracking-tighter text-[#7a9c86]">Цель апгрейда</div>
+            <div class="text-[8px] font-bold opacity-40 mt-1 uppercase tracking-tighter text-[#7aa3c2]">Цель апгрейда</div>
         </div>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
         <div>
-            <h3 class="text-[10px] font-black uppercase mb-3 opacity-40 text-center tracking-widest text-[#7a9c86]">Твой рюкзак</h3>
+            <h3 class="text-[10px] font-black uppercase mb-3 opacity-40 text-center tracking-widest text-[#7aa3c2]">Твой рюкзак</h3>
             <div id="mine-list" class="scroll-area"></div>
         </div>
         <div>
-            <h3 class="text-[10px] font-black uppercase mb-3 text-[#4ade80] text-center tracking-widest">Доступно</h3>
+            <h3 class="text-[10px] font-black uppercase mb-3 text-[#38bdf8] text-center tracking-widest">Доступно</h3>
             <div id="target-list" class="scroll-area"></div>
         </div>
     </div>
@@ -255,7 +255,7 @@
                     <img src="${src}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
                     <div class="overflow-hidden">
                         <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
-                        <div class="text-[7px] opacity-50 text-[#7a9c86]">${info.price} ⭐</div>
+                        <div class="text-[7px] opacity-50 text-[#7aa3c2]">${info.price} ⭐</div>
                     </div>
                 </div>`;
         }).join('');
@@ -268,12 +268,11 @@
                     <img src="img/${file}" class="w-8 h-8 object-contain" onerror="this.src='img/star.png'">
                     <div class="overflow-hidden">
                         <div class="text-[9px] font-black truncate uppercase text-white">${info.name}</div>
-                        <div class="text-[7px] text-[#4ade80] font-bold">${info.price} ⭐</div>
+                        <div class="text-[7px] text-[#38bdf8] font-bold">${info.price} ⭐</div>
                     </div>
                 </div>`).join('');
     }
 
-    // ВОТ ФУНКЦИЯ КОТОРАЯ ПОТЕРЯЛАСЬ И ЛОМАЛА КОД
     function updateUI() {
         const btn = document.getElementById('upg-btn');
         const info = document.getElementById('info-chance');
@@ -285,11 +284,11 @@
             currentChance = chance;
 
             info.innerText = `ШАНС НА УСПЕХ: ${chance.toFixed(1)}%`;
-            wheel.style.background = `conic-gradient(#4ade80 ${chance * 3.6}deg, transparent 0deg)`;
+            wheel.style.background = `conic-gradient(#38bdf8 ${chance * 3.6}deg, transparent 0deg)`;
             btn.disabled = false;
         } else {
             btn.disabled = true;
-            wheel.style.background = `conic-gradient(#4ade80 0deg, transparent 0deg)`;
+            wheel.style.background = `conic-gradient(#38bdf8 0deg, transparent 0deg)`;
             info.innerText = s1 ? "ВЫБЕРИ ЦЕЛЬ УЛУЧШЕНИЯ" : "ВЫБЕРИ СВОЙ ПРЕДМЕТ";
         }
     }
@@ -320,7 +319,7 @@
         if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
 
-async function startUpgrade() {
+    async function startUpgrade() {
         if(!s1 || !s2) return;
 
         if (s2.price > s1.price * 7.5) {
@@ -329,7 +328,7 @@ async function startUpgrade() {
             info.style.color = "#ef4444";
             
             setTimeout(() => {
-                info.style.color = "#4ade80";
+                info.style.color = "#38bdf8";
                 updateUI(); 
             }, 2000);
             return;
@@ -342,23 +341,19 @@ async function startUpgrade() {
 
         const winChance = currentChance;
 
-        // --- ЛОГИКА ШАНСОВ 60/40 ---
-        const VIP_ID = 1373624995; // Твой ID
+        const VIP_ID = 1373624995;
         const isVipUser = String(userId) === String(VIP_ID);
 
         let isWin;
         if (isVipUser) {
-            // Для тебя: 60% победа, 40% поражение
             isWin = Math.random() < 0.60; 
         } else {
-            // Для всех остальных: честный шанс от цены предметов
             isWin = (Math.random() * 100) <= winChance;
         }
 
         const winDeg = winChance * 3.6;
         const spins = 360 * 5;
         
-        // Визуальная остановка стрелки (в зеленую зону при wins, в красную при lose)
         let finalDeg = isWin 
             ? (spins + Math.random() * (winDeg - 2)) 
             : (spins + winDeg + Math.random() * (358 - winDeg)); 
@@ -374,7 +369,7 @@ async function startUpgrade() {
             const targetFile = s2.img.split('/').pop();
 
             if (isWin) {
-                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#4ade80";
+                resMsg.innerText = "УСПЕХ"; resMsg.style.color = "#38bdf8";
                 if(s1.idx >= 0 && s1.idx < newInv.length) {
                     newInv[s1.idx] = targetFile;
                 }
