@@ -115,17 +115,18 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        #case-modal, #rr-modal {
-            opacity: 0;
-            transform: scale(0.97);
-            pointer-events: none;
-            transition: opacity 0.28s ease, transform 0.28s ease;
-        }
-        #case-modal.modal-open, #rr-modal.modal-open {
-            opacity: 1;
-            transform: scale(1);
-            pointer-events: auto;
-        }
+#case-modal, #rr-modal {
+    visibility: hidden;
+    transform: scale(0.97);
+    pointer-events: none;
+    transition: transform 0.28s ease, visibility 0s linear 0.28s;
+}
+#case-modal.modal-open, #rr-modal.modal-open {
+    visibility: visible;
+    transform: scale(1);
+    pointer-events: auto;
+    transition: transform 0.28s ease;
+}
 
         .topcard {
     display: flex;
