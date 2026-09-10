@@ -2,11 +2,11 @@ import os
 import random
 import requests
 from flask import Flask, request, jsonify
-from flask_cors import CORS  # Нужен для надежной работы CORS при ошибках 500/400
+from flask_cors import CORS 
 from supabase import create_client
  
 app = Flask(__name__)
-# Включаем CORS глобально, чтобы браузер не ругался при ошибках
+# Включаем CORS глобально
 CORS(app, resources={r"/api/*": {"origins": "*"}, r"/webhook": {"origins": "*"}, r"/api/crypto-webhook": {"origins": "*"}})
  
 # Инициализация
@@ -168,46 +168,41 @@ def craft_gift():
 def process_withdrawal():
     data = request.get_json()
     uid = str(data.get('user_id'))
-    item_name = data.get('item_name') # Это точное имя гифта из инвентаря
-    
-    # 1. Получаем текущие данные пользователя из Supabase
+    item_name = data.get('item_name')
+     
     user_res = supabase.table("users").select("stars, inventory").eq("user_id", uid).single().execute()
     user = user_res.data
-    
+     
     if not user:
         return jsonify({"success": False, "error": "Пользователь не найден"}), 404
-        
+         
     current_stars = float(user.get('stars', 0))
     inventory = user.get('inventory', [])
-    
-    # 2. Валидация
+     
     if current_stars < 75:
         return jsonify({"success": False, "error": "Недостаточно звезд"}), 400
-    
+     
     if item_name not in inventory:
         return jsonify({"success": False, "error": "Предмет не найден в инвентаре"}), 400
 
-    # 3. Транзакция: обновляем пользователя и создаем заказ
     try:
-        # Списываем звезды и удаляем предмет из массива
         new_inventory = inventory.copy()
         new_inventory.remove(item_name)
-        
+         
         supabase.table("users").update({
             "stars": current_stars - 75,
             "inventory": new_inventory
         }).eq("user_id", uid).execute()
-        
-        # Создаем запись в orders (согласно твоей структуре таблицы)
+         
         supabase.table("orders").insert({
             "user_id": uid,
             "item_name": item_name,
-            "item_img": f"{item_name}.png", # Убедись, что файлы называются так
+            "item_img": f"{item_name}.png",
             "status": "pending"
         }).execute()
-        
+         
         return jsonify({"success": True}), 200
-        
+         
     except Exception as e:
         print(f"ERROR: {str(e)}")
         return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
@@ -216,7 +211,7 @@ def process_withdrawal():
 @app.route('/api/create_stars_pay', methods=['POST'])
 def create_stars_pay():
     import time
-    
+     
     data = request.get_json() or {}
     uid = str(data.get('user_id', '0'))
     gift_name = data.get('gift_name', 'unknown')
@@ -225,21 +220,21 @@ def create_stars_pay():
     except:
         amount = 0
 
-    if amount < 1:
-        return jsonify({"error": "Invalid amount"}), 400
+    # Изменили порог минимума на 5 звезд
+    if amount < 5:
+        return jsonify({"error": "Минимальная сумма пополнения — 5 звезд"}), 400
 
-    # запоминаем, какой именно предмет юзер сейчас пытается вывести
     supabase.table('users').update({'pending_item': gift_name}).eq('user_id', uid).execute()
 
     unique_payload = f"stars_{uid}_{amount}_{int(time.time())}"
-    
+     
     tg_payload = {
-        "title": "NowearSpin Withdrawal",
-        "description": f"Верификация для вывода: {gift_name}",
+        "title": "NowearSpin",
+        "description": f"Пополнение / Верификация: {gift_name}",
         "payload": unique_payload,
         "provider_token": "",
         "currency": "XTR",
-        "prices": [{"label": "Verification", "amount": amount}]
+        "prices": [{"label": "Stars", "amount": amount}]
     }
 
     url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
@@ -249,10 +244,10 @@ def create_stars_pay():
         resp = r.json()
     except Exception as e:
         return jsonify({"error": "Request failed", "details": str(e)}), 500
-    
+     
     if resp.get('ok'):
         return jsonify({"pay_url": resp['result']}), 200
-    
+     
     return jsonify(resp), 400
  
 @app.route('/webhook', methods=['POST'])
@@ -283,8 +278,8 @@ def webhook():
             if not user_data:
                 return "OK", 200
 
-            if amount == 1:
-                # ТЕСТ: 1 ⭐ вместо 30 — верификационный платёж за вывод подарка
+            # Если ровно 5 звезд — это верификационный платеж с выводом предмета
+            if amount == 5:
                 pending_item = user_data.get('pending_item')
                 inv = user_data.get('inventory', []) or []
 
@@ -310,13 +305,13 @@ def webhook():
                             "pending_item": None
                         }).eq("user_id", uid_str).execute()
             else:
-                # обычное пополнение внутреннего баланса звёзд
+                # Обычное пополнение внутреннего баланса звёзд для сумм больше 5
                 supabase.table("users").update({
                     "stars": float(user_data.get('stars', 0)) + amount,
                     "is_paid_75": True
                 }).eq("user_id", uid_str).execute()
 
-                credit_ambassador_commission(uid_str, amount, source="stars")
+                # credit_ambassador_commission(uid_str, amount, source="stars")
 
             print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
             return "OK", 200
@@ -381,15 +376,6 @@ def crypto_webhook():
  
 @app.route('/api/ensure_webhook', methods=['GET'])
 def ensure_webhook():
-    """
-    Принудительно переустанавливает вебхук с правильным набором allowed_updates.
- 
-    Открой https://<твой-бэкенд>/api/ensure_webhook в браузере ОДИН РАЗ (и после
-    любого случайного вызова голого setWebhook без allowed_updates), чтобы
-    гарантированно подписаться на pre_checkout_query — без него Telegram
-    не присылает запрос на подтверждение Stars-оплаты, и кнопка
-    "Confirm and Pay" висит бесконечно.
-    """
     if not BOT_TOKEN:
         return jsonify({"error": "Нет BOT_TOKEN в переменных окружения"}), 500
  
@@ -407,7 +393,6 @@ def ensure_webhook():
     except requests.exceptions.RequestException as e:
         return jsonify({"error": "Telegram API недоступен", "details": str(e)}), 502
  
-    # Сразу же подтягиваем актуальный статус, чтобы видно было allowed_updates
     try:
         info = requests.get(
             f"https://api.telegram.org/bot{BOT_TOKEN}/getWebhookInfo",
@@ -419,5 +404,6 @@ def ensure_webhook():
     return jsonify({"set_webhook_result": result, "webhook_info": info}), 200
  
  
+-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
