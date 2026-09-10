@@ -10,9 +10,9 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
         :root { 
-            --accent: #f5b025; 
-            --accent-hover: #c68c16; 
-            --accent-gradient: linear-gradient(135deg, #fbe3a8 0%, #f5b025 50%, #c68c16 100%);
+            --accent: #2ea8f5; 
+            --accent-hover: #1c78c9; 
+            --accent-gradient: linear-gradient(135deg, #a8d8fb 0%, #2ea8f5 50%, #1c6fc9 100%);
             --bg: #000000; 
         }
         
@@ -29,7 +29,7 @@
         .content-wrapper { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; flex: 1; min-height: 0; }
 
         .header-panel { 
-            padding: 12px 16px; background: rgba(10, 10, 10, 0.6); border-bottom: 1px solid rgba(245, 176, 37, 0.12); 
+            padding: 12px 16px; background: rgba(10, 10, 10, 0.6); border-bottom: 1px solid rgba(46, 168, 245, 0.12); 
             padding-top: calc(12px + var(--tg-safe-area-inset-top, 0px));
             backdrop-filter: blur(10px);
         }
@@ -42,8 +42,8 @@
 
         .wheel-track { 
             position: relative; width: 100%; height: 90px; overflow: hidden; 
-            border-top: 1px solid rgba(245, 176, 37, 0.2); border-bottom: 1px solid rgba(245, 176, 37, 0.2);
-            background: rgba(245, 176, 37, 0.02);
+            border-top: 1px solid rgba(46, 168, 245, 0.2); border-bottom: 1px solid rgba(46, 168, 245, 0.2);
+            background: rgba(46, 168, 245, 0.02);
             border-radius: 14px;
         }
 
@@ -58,7 +58,7 @@
         .item { 
             min-width: 80px; height: 80px; margin: 0 4px; background: rgba(255, 255, 255, 0.02); 
             border-radius: 12px; display: flex; align-items: center; justify-content: center; 
-            border: 1px solid rgba(245, 176, 37, 0.1);
+            border: 1px solid rgba(46, 168, 245, 0.1);
         }
         .item img { width: 55px; height: 55px; object-fit: contain; }
 
@@ -134,14 +134,14 @@
 
         .btn-main { 
             background: var(--accent-gradient); color: #000; font-weight: 900; border-radius: 18px; 
-            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 5px 25px rgba(245, 176, 37, 0.25);
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); box-shadow: 0 5px 25px rgba(46, 168, 245, 0.25);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .btn-main:active { transform: scale(0.95); }
         .btn-main:disabled { opacity: 0.3; filter: grayscale(1); }
 
-        .multi-btn { background: rgba(245, 176, 37, 0.04); border: 1px solid rgba(245, 176, 37, 0.1); padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #6b5c38; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
-        .multi-btn.active { border-color: var(--accent); background: rgba(245, 176, 37, 0.12); color: white; box-shadow: 0 0 10px rgba(245, 176, 37, 0.25); }
+        .multi-btn { background: rgba(46, 168, 245, 0.04); border: 1px solid rgba(46, 168, 245, 0.1); padding: 10px 0; border-radius: 12px; flex: 1; font-weight: 900; font-size: 12px; color: #2d5a7a; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease; }
+        .multi-btn.active { border-color: var(--accent); background: rgba(46, 168, 245, 0.12); color: white; box-shadow: 0 0 10px rgba(46, 168, 245, 0.25); }
         .multi-btn:active { transform: scale(0.9); }
 
         .skip-wrap { display: none; justify-content: center; padding-bottom: 6px; }
@@ -154,7 +154,7 @@
         .skip-btn:active { background: rgba(255,255,255,0.1); }
 
         #win-modal, #sub-modal { display: none; position: fixed; inset: 0; z-index: 999; background: rgba(0, 0, 0, 0.96); backdrop-filter: blur(10px); align-items: center; justify-content: center; }
-        .modal-box { background: rgba(20,20,20,0.9); border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(245, 176, 37, 0.2); animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .modal-box { background: rgba(20,20,20,0.9); border: 1px solid var(--accent); border-radius: 24px; width: 85%; padding: 25px; text-align: center; box-shadow: 0 0 40px rgba(46, 168, 245, 0.2); animation: modalPop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes modalPop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
 
         .win-item-card { animation: fadeIn 0.4s ease-out forwards; opacity: 0; }
@@ -204,7 +204,7 @@
 
         <div id="wheels-container"></div>
 
-        <div class="p-6 bg-black/40 border-t border-[#f5b025]/10">
+        <div class="p-6 bg-black/40 border-t border-[#2ea8f5]/10">
             <div id="skip-wrap" class="skip-wrap">
                 <button onclick="skipSpin()" class="skip-btn tap-bounce">Пропустить ⏭</button>
             </div>
@@ -221,14 +221,14 @@
 
     <div id="win-modal">
         <div class="modal-box">
-            <h2 class="text-xl font-black italic uppercase text-[#f5b025] tracking-wider">Отличный улов!</h2>
+            <h2 class="text-xl font-black italic uppercase text-[#2ea8f5] tracking-wider">Отличный улов!</h2>
             <p class="text-[11px] text-gray-400 uppercase font-medium mt-1">Твои награды:</p>
             
             <div id="win-items-container" class="grid grid-cols-3 gap-2 my-5"></div>
             
-            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-[#f5b025] text-sm">0</span> ★</p>
+            <p class="text-[11px] text-gray-400 uppercase font-bold mb-5">Общая ценность: <span id="total-win-price" class="text-[#2ea8f5] text-sm">0</span> ★</p>
             
-            <button onclick="claimPrize('sell')" id="sell-btn" class="tap-bounce w-full bg-gradient-to-r from-[#fbe3a8] via-[#f5b025] to-[#c68c16] text-black py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-amber-500/10 tracking-wider">Продать и забрать монеты</button>
+            <button onclick="claimPrize('sell')" id="sell-btn" class="tap-bounce w-full bg-gradient-to-r from-[#a8d8fb] via-[#2ea8f5] to-[#1c6fc9] text-black py-4 rounded-xl font-black uppercase text-xs mb-3 shadow-lg shadow-sky-500/10 tracking-wider">Продать и забрать монеты</button>
             <button onclick="claimPrize('keep')" id="keep-btn" class="tap-bounce w-full bg-white/5 text-gray-300 py-4 rounded-xl font-bold uppercase text-[10px] tracking-wider border border-white/5">Оставить в рюкзаке</button>
         </div>
     </div>
@@ -240,7 +240,7 @@
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="#34b7f1"><path d="M21.9 2.7c.3-1.2-.6-1.9-1.5-1.5L1.3 9.4c-.9.4-.9 1.9.1 2.1l4.7 1.5 1.8 5.8c.2.7 1.1.9 1.6.4l2.6-2.4 4.8 3.6c.7.5 1.7.1 1.9-.8L21.9 2.7z"/></svg>
             </div>
             <h2 class="text-lg font-black italic uppercase text-white tracking-wider">Почти готово!</h2>
-            <p class="text-[12px] text-gray-400 mt-2 mb-5 leading-relaxed">Чтобы получить <span class="text-[#f5b025] font-bold">бесплатный спин</span>, подпишись на наш канал — там дропы, промокоды и новости проекта.</p>
+            <p class="text-[12px] text-gray-400 mt-2 mb-5 leading-relaxed">Чтобы получить <span class="text-[#2ea8f5] font-bold">бесплатный спин</span>, подпишись на наш канал — там дропы, промокоды и новости проекта.</p>
 
             <button onclick="openChannel()" class="sub-btn tap-bounce w-full mb-3">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 2.7c.3-1.2-.6-1.9-1.5-1.5L1.3 9.4c-.9.4-.9 1.9.1 2.1l4.7 1.5 1.8 5.8c.2.7 1.1.9 1.6.4l2.6-2.4 4.8 3.6c.7.5 1.7.1 1.9-.8L21.9 2.7z"/></svg>
@@ -454,7 +454,7 @@
         currentWins.forEach((w, i) => {
             total += w.price;
             const itemImgPath = w.img.startsWith('img/') ? w.img : `img/${w.img}`;
-            container.innerHTML += `<div class="win-item-card bg-white/5 p-2 rounded-xl border border-[#f5b025]/20" style="animation-delay:${i * 0.08}s"><img src="${itemImgPath}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'"><p class="text-[10px] font-black text-[#f5b025] mt-1">${w.price}★</p></div>`;
+            container.innerHTML += `<div class="win-item-card bg-white/5 p-2 rounded-xl border border-[#2ea8f5]/20" style="animation-delay:${i * 0.08}s"><img src="${itemImgPath}" class="w-10 h-10 mx-auto" onerror="this.src='img/star.png'"><p class="text-[10px] font-black text-[#2ea8f5] mt-1">${w.price}★</p></div>`;
         });
         document.getElementById('total-win-price').innerText = total;
         document.getElementById('win-modal').style.display = 'flex';
@@ -516,7 +516,7 @@
 
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(245, 176, 37, ${p.alpha})`;
+                ctx.fillStyle = `rgba(46, 168, 245, ${p.alpha})`;
                 ctx.fill();
 
                 p.y -= p.vy;
