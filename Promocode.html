@@ -50,12 +50,15 @@
         .btn-blue:active { transform: scale(0.96); filter: brightness(1.08); }
         .btn-blue:disabled { opacity: 0.45; box-shadow: none; }
 
-        .code-display { letter-spacing: 0.25em; }
+        /* ИСПРАВЛЕНИЕ: адаптивный размер и уменьшенный трекинг для длинных кодов */
+        .code-display { 
+            letter-spacing: 0.1em; 
+            font-size: clamp(1.2rem, 5vw, 1.8rem);
+            word-break: break-all;
+        }
+        
         .activator-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 16px; gap: 8px; }
 
-        /* ============================================================
-           BOTTOM DOCK — идентично главному экрану
-           ============================================================ */
         .dock {
             position: fixed;
             left: 50%;
@@ -162,8 +165,8 @@
         <!-- Блок: если промокод уже создан -->
         <section id="existing-block" class="glass-card p-6 mb-6 anim-fade" style="display:none;">
             <h3 class="text-[10px] font-black uppercase text-blue-400 tracking-widest mb-4">Ваш промокод</h3>
-            <div class="bg-black/30 border border-blue-500/25 rounded-2xl p-5 text-center mb-4">
-                <span id="my-code" class="orbitron code-display text-2xl font-black text-blue-400">------</span>
+            <div class="bg-black/30 border border-blue-500/25 rounded-2xl p-4 text-center mb-4 overflow-hidden">
+                <span id="my-code" class="orbitron code-display font-black text-blue-400">------</span>
             </div>
             <div class="grid grid-cols-2 gap-3 mb-2">
                 <div class="bg-white/5 rounded-xl p-3 text-center">
@@ -212,10 +215,6 @@
         </section>
     </div>
 
-    <!-- ============================================================
-         НИЖНИЙ ТУЛБАР — тот же порядок, что и на главном экране:
-         Главная → Рефералы (активна на этой странице) → Профиль
-         ============================================================ -->
     <div class="dock" id="dock">
         <div class="dock-btn press-fx" onclick="navigateTo('index.html')">
             <svg class="d-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -300,7 +299,6 @@ async function loadActivators(code) {
 
     block.style.display = 'block';
 
-    // Подтягиваем username и аватарки активировавших одним запросом
     const activatorIds = [...new Set(activations.map(a => a.activator_id))];
     const { data: profiles } = await _supabase
         .from('users')
@@ -351,7 +349,6 @@ async function claimReward(activationId) {
     claimInProgress = true;
 
     try {
-        // Атомарно "захватываем" эту активацию: обновляем только если она ещё не была забрана.
         const { data: updated, error: claimErr } = await _supabase
             .from('userss_promo_activations')
             .update({ claimed: true, claimed_at: new Date().toISOString() })
@@ -370,7 +367,6 @@ async function claimReward(activationId) {
             return;
         }
 
-        // Захват прошёл успешно — только теперь начисляем звёзды
         const { data: me, error: meErr } = await _supabase
             .from('users')
             .select('stars')
@@ -480,7 +476,6 @@ function copyCode() {
     });
 }
 
-// --- Навигация с плавным затемнением, как на главном экране ---
 function navigateTo(url) {
     try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
     const overlay = document.getElementById('page-transition');
@@ -528,7 +523,6 @@ function attachPressFx(root = document) {
     });
 }
 
-// --- Летающие частицы на фоне (синий тон, как в общей стилистике) ---
 function initParticles() {
     const canvas = document.getElementById('stars-canvas');
     if (!canvas) return;
