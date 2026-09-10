@@ -180,16 +180,32 @@
 <body>
 
     <header class="p-6 flex justify-between items-center sticky top-0 z-[100] bg-[#0f0a02]/90 backdrop-blur-xl border-b border-blue-400/10">
-        <div class="flex items-center gap-4">
-            <button onclick="window.location.href='index.html'" class="tap-bounce flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10">
-                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
-            </button>
-            <!-- Увеличенный размер шрифта (1.6rem) и выравнивание по центру относительно кнопки -->
-        <div class="balance-container-v2">
-            <div class="balance-item-v2 text-blue-400"><span id="header-ton">0.00</span><img src="img/ton.png"></div>
-            <div class="balance-item-v2 text-blue-400"><span id="header-stars">0</span><img src="img/star.png"></div>
-            <div class="balance-item-v2 text-blue-600"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
+<div class="topcard anim-fade" id="topcard">
+    <div class="topcard-content">
+        <!-- Левая часть: Аватар и статус -->
+        <div class="topcard-left">
+            <img id="userAvatar" src="https://ui-avatars.com/api/?background=random&color=fff&name=User" alt="Avatar" class="avatar">
+            <div class="user-info">
+                <div class="topcard-label">Ваш баланс</div>
+                <div id="userName" style="display:none;">USER123</div>
+                <div id="userIdDisplay" style="display:none;">ID: 123456789</div>
+            </div>
         </div>
+
+        <!-- Правая часть: Балансы TON и Stars -->
+        <div class="topcard-balances">
+            <div class="bal-pill pill-ton press-fx" onclick="openVault('ton')">
+                <span class="pill-icon-wrap"><img src="img/ton.png" alt="ton"></span>
+                <span id="balTon">0.00</span>
+            </div>
+            <div class="bal-pill pill-stars press-fx" onclick="openVault('stars')">
+                <span class="pill-icon-wrap"><img src="img/star.png" alt="stars"></span>
+                <span id="balStars">0</span>
+            </div>
+        </div>
+    </div>
+    <span id="balTickets" style="display:none;">0</span>
+</div>
     </header>
 
     <div class="live-header px-6"><div class="live-dot"></div><div class="live-label">Live Drop</div></div>
