@@ -399,8 +399,10 @@ async function loadMe(force){
 
 function renderMyBalance(){
   if(!myProfile) return;
-  document.getElementById('my-stars').textContent = fmt(myProfile.stars || 0);
-  document.getElementById('my-ton').textContent = fmt(myProfile.balance || 0);
+  const elStars = document.getElementById('header-stars');
+  const elTon = document.getElementById('header-ton');
+  if(elStars) elStars.textContent = fmt(myProfile.stars || 0);
+  if(elTon) elTon.textContent = fmt(myProfile.balance || 0);
 }
 
 function parseGifts(raw){
