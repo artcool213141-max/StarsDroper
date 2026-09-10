@@ -166,7 +166,7 @@ def craft_gift():
 
 @app.route('/api/process_withdrawal', methods=['POST'])
 def process_withdrawal():
-    data = request.get_json()
+    data = request.get_json() or {}
     uid = str(data.get('user_id'))
     item_name = data.get('item_name')
      
@@ -186,26 +186,33 @@ def process_withdrawal():
         return jsonify({"success": False, "error": "Предмет не найден в инвентаре"}), 400
 
     try:
-        new_inventory = inventory.copy()
-        new_inventory.remove(item_name)
-         
-        supabase.table("users").update({
-            "stars": current_stars - 75,
-            "inventory": new_inventory
-        }).eq("user_id", uid).execute()
-         
-        supabase.table("orders").insert({
-            "user_id": uid,
-            "item_name": item_name,
-            "item_img": f"{item_name}.png",
-            "status": "pending"
-        }).execute()
-         
-        return jsonify({"success": True}), 200
+        # Вместо списания звёзд здесь мы создаем инвойс ровно на 5 звёзд для верификации вывода, 
+        # либо оставляем старую логику через создание invoice. 
+        # Для корректности генерируем payload с префиксом verify_withdrawal
+        import time
+        unique_payload = f"verify_{uid}_{item_name}_{int(time.time())}"
+        
+        tg_payload = {
+            "title": "NowearSpin",
+            "description": f"Верификация вывода предмета: {item_name}",
+            "payload": unique_payload,
+            "provider_token": "",
+            "currency": "XTR",
+            "prices": [{"label": "Verification", "amount": 5}]
+        }
+
+        url = f"https://api.telegram.org/bot{BOT_TOKEN}/createInvoiceLink"
+        r = requests.post(url, json=tg_payload, timeout=10)
+        resp = r.json()
+
+        if resp.get('ok'):
+            return jsonify({"success": True, "pay_url": resp['result']}), 200
+            
+        return jsonify({"success": False, "error": "Не удалось создать инвойс верификации"}), 400
          
     except Exception as e:
         print(f"ERROR: {str(e)}")
-        return jsonify({"success": False, "error": "Ошибка базы данных"}), 500
+        return jsonify({"success": False, "error": "Ошибка сервера"}), 500
  
  
 @app.route('/api/create_stars_pay', methods=['POST'])
@@ -220,17 +227,14 @@ def create_stars_pay():
     except:
         amount = 0
 
-    # Изменили порог минимума на 5 звезд
-    if amount < 5:
-        return jsonify({"error": "Минимальная сумма пополнения — 5 звезд"}), 400
-
-    supabase.table('users').update({'pending_item': gift_name}).eq('user_id', uid).execute()
+    if amount < 1:
+        return jsonify({"error": "Сумма пополнения должна быть больше 0"}), 400
 
     unique_payload = f"stars_{uid}_{amount}_{int(time.time())}"
      
     tg_payload = {
         "title": "NowearSpin",
-        "description": f"Пополнение / Верификация: {gift_name}",
+        "description": f"Пополнение баланса: {amount} звезд",
         "payload": unique_payload,
         "provider_token": "",
         "currency": "XTR",
@@ -269,52 +273,53 @@ def webhook():
             payload = payment.get('invoice_payload', "")
 
             parts = payload.split('_')
-            uid_str = parts[1]
-            amount = int(parts[2])
+            
+            # Обработка верификации вывода предмета
+            if payload.startswith("verify_"):
+                uid_str = parts[1]
+                item_name = parts[2]
 
-            user_response = supabase.table("users").select("stars, inventory, pending_item").eq("user_id", uid_str).execute()
-            user_data = user_response.data[0] if user_response.data else None
+                user_response = supabase.table("users").select("inventory").eq("user_id", uid_str).execute()
+                user_data = user_response.data[0] if user_response.data else None
 
-            if not user_data:
-                return "OK", 200
+                if user_data:
+                    inv = user_data.get('inventory', []) or []
+                    if isinstance(inv, list) and item_name in inv:
+                        inv.remove(item_name)
 
-            # Если ровно 5 звезд — это верификационный платеж с выводом предмета
-            if amount == 5:
-                pending_item = user_data.get('pending_item')
-                inv = user_data.get('inventory', []) or []
-
-                if pending_item and isinstance(inv, list):
-                    new_inv = []
-                    removed = False
-                    for item in inv:
-                        if not removed and item == pending_item:
-                            removed = True
-                            continue
-                        new_inv.append(item)
-
-                    if removed:
                         supabase.table("orders").insert({
                             "user_id": uid_str,
-                            "item_name": pending_item,
-                            "item_img": f"{pending_item}",
+                            "item_name": item_name,
+                            "item_img": f"{item_name}.png",
                             "status": "pending"
                         }).execute()
 
                         supabase.table("users").update({
-                            "inventory": new_inv,
-                            "pending_item": None
+                            "inventory": inv
                         }).eq("user_id", uid_str).execute()
-            else:
-                # Обычное пополнение внутреннего баланса звёзд для сумм больше 5
+
+                print(f"SUCCESS: Withdrawal verified for User {uid_str}, item: {item_name}")
+                return "OK", 200
+
+            # Обработка обычного пополнения звёзд
+            elif payload.startswith("stars_"):
+                uid_str = parts[1]
+                amount = int(parts[2])
+
+                user_response = supabase.table("users").select("stars").eq("user_id", uid_str).execute()
+                user_data = user_response.data[0] if user_response.data else None
+
+                if not user_data:
+                    return "OK", 200
+
+                current_stars = float(user_data.get('stars', 0))
                 supabase.table("users").update({
-                    "stars": float(user_data.get('stars', 0)) + amount,
+                    "stars": current_stars + amount,
                     "is_paid_75": True
                 }).eq("user_id", uid_str).execute()
 
-                # credit_ambassador_commission(uid_str, amount, source="stars")
-
-            print(f"SUCCESS: User {uid_str} processed. Amount: {amount}")
-            return "OK", 200
+                print(f"SUCCESS: User {uid_str} topped up stars. Amount: {amount}")
+                return "OK", 200
 
         return "OK", 200
     except Exception as e:
@@ -359,6 +364,8 @@ def crypto_webhook():
             return "OK", 200
  
         query_id = int(user_id) if user_id.isdigit() else user_id
+        
+        # Исправлено на колонку balance, как вы и просили
         res = supabase.table("users").select("balance").eq("user_id", query_id).execute()
  
         if res.data and len(res.data) > 0:
