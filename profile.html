@@ -683,11 +683,9 @@ async function loadLeaderboard() {
     listEl.innerHTML = '<div class="lb-loading">Загрузка рейтинга...</div>';
 
     try {
-        // Тянем из базы только нужные поля, чтобы не грузить лишнее и не тормозить профиль.
-        // Если это упадёт — почти всегда причина в RLS Supabase (см. инструкцию в ответе).
         const { data: allUsers, error } = await _supabase
             .from('users')
-            .select('user_id, username, first_name, inventory')
+            .select('user_id, username, first_name, balance, stars')
             .limit(1000);
 
         if (error) {
@@ -695,37 +693,51 @@ async function loadLeaderboard() {
             throw error;
         }
 
-        const ranked = (allUsers || [])
-            .map(u => {
-                const inv = Array.isArray(u.inventory) ? u.inventory : [];
-                const total = inv.reduce((sum, it) => sum + giftValue(giftFileName(it)), 0);
-                return {
-                    id: String(u.user_id),
-                    name: u.username ? `@${u.username}` : (u.first_name || 'Игрок'),
-                    total
-                };
-            })
-            .filter(u => u.total > 0)
-            .sort((a, b) => b.total - a.total);
+        const ranked = (allUsers || []).map(u => {
+            const balance = Number(u.balance || 0);
+            const stars = Number(u.stars || 0);
+            
+            // Общая условная сумма для сортировки (можете изменить коэффициент)
+            const totalScore = stars + (balance * 100);
+
+            return {
+                id: String(u.user_id),
+                name: u.username ? `@${u.username}` : (u.first_name || 'Игрок'),
+                balance,
+                stars,
+                totalScore
+            };
+        })
+        .filter(u => u.totalScore > 0)
+        .sort((a, b) => b.totalScore - a.totalScore);
 
         if (ranked.length === 0) {
-            listEl.innerHTML = '<div class="lb-empty">Пока никто не заработал звёзды</div>';
-            meBox.innerHTML = '';
+            listEl.innerHTML = '<div class="lb-empty">Пока нет данных в рейтинге</div>';
+            if (meBox) meBox.innerHTML = '';
             return;
         }
 
-        const top10 = ranked.slice(0, 10);
-        listEl.innerHTML = top10.map((u, i) => lbRowHtml(i + 1, u.name, u.total, u.id === userId)).join('');
+        // Функция для генерации красивой строки с иконками картинок
+        const formatScore = (bal, st) => `
+            <span class="inline-flex items-center gap-2">
+                <span>${bal.toFixed(2)} <img src="img/ton.png" class="inline w-3.5 h-3.5 align-middle" alt="TON"></span>
+                <span class="text-gray-500">•</span>
+                <span>${st} <img src="img/star.png" class="inline w-3.5 h-3.5 align-middle" alt="Stars"></span>
+            </span>
+        `;
 
-        const myIndex = ranked.findIndex(u => u.id === userId);
+        const top10 = ranked.slice(0, 10);
+        listEl.innerHTML = top10.map((u, i) => lbRowHtml(i + 1, u.name, formatScore(u.balance, u.stars), u.id === String(userId))).join('');
+
+        const myIndex = ranked.findIndex(u => u.id === String(userId));
         if (myIndex === -1 || myIndex < 10) {
-            meBox.innerHTML = '';
+            if (meBox) meBox.innerHTML = '';
         } else {
-            meBox.innerHTML = `<div class="lb-me-divider"></div>` + lbRowHtml(myIndex + 1, ranked[myIndex].name, ranked[myIndex].total, true);
+            if (meBox) {
+                meBox.innerHTML = `<div class="lb-me-divider"></div>` + lbRowHtml(myIndex + 1, ranked[myIndex].name, formatScore(ranked[myIndex].balance, ranked[myIndex].stars), true);
+            }
         }
     } catch (e) {
-        // Показываем причину в консоли (для отладки) и понятную кнопку "Повторить" для юзера,
-        // вместо тихого "не удалось загрузить" без возможности переиграть запрос.
         listEl.innerHTML = `
             <div class="lb-empty">Не удалось загрузить рейтинг</div>
             <button class="lb-retry" onclick="loadLeaderboard()">Повторить</button>
