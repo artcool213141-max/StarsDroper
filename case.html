@@ -179,36 +179,21 @@
 </head>
 <body>
 
-<div class="topcard anim-fade" id="topcard" style="background: linear-gradient(135deg, rgba(0, 150, 255, 0.75) 0%, rgba(0, 80, 180, 0.85) 100%) !important; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.2) !important; box-shadow: 0 10px 30px rgba(0, 120, 255, 0.35);">
-    <div class="user">
-        <button onclick="navigateTo('index.html')" class="press-fx" style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,0.14); border: 2px solid rgba(255,255,255,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M15 19l-7-7 7-7"></path>
+<header class="p-6 flex justify-between items-center sticky top-0 z-[100] bg-[#0f0a02]/90 backdrop-blur-xl border-b border-blue-400/10">
+    <div class="flex items-center gap-3">
+        <button onclick="window.location.href='index.html'" class="tap-bounce flex items-center justify-center w-10 h-10 rounded-full bg-white/5 border border-white/10">
+            <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path d="M15 19l-7-7 7-7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
             </svg>
         </button>
-        <div class="user-info">
-            <div class="topcard-label">Ваш баланс</div>
-            <div class="topcard-balances">
-                <div class="bal-pill pill-ton press-fx" onclick="openVault('ton')">
-                    <span class="pill-icon-wrap"><img src="img/ton.png" alt="ton"></span>
-                    <span id="balTon">0.00</span>
-                </div>
-                <div class="bal-pill pill-stars press-fx" onclick="openVault('stars')">
-                    <span class="pill-icon-wrap"><img src="img/star.png" alt="stars"></span>
-                    <span id="balStars">0</span>
-                </div>
-            </div>
-        </div>
+        <div class="orbitron text-xl font-black italic">SWAP</div>
     </div>
-
-    <div style="flex: 1; text-align: right; font-size: 22px; font-weight: 900; font-style: italic; letter-spacing: 0.5px; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.35); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 4px;">
-        SWAP
+    <div class="balance-container-v2">
+        <div class="balance-item-v2 text-blue-400"><span id="header-ton">0.00</span><img src="img/ton.png"></div>
+        <div class="balance-item-v2 text-blue-400"><span id="header-stars">0</span><img src="img/star.png"></div>
+        <div class="balance-item-v2 text-blue-600"><span id="header-tickets">0</span><img src="img/ticket.png"></div>
     </div>
-
-    <span id="userName" style="display:none;"></span>
-    <span id="userIdDisplay" style="display:none;"></span>
-    <span id="balTickets" style="display:none;">0</span>
-</div>
+</header>
 
 
     <div class="live-header px-6"><div class="live-dot"></div><div class="live-label">Live Drop</div></div>
