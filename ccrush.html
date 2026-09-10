@@ -538,8 +538,8 @@
         try {
             const { data } = await SB.from('users').select('*').eq('user_id', currentUser.user_id).single();
             if (data) {
-                document.getElementById('val-stars').innerText = Math.floor(Number(data.stars || 0));
-                document.getElementById('val-ton').innerText = Number(data.balance || 0).toFixed(2);
+                document.getElementById('header-stars').innerText = Math.floor(Number(data.stars || 0));
+                document.getElementById('header-ton').innerText = Number(data.balance || 0).toFixed(2);
             }
         } catch(e) {}
     }
