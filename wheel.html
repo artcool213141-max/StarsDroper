@@ -331,7 +331,8 @@
         const { data, error } = await SB.from('users').select('stars').eq('user_id', user.user_id).single();
         if (!error && data) {
             user.stars = data.stars;
-            document.getElementById('val-stars').innerText = Math.floor(user.stars);
+            const el = document.getElementById('header-stars');
+            if (el) el.innerText = Math.floor(user.stars);
         }
     }
 
@@ -343,7 +344,8 @@
             data = newUser;
         }
         user = data;
-        document.getElementById('val-stars').innerText = Math.floor(user.stars || 0);
+        const el = document.getElementById('header-stars');
+        if (el) el.innerText = Math.floor(user.stars || 0);
         updateUI();
     }
 
