@@ -902,6 +902,16 @@
     </div>
 
     <script>
+        /*
+         =====================================================================
+         РЕГИСТРАЦИЯ ЮЗЕРОВ: основной путь теперь — сервер (обработка /start в
+         server.py через service_role, который игнорирует RLS). Код ниже —
+         ТОЛЬКО safety-net на случай, если бэкенд-регистрация почему-то не
+         сработала (юзер зашёл в вебапп без /start, вебхук не долетел и т.п.).
+         Раньше здесь была только syncData() с select — если юзера не было
+         в базе, страница просто молча показывала нули и не создавала его.
+         =====================================================================
+        */
         const tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
@@ -921,12 +931,74 @@
         }
 
         let userId = null;
+        let currentTgUser = null;
         const SUPABASE_URL = 'https://xjucalpaoqlrtmofmden.supabase.co';
         const SUPABASE_KEY = 'sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx';
         const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         const BACKEND_URL = 'https://stars-droper-main.vercel.app';
         let isProcessing = false;
         let isStarsProcessing = false;
+
+        function logSupabaseError(label, error) {
+            if (!error) return;
+            console.error(label, {
+                message: error.message,
+                details: error.details,
+                hint: error.hint,
+                code: error.code
+            });
+        }
+
+        // Тот же полный набор полей, что и в profile.html — чтобы вставка не
+        // падала из-за отсутствующих колонок независимо от того, с какой
+        // страницы юзер попал в приложение первым.
+        function buildDefaultUserPayload(uid, tgUser) {
+            const firstName = tgUser.first_name || "ИГРОК";
+            return {
+                user_id: uid,
+                username: tgUser.username || null,
+                first_name: firstName,
+                stars: 0,
+                balance: 0,
+                tickets: 0,
+                inventory: [],
+                referral_count: 0,
+                spin_count: 0,
+                last_free_spin: null,
+                used_promos: null,
+                has_used_referral: false,
+                activated_referral_code: null
+            };
+        }
+
+        // Тот же паттерн retry, что и в profile.html: upsert -> insert -> reread.
+        async function ensureUserExists(uid, tgUser) {
+            const payload = buildDefaultUserPayload(uid, tgUser);
+
+            let { data, error } = await _supabase
+                .from('users')
+                .upsert(payload, { onConflict: 'user_id' })
+                .select()
+                .maybeSingle();
+
+            if (!error && data) return { data, error: null };
+            logSupabaseError("upsert не сработал, пробуем insert:", error);
+
+            ({ data, error } = await _supabase
+                .from('users')
+                .insert(payload)
+                .select()
+                .maybeSingle());
+
+            if (!error && data) return { data, error: null };
+            logSupabaseError("insert тоже не сработал, перечитываем строку:", error);
+
+            const reread = await _supabase.from('users').select('*').eq('user_id', uid).maybeSingle();
+            if (reread.error) logSupabaseError("reread тоже не сработал:", reread.error);
+            if (reread.data) return { data: reread.data, error: null };
+
+            return { data: null, error: error || reread.error || new Error('unknown') };
+        }
 
         function handleReferral() {
             const startParam = tg.initDataUnsafe?.start_param;
@@ -947,13 +1019,24 @@
         async function syncData() {
             try {
                 const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
-                if (error) { console.error("Ошибка Supabase:", error); return; }
-                if (!data) { console.warn("Пользователь не найден"); return; }
+                if (error) { logSupabaseError("Ошибка Supabase при загрузке:", error); return; }
+
+                let user = data;
+
+                if (!user) {
+                    console.warn("Пользователь не найден в базе, создаём (safety-net)...");
+                    const { data: created, error: createErr } = await ensureUserExists(userId, currentTgUser);
+                    if (createErr || !created) {
+                        logSupabaseError("Не удалось создать профиль (safety-net):", createErr);
+                        return;
+                    }
+                    user = created;
+                }
 
                 const update = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
-                update('balTon', parseFloat(data.balance || 0).toFixed(2));
-                update('balStars', Math.floor(data.stars || 0));
-                update('balTickets', Math.floor(data.tickets || 0));
+                update('balTon', parseFloat(user.balance || 0).toFixed(2));
+                update('balStars', Math.floor(user.stars || 0));
+                update('balTickets', Math.floor(user.tickets || 0));
             } catch (e) { console.error("syncData error:", e); }
         }
 
@@ -1175,6 +1258,7 @@ document.querySelectorAll('.mosaic .card').forEach(card => {
             }
 
             userId = String(tgUser.id);
+            currentTgUser = tgUser;
             const firstName = tgUser.first_name || "PLAYER";
             const photoUrl = tgUser.photo_url;
 
