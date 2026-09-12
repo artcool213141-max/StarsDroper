@@ -171,6 +171,39 @@ def handle_start_referral(new_user_id, start_param):
         print(f"WARNING: referral handling failed: {e}")
 
 
+@app.route('/api/register_user', methods=['POST', 'OPTIONS'])
+def register_user():
+    """
+    ЕДИНАЯ точка регистрации/загрузки юзера для ВСЕХ страниц фронта
+    (index.html, profile.html, wheel.html и т.д.). Работает через
+    service_role — то есть полностью игнорирует RLS, в отличие от
+    прямых запросов к Supabase с анонимного (publishable) ключа с фронта,
+    которые RLS вполне может тихо блокировать (и, судя по всему, блокирует).
+
+    Фронт должен слать сюда tg_user (объект из tg.initDataUnsafe.user) и,
+    если есть, start_param — вместо того чтобы дергать Supabase напрямую.
+    """
+    if request.method == 'OPTIONS':
+        return '', 200
+
+    data = request.get_json() or {}
+    tg_from = data.get('tg_user') or {}
+
+    if not tg_from.get('id'):
+        return jsonify({"error": "tg_user.id обязателен"}), 400
+
+    user_data, is_new = register_user_if_new(tg_from)
+
+    if not user_data:
+        return jsonify({"error": "Не удалось создать или найти пользователя"}), 500
+
+    start_param = data.get('start_param')
+    if is_new and start_param:
+        handle_start_referral(str(tg_from['id']), start_param)
+
+    return jsonify({"success": True, "user": user_data, "is_new": is_new}), 200
+
+
 @app.route('/api/get_inventory', methods=['GET', 'OPTIONS'])
 def get_inventory():
     if request.method == 'OPTIONS':
