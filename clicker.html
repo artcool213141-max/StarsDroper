@@ -722,7 +722,8 @@ const heroes = [
         ownedPets: [0],       // питомцы в коллекции (стартовый - Дворняга)
         activePetId: 0,       // какой питомец отображается на экране
         lastUnix: Date.now(),
-        lastChargeUnix: 0
+        lastChargeUnix: 0,
+        lastSeenUnix: Date.now()
     };
 
     function getRebirthCount() {
@@ -758,81 +759,205 @@ const heroes = [
 
     function triggerSaveProcess() {
         state.lastUnix = Date.now();
-        localStorage.setItem('nova_engine_save', JSON.stringify(state));
+        persistLocal();
         saveToDB(); 
     }
 
-    // select -> если строки нет, insert с дефолтами (точно так же, как checkAuth в рулетке)
+    // ==================== ЛОКАЛЬНОЕ СОХРАНЕНИЕ (безопасная обёртка) ====================
+    function persistLocal() {
+        try {
+            localStorage.setItem('nova_engine_save', JSON.stringify(state));
+        } catch (e) {
+            console.warn("Не удалось сохранить в localStorage:", e);
+        }
+    }
+
+    // Приводим значения из БД к ожидаемым типам, чтобы не словить NaN/undefined,
+    // даже если колонка вернулась строкой (bigint из PostgREST), null-ом или в
+    // неожиданном формате.
+    function toNumber(val, fallback) {
+        const n = typeof val === 'string' ? parseFloat(val) : val;
+        return (typeof n === 'number' && isFinite(n)) ? n : fallback;
+    }
+    function toIntArray(val, fallback) {
+        if (Array.isArray(val)) return val.map(v => parseInt(v, 10)).filter(v => !isNaN(v));
+        if (typeof val === 'string') {
+            try {
+                const parsed = JSON.parse(val);
+                return Array.isArray(parsed) ? parsed.map(v => parseInt(v, 10)).filter(v => !isNaN(v)) : fallback;
+            } catch (e) { return fallback; }
+        }
+        return fallback;
+    }
+    function toObject(val, fallback) {
+        if (val && typeof val === 'object' && !Array.isArray(val)) return val;
+        if (typeof val === 'string') {
+            try {
+                const parsed = JSON.parse(val);
+                return (parsed && typeof parsed === 'object') ? parsed : fallback;
+            } catch (e) { return fallback; }
+        }
+        return fallback;
+    }
+
+    // Собираем "снимок" состояния для отправки в Supabase - в одном месте,
+    // чтобы insert и update всегда слали одинаковый набор полей.
+    function buildSavePayload(userId, username) {
+        return {
+            user_id: userId,
+            username: username || 'Anonymous',
+            points: Math.round(state.points),
+            energy: Math.floor(state.energy),
+            max_energy: Math.floor(state.maxEnergy),
+            click_power: Math.floor(state.clickPower),
+            active_hero_id: state.activeHeroId,
+            owned_heroes: state.ownedHeroes || [0],
+            market_levels: state.marketLevels || {},
+            last_charge_unix: Math.floor(state.lastChargeUnix || 0),
+            click_mult_percent: state.clickMultPercent || 0,
+            factory_pph: state.factoryPph || {},
+            built_factories: state.builtFactories || [],
+            owned_pets: state.ownedPets || [0],
+            active_pet_id: state.activePetId || 0,
+            last_seen_unix: Date.now()
+        };
+    }
+
+    function getCurrentUserId() {
+        return tg.initDataUnsafe?.user?.id || 12345;
+    }
+    function getCurrentUsername() {
+        return tg.initDataUnsafe?.user?.username || 'Anonymous';
+    }
+
+    // select -> если строки нет, upsert с дефолтами. Upsert (а не голый insert)
+    // используется специально: если два запроса от одного и того же игрока
+    // (например, два открытых окна) попытаются создать строку одновременно,
+    // insert выдаст ошибку дублирования ключа, а upsert - нет.
     async function loadFromDB() {
-        const userId = tg.initDataUnsafe?.user?.id || 12345;
+        const userId = getCurrentUserId();
+        const username = getCurrentUsername();
 
-        let { data, error } = await SB.from('users').select('*').eq('user_id', userId).single();
+        let data = null;
+        try {
+            const res = await SB.from('users').select('*').eq('user_id', userId).single();
+            data = res.data;
+        } catch (e) {
+            console.warn("Строка пользователя ещё не найдена, создаём новую:", e);
+        }
 
-        if (error || !data) {
-            const { data: newUser } = await SB.from('users').insert([{
-                user_id: userId,
-                username: tg.initDataUnsafe?.user?.username || 'Anonymous',
-                points: 0,
-                energy: 1000,
-                max_energy: 1000,
-                click_power: 1,
-                active_hero_id: 0,
-                owned_heroes: [0],
-                market_levels: {},
-                last_charge_unix: 0,
-                click_mult_percent: 0,
-                factory_pph: {},
-                built_factories: [],
-                owned_pets: [0],
-                active_pet_id: 0
-            }]).select().single();
-            data = newUser;
+        if (!data) {
+            try {
+                const defaults = buildSavePayload(userId, username);
+                const { data: newUser, error: upsertErr } = await SB
+                    .from('users')
+                    .upsert([defaults], { onConflict: 'user_id' })
+                    .select()
+                    .single();
+                if (upsertErr) throw upsertErr;
+                data = newUser;
+            } catch (e) {
+                console.error("Не удалось создать пользователя в базе:", e);
+                // Пробуем ещё раз просто прочитать - вдруг строка всё же появилась
+                // (например, создана параллельным запросом)
+                try {
+                    const retry = await SB.from('users').select('*').eq('user_id', userId).single();
+                    data = retry.data;
+                } catch (e2) {
+                    console.error("Повторное чтение тоже не удалось:", e2);
+                }
+            }
         }
 
         if (data) {
-            state.points = parseInt(data.points || 0);
-            state.energy = parseInt(data.energy || 1000);
-            state.maxEnergy = parseInt(data.max_energy || 1000);
-            state.clickPower = parseInt(data.click_power || 1);
-            state.activeHeroId = parseInt(data.active_hero_id || 0);
-            state.ownedHeroes = Array.isArray(data.owned_heroes) ? data.owned_heroes : [0];
-            state.marketLevels = data.market_levels || {};
-            state.lastChargeUnix = parseInt(data.last_charge_unix || 0);
-            state.clickMultPercent = parseFloat(data.click_mult_percent) || 0;
-            state.factoryPph = data.factory_pph || {};
-            state.builtFactories = data.built_factories || [];
-            state.ownedPets = data.owned_pets || [0];
-            state.activePetId = parseInt(data.active_pet_id) || 0;
+            state.points = toNumber(data.points, 0);
+            state.energy = toNumber(data.energy, 1000);
+            state.maxEnergy = toNumber(data.max_energy, 1000);
+            state.clickPower = toNumber(data.click_power, 1);
+            state.activeHeroId = toNumber(data.active_hero_id, 0);
+            state.ownedHeroes = toIntArray(data.owned_heroes, [0]);
+            if (state.ownedHeroes.length === 0) state.ownedHeroes = [0];
+            state.marketLevels = toObject(data.market_levels, {});
+            state.lastChargeUnix = toNumber(data.last_charge_unix, 0);
+            state.clickMultPercent = toNumber(data.click_mult_percent, 0);
+            state.factoryPph = toObject(data.factory_pph, {});
+            state.builtFactories = toIntArray(data.built_factories, []);
+            state.ownedPets = toIntArray(data.owned_pets, [0]);
+            if (state.ownedPets.length === 0) state.ownedPets = [0];
+            state.activePetId = toNumber(data.active_pet_id, 0);
+
+            // ---- ОФФЛАЙН-ДОХОД: считаем от серверной метки last_seen_unix,
+            // а не от localStorage, чтобы прогресс не терялся при заходе
+            // с другого устройства/браузера или после очистки localStorage. ----
+            const lastSeen = toNumber(data.last_seen_unix, Date.now());
+            const elapsedSec = Math.max(0, Math.floor((Date.now() - lastSeen) / 1000));
+            if (elapsedSec > 0) {
+                const regenLvl = state.marketLevels[20] || 0;
+                const energyPerSec = 1 + regenLvl;
+                state.energy = Math.min(state.maxEnergy, state.energy + energyPerSec * elapsedSec);
+
+                const pph = totalPphPerHour();
+                if (pph > 0) {
+                    state.points += (pph / 3600) * elapsedSec;
+                }
+            }
+            state.lastSeenUnix = Date.now();
+            state.lastUnix = Date.now();
 
             updateUI();
             applyHeroVisuals();
             refreshPetIcon();
+
+            // Сразу фиксируем оффлайн-начисления и обновлённый last_seen_unix в базе,
+            // чтобы при быстром повторном заходе не насчитать бонус дважды.
+            triggerSaveProcess();
         }
     }
 
     async function saveToDB() {
-        const user = tg.initDataUnsafe?.user;
-        const userId = user?.id || 12345;
-        const username = user?.username || 'Anonymous';
+        const userId = getCurrentUserId();
+        const username = getCurrentUsername();
+        const payload = buildSavePayload(userId, username);
+
         try {
-            await SB.from('users').update({
-                username: username,
-                points: Math.floor(state.points),
-                energy: Math.floor(state.energy),
-                max_energy: state.maxEnergy,
-                click_power: state.clickPower,
-                active_hero_id: state.activeHeroId,
-                owned_heroes: state.ownedHeroes,
-                market_levels: state.marketLevels,
-                last_charge_unix: state.lastChargeUnix,
-                click_mult_percent: state.clickMultPercent || 0,
-                factory_pph: state.factoryPph || {},
-                built_factories: state.builtFactories || [],
-                owned_pets: state.ownedPets || [0],
-                active_pet_id: state.activePetId || 0
-            }).eq('user_id', userId);
+            const { error } = await SB.from('users').upsert(payload, { onConflict: 'user_id' });
+            if (error) throw error;
         } catch (e) {
-            console.error("Ошибка сохранения в Supabase:", e);
+            console.error("Ошибка сохранения в Supabase, повторим через 2с:", e);
+            setTimeout(async () => {
+                try {
+                    const { error: retryErr } = await SB.from('users').upsert(payload, { onConflict: 'user_id' });
+                    if (retryErr) throw retryErr;
+                } catch (e2) {
+                    console.error("Повторная попытка сохранения тоже не удалась:", e2);
+                }
+            }, 2000);
+        }
+    }
+
+    // "Аварийное" сохранение при закрытии/сворачивании приложения - обычный
+    // fetch с keepalive: true, чтобы браузер успел отправить запрос даже
+    // если страница уже начала закрываться (в отличие от обычного fetch).
+    function flushSaveOnExit() {
+        try {
+            const userId = getCurrentUserId();
+            const username = getCurrentUsername();
+            const payload = buildSavePayload(userId, username);
+            persistLocal();
+
+            fetch(`${SB_URL}/rest/v1/users?on_conflict=user_id`, {
+                method: 'POST',
+                keepalive: true,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': SB_KEY,
+                    'Authorization': `Bearer ${SB_KEY}`,
+                    'Prefer': 'resolution=merge-duplicates'
+                },
+                body: JSON.stringify(payload)
+            }).catch(e => console.warn("flushSaveOnExit fetch error:", e));
+        } catch (e) {
+            console.warn("flushSaveOnExit failed:", e);
         }
     }
 
@@ -850,12 +975,12 @@ const heroes = [
 
             list.innerHTML = '';
             (topUsers || []).forEach((user, index) => {
-                const isMe = user.user_id == (tg.initDataUnsafe?.user?.id || 12345);
+                const isMe = user.user_id == getCurrentUserId();
                 list.innerHTML += `
                     <div class="lb-row ${isMe ? 'me' : ''}">
                         <div class="lb-rank">${index + 1}</div>
                         <div class="lb-name">${user.username || 'Anonymous'}</div>
-                        <div class="lb-points">${formatNumber(user.points || 0)}</div>
+                        <div class="lb-points">${formatNumber(toNumber(user.points, 0))}</div>
                     </div>
                 `;
             });
@@ -916,6 +1041,16 @@ function startLoops() {
 
     // Питомец: случайное появление косточки
     scheduleBone();
+
+    // ---- Аварийное сохранение при сворачивании/закрытии/уходе со страницы ----
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushSaveOnExit();
+    });
+    window.addEventListener('pagehide', flushSaveOnExit);
+    window.addEventListener('beforeunload', flushSaveOnExit);
+    if (tg && tg.onEvent) {
+        try { tg.onEvent('viewportChanged', () => { if (tg.isExpanded === false) flushSaveOnExit(); }); } catch (e) {}
+    }
 }
 
     const tapZone = document.getElementById('tap-zone');
@@ -1731,7 +1866,7 @@ window.handleHero = function(id) {
     }
 
     async function goBackWithSave() {
-        localStorage.setItem('nova_engine_save', JSON.stringify(state));
+        persistLocal();
         const backBtn = document.querySelector('.btn-back');
         if (backBtn) backBtn.innerHTML = 'СОХРАНЕНИЕ...';
         try {
@@ -1763,19 +1898,24 @@ window.handleHero = function(id) {
     }
 
     async function init() {
-        const saved = localStorage.getItem('nova_engine_save');
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            state = { ...state, ...parsed };
-            const elapsed = Math.floor((Date.now() - state.lastUnix) / 1000);
-            state.energy = Math.min(state.maxEnergy, state.energy + elapsed);
-
-            const pph = totalPphPerHour();
-            if (pph > 0 && elapsed > 0) {
-                state.points += (pph / 3600) * elapsed;
+        // Локальную копию используем только для мгновенной отрисовки UI до ответа
+        // сервера (чтобы не было "мигания" нулевого баланса). Оффлайн-доход
+        // считается ПОСЛЕ ответа сервера (см. loadFromDB), от серверной метки
+        // last_seen_unix - иначе он терялся бы при заходе с другого устройства
+        // или если localStorage была очищена.
+        try {
+            const saved = localStorage.getItem('nova_engine_save');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed };
+                updateUI();
+                applyHeroVisuals();
+                refreshPetIcon();
             }
+        } catch (e) {
+            console.warn("Локальное сохранение повреждено, игнорируем:", e);
         }
-        
+
         const heroImgEl = document.getElementById('hero-img');
         heroImgEl.addEventListener('pointerdown', (e) => {
             e.preventDefault();
