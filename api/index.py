@@ -53,6 +53,23 @@ def add_cors_headers(response):
     response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
     return response
+
+
+def find_user_by_id(table_select, uid_str):
+    """
+    Универсальный поиск пользователя: сначала пробуем как число (int8 колонка),
+    затем как строку. Возвращает (query_id, user_data) или (query_id, None).
+    """
+    query_id = int(uid_str) if str(uid_str).isdigit() else uid_str
+    res = supabase.table("users").select(table_select).eq("user_id", query_id).execute()
+
+    if not res.data and query_id != str(uid_str):
+        res = supabase.table("users").select(table_select).eq("user_id", str(uid_str)).execute()
+        if res.data:
+            query_id = str(uid_str)
+
+    user_data = res.data[0] if res.data else None
+    return query_id, user_data
  
  
 @app.route('/api/get_inventory', methods=['GET', 'OPTIONS'])
@@ -65,14 +82,10 @@ def get_inventory():
         return jsonify({"error": "No user_id provided"}), 400
  
     try:
-        query_id = int(user_id) if user_id.isdigit() else user_id
-        res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
- 
-        if not res.data:
-            res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
- 
-        if res.data:
-            raw_inventory = res.data[0].get("inventory", [])
+        query_id, user_data = find_user_by_id("inventory", user_id)
+
+        if user_data:
+            raw_inventory = user_data.get("inventory", [])
             if not isinstance(raw_inventory, list):
                 raw_inventory = []
  
@@ -122,16 +135,12 @@ def craft_gift():
                 return jsonify({"error": f"Предмет {clean_key} не найден."}), 400
             total_price += giftDatabase[clean_key]["price"]
  
-        query_id = int(user_id) if str(user_id).isdigit() else user_id
-        res = supabase.table("users").select("inventory").eq("user_id", query_id).execute()
- 
-        if not res.data:
-            res = supabase.table("users").select("inventory").eq("user_id", str(user_id)).execute()
- 
-        if not res.data:
+        query_id, user_data = find_user_by_id("inventory", user_id)
+
+        if not user_data:
             return jsonify({"error": "Пользователь не найден."}), 404
  
-        current_inventory = res.data[0].get("inventory", [])
+        current_inventory = user_data.get("inventory", [])
         if not isinstance(current_inventory, list):
             current_inventory = []
  
@@ -274,26 +283,31 @@ def webhook():
                 uid_str = parts[1]
                 item_name = parts[2]
 
-                user_response = supabase.table("users").select("inventory").eq("user_id", uid_str).execute()
-                user_data = user_response.data[0] if user_response.data else None
+                query_id, user_data = find_user_by_id("inventory", uid_str)
 
-                if user_data:
-                    inv = user_data.get('inventory', []) or []
-                    if isinstance(inv, list) and item_name in inv:
-                        inv.remove(item_name)
+                if not user_data:
+                    print(f"WARNING: withdrawal verify — user {uid_str} not found in DB")
+                    return "OK", 200
 
-                        supabase.table("orders").insert({
-                            "user_id": uid_str,
-                            "item_name": item_name,
-                            "item_img": f"{item_name}.png",
-                            "status": "pending"
-                        }).execute()
+                inv = user_data.get('inventory', []) or []
+                if isinstance(inv, list) and item_name in inv:
+                    inv.remove(item_name)
 
-                        supabase.table("users").update({
-                            "inventory": inv
-                        }).eq("user_id", uid_str).execute()
+                    supabase.table("orders").insert({
+                        "user_id": uid_str,
+                        "item_name": item_name,
+                        "item_img": f"{item_name}.png",
+                        "status": "pending"
+                    }).execute()
 
-                print(f"SUCCESS: Withdrawal verified for User {uid_str}, item: {item_name}")
+                    supabase.table("users").update({
+                        "inventory": inv
+                    }).eq("user_id", query_id).execute()
+
+                    print(f"SUCCESS: Withdrawal verified for User {uid_str}, item: {item_name}")
+                else:
+                    print(f"WARNING: item {item_name} not found in inventory of user {uid_str}")
+
                 return "OK", 200
 
             # Обработка обычного пополнения звёзд
@@ -301,19 +315,19 @@ def webhook():
                 uid_str = parts[1]
                 amount = int(parts[2])
 
-                user_response = supabase.table("users").select("stars").eq("user_id", uid_str).execute()
-                user_data = user_response.data[0] if user_response.data else None
+                query_id, user_data = find_user_by_id("stars", uid_str)
 
                 if not user_data:
+                    print(f"WARNING: stars topup — user {uid_str} not found in DB, payload={payload}")
                     return "OK", 200
 
-                current_stars = float(user_data.get('stars', 0))
+                current_stars = float(user_data.get('stars', 0) or 0)
                 supabase.table("users").update({
                     "stars": current_stars + amount,
                     "is_paid_75": True
-                }).eq("user_id", uid_str).execute()
+                }).eq("user_id", query_id).execute()
 
-                print(f"SUCCESS: User {uid_str} topped up stars. Amount: {amount}")
+                print(f"SUCCESS: User {uid_str} topped up stars. Amount: {amount}. New balance: {current_stars + amount}")
                 return "OK", 200
 
         return "OK", 200
@@ -358,12 +372,10 @@ def crypto_webhook():
             print("ERROR: Crypto Webhook received empty user_id")
             return "OK", 200
  
-        query_id = int(user_id) if user_id.isdigit() else user_id
-         
-        res = supabase.table("users").select("balance").eq("user_id", query_id).execute()
- 
-        if res.data and len(res.data) > 0:
-            old_bal = float(res.data[0].get('balance') or 0)
+        query_id, user_data = find_user_by_id("balance", user_id)
+
+        if user_data:
+            old_bal = float(user_data.get('balance') or 0)
             new_bal = old_bal + amount_ton
             supabase.table("users").update({"balance": new_bal}).eq("user_id", query_id).execute()
         else:
