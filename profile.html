@@ -257,14 +257,6 @@
         .stars-pay-btn:active { transform: scale(0.92); filter: brightness(1.15); }
         .stars-pay-btn:disabled { opacity: 0.4; }
 
-        #tg-error-screen {
-            position: fixed; inset: 0; z-index: 10001; display: none;
-            flex-direction: column; align-items: center; justify-content: center;
-            background: var(--bg-dark); text-align: center; padding: 40px 24px;
-        }
-        #tg-error-screen h2 { color: var(--accent-blue); font-weight: 900; font-style: italic; text-transform: uppercase; margin-bottom: 12px; }
-        #tg-error-screen p { color: #b8ac8e; font-size: 13px; line-height: 1.6; max-width: 320px; }
-
         #loader {
             position: fixed; inset: 0; background: #000; z-index: 99999;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -418,68 +410,17 @@
 
 <script>
 /*
- =====================================================================
- ВАЖНО ПРО РЕГИСТРАЦИЮ НОВЫХ ЮЗЕРОВ (читай перед тем как снова дебажить)
- =====================================================================
- Вы используете sb_publishable_... (anon key) и логинитесь по своему
- Telegram user_id, а НЕ через встроенный Supabase Auth. Это значит,
- что все insert/update/select идут от роли anon, и если в таблице
- users включен RLS без явных политик для anon — новые юзеры не
- создаются либо создаются, но не читаются обратно (out тогда null).
-
- Проверь/накати в Supabase SQL editor:
-
-    alter table users enable row level security;
-
-    create policy "anon can insert users" on users
-    for insert to anon
-    with check (true);
-
-    create policy "anon can select users" on users
-    for select to anon
-    using (true);
-
-    create policy "anon can update users" on users
-    for update to anon
-    using (true);
-
- И убедись, что на user_id есть уникальный констрейнт (нужен для
- upsert onConflict):
-
-    alter table users add constraint users_user_id_key unique (user_id);
-
- Если сомневаешься — сначала посмотри в консоль браузера при заходе
- нового юзера: ensureUserExists теперь печатает message/details/hint/code
- из реальной ошибки Supabase, а не просто "не сработал".
- =====================================================================
+ Авторизация упрощена и приведена к тому же принципу, что используется
+ в рулетке (Swap): select по user_id -> если строки нет, insert.
+ Никакого ожидания initDataUnsafe.user, никакого upsert с retry-логикой.
+ Если анон-политики (RLS) на таблице users не настроены на insert/select/update
+ для роли anon — операции ниже будут падать так же, как и в рулетке.
 */
 
 const tg = window.Telegram.WebApp;
 
 tg.ready();
 tg.expand();
-
-function waitForTelegramUser(maxAttempts = 25, interval = 20) {
-    return new Promise((resolve) => {
-        const u0 = tg.initDataUnsafe?.user;
-        if (u0 && u0.id) { resolve(u0); return; }
-        let attempts = 0;
-        const check = () => {
-            const u = tg.initDataUnsafe?.user;
-            if (u && u.id) {
-                resolve(u);
-                return;
-            }
-            attempts++;
-            if (attempts >= maxAttempts) {
-                resolve(null);
-                return;
-            }
-            setTimeout(check, interval);
-        };
-        check();
-    });
-}
 
 let userId = null;
 const BACKEND_URL = 'https://stars-droper-main.vercel.app';
@@ -503,144 +444,57 @@ function hideLoader() {
 // Страховка: не даём лоадеру висеть дольше 3.5с, даже если сеть тормозит
 setTimeout(hideLoader, 3500);
 
-// Разворачивает объект ошибки Supabase в читаемые поля, вместо
-// "[object Object]" в консоли. Это то, чего не хватало раньше —
-// без этого невозможно было понять, RLS ли это, отсутствующий
-// констрейнт или что-то ещё.
-function logSupabaseError(label, error) {
-    if (!error) return;
-    console.error(label, {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code
-    });
-}
-
-// Полный набор полей, которые в разных местах проекта (swap, rolls, profile)
-// ожидают увидеть в строке users. Если в базе не хватает какой-то из этих
-// колонок при первом создании — именно это раньше валило создание пользователя
-// с ошибкой "ошибка создания профиля". Здесь мы явно проставляем безопасные
-// дефолты для ВСЕХ известных полей, чтобы вставка проходила независимо от
-// того, через какую страницу человек попал в приложение первым.
-function buildDefaultUserPayload(userId, tgUser) {
-    const firstName = tgUser.first_name || "ИГРОК";
-    return {
-        user_id: userId,
-        username: tgUser.username || null,
-        first_name: firstName,
-        stars: 0,
-        balance: 0,
-        tickets: 0,
-        inventory: [],
-        referral_count: 0,
-        spin_count: 0,
-        last_free_spin: null,
-        used_promos: null,
-        has_used_referral: false,
-        activated_referral_code: null
-    };
-}
-
-// Пытается создать пользователя. Сначала upsert (быстрый путь), если он
-// падает — пробуем обычный insert (иногда upsert падает из-за специфики
-// RLS-политик или уникального индекса, а insert проходит), а если и это не
-// получилось — пробуем ещё раз прочитать строку (вдруг она уже была
-// создана параллельно другой страницей/вкладкой прямо во время наших
-// попыток) и только в самом конце сдаёмся.
-async function ensureUserExists(userId, tgUser) {
-    const payload = buildDefaultUserPayload(userId, tgUser);
-
-    // Попытка 1: upsert
-    let { data, error } = await _supabase
-        .from('users')
-        .upsert(payload, { onConflict: 'user_id' })
-        .select()
-        .maybeSingle();
-
-    if (!error && data) return { data, error: null };
-    logSupabaseError("upsert не сработал, пробуем insert:", error);
-
-    // Попытка 2: обычный insert
-    ({ data, error } = await _supabase
-        .from('users')
-        .insert(payload)
-        .select()
-        .maybeSingle());
-
-    if (!error && data) return { data, error: null };
-    logSupabaseError("insert тоже не сработал, перечитываем строку:", error);
-
-    // Попытка 3: возможно строка уже существует (создана параллельно),
-    // просто перечитываем её ещё раз
-    const reread = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
-    if (reread.error) logSupabaseError("reread тоже не сработал:", reread.error);
-    if (reread.data) return { data: reread.data, error: null };
-
-    return { data: null, error: error || reread.error || new Error('unknown') };
-}
-
 async function loadUser() {
-    try {
-        const tgUser = await waitForTelegramUser();
+    const tgUser = tg.initDataUnsafe?.user;
+    userId = String(tgUser?.id || 8015661230);
 
-        if (!tgUser) {
-            hideLoader();
-            document.getElementById('tg-error-screen').style.display = 'flex';
+    const firstName = tgUser?.first_name || "ИГРОК";
+    const displayName = tgUser?.username ? `@${tgUser.username}` : firstName.toUpperCase();
+    document.getElementById('u-name').innerText = displayName;
+
+    const photoUrl = tgUser?.photo_url;
+    if (document.getElementById('u-avatar')) {
+        document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=0b5cab&color=fff`;
+    }
+
+    // Имя/аватар уже на экране — прячем лоадер сразу, остальное дорисуется поверх
+    hideLoader();
+
+    let { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).single();
+
+    if (error || !data) {
+        const { data: newUser, error: insertError } = await _supabase
+            .from('users')
+            .insert([{
+                user_id: userId,
+                username: tgUser?.username || null,
+                first_name: firstName,
+                stars: 0,
+                balance: 0,
+                tickets: 0,
+                inventory: [],
+                referral_count: 0,
+                spin_count: 0
+            }])
+            .select()
+            .single();
+
+        if (insertError || !newUser) {
+            console.error("Не удалось создать/загрузить профиль:", insertError);
+            tg.showAlert && tg.showAlert("Не удалось загрузить профиль. Попробуйте обновить страницу.");
             return;
         }
-
-        userId = String(tgUser.id);
-
-        const firstName = tgUser.first_name || "ИГРОК";
-        const displayName = tgUser.username ? `@${tgUser.username}` : firstName.toUpperCase();
-        document.getElementById('u-name').innerText = displayName;
-
-        const photoUrl = tgUser.photo_url;
-        if (document.getElementById('u-avatar')) {
-            document.getElementById('u-avatar').src = photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName)}&background=0b5cab&color=fff`;
-        }
-
-        // Имя/аватар уже на экране — прячем лоадер сразу, остальное дорисуется поверх
-        hideLoader();
-
-        const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
-
-        if (error) {
-            logSupabaseError("Ошибка при загрузке из БД:", error);
-        }
-
-        if (data) {
-            user = data;
-        } else {
-            console.warn("Пользователь не найден в базе, создаём нового...");
-            const { data: createdUser, error: createErr } = await ensureUserExists(userId, tgUser);
-
-            if (createErr || !createdUser) {
-                logSupabaseError("Не удалось создать профиль после всех попыток:", createErr);
-                // Не блокируем интерфейс текстом "ошибка создания профиля" —
-                // показываем профиль с нулевыми значениями локально (в памяти),
-                // чтобы человек мог пользоваться приложением. При следующей
-                // загрузке (или после действия на другой странице) попытка
-                // создания повторится снова.
-                user = buildDefaultUserPayload(userId, tgUser);
-                tg.showAlert && tg.showAlert("Не удалось сохранить профиль в базе. Попробуйте обновить страницу.");
-            } else {
-                user = createdUser;
-            }
-        }
-
-        document.getElementById('u-stars').innerText = user.stars || 0;
-        document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
-        document.getElementById('u-tickets').innerText = user.tickets || 0;
-        document.getElementById('ref-count').innerText = user.referral_count || 0;
-        document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
-        renderGrid();
-
-    } catch (e) {
-        console.error("Критическая ошибка:", e);
-        hideLoader();
+        data = newUser;
     }
+
+    user = data;
+
+    document.getElementById('u-stars').innerText = user.stars || 0;
+    document.getElementById('u-ton').innerText = (user.balance || 0).toFixed(2);
+    document.getElementById('u-tickets').innerText = user.tickets || 0;
+    document.getElementById('ref-count').innerText = user.referral_count || 0;
+    document.getElementById('u-id-label').innerText = `ID: ${user.user_id}`;
+    renderGrid();
 }
 
 function renderGrid() {
@@ -698,7 +552,7 @@ async function handlePromo() {
     const { data: refPromo, error: refErr } = await _supabase.from('userss_promo').select('*').eq('code', codeText).maybeSingle();
 
     if (refErr) {
-        logSupabaseError("Ошибка проверки реферального промокода:", refErr);
+        console.error("Ошибка проверки реферального промокода:", refErr);
     }
 
     if (refPromo) {
