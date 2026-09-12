@@ -6,6 +6,7 @@
     <title>StarDrop Nova - Deluxe Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --neon: #1e9bff; /* Изменено на синий */
@@ -625,8 +626,19 @@ body.glitch-active {
 
 <script>
     const tg = window.Telegram.WebApp;
-    const BACKEND_URL = 'https://stars-droper-main.vercel.app/api'; 
+    const BACKEND_URL = 'https://stars-droper-main.vercel.app/api';
     tg.expand();
+
+    // ==================== SUPABASE (тот же принцип, что и в рулетке/профиле) ====================
+    // select по user_id -> если строки нет, insert с дефолтами этой игры.
+    // Таблица та же 'users', но набор колонок свой: points, energy, max_energy,
+    // click_power, active_hero_id, owned_heroes, market_levels, last_charge_unix,
+    // click_mult_percent, factory_pph, built_factories, owned_pets, active_pet_id.
+    // Если в реальной базе эти колонки лежат в другой таблице - поменяй 'users'
+    // на её имя в трёх местах ниже (loadFromDB, saveToDB, fetchLeaderboard).
+    const SB_URL = "https://xjucalpaoqlrtmofmden.supabase.co";
+    const SB_KEY = "sb_publishable_SaK4-9Ub_yQQez5F-eUq3A_NPx46axx";
+    const SB = supabase.createClient(SB_URL, SB_KEY);
 
 const heroes = [
     { id: 0, x: 1, price: 0, img: "img/Новая папка (3)/pepe1.png", color: "#1e9bff", bg: "#051a2e" },
@@ -750,32 +762,51 @@ const heroes = [
         saveToDB(); 
     }
 
+    // select -> если строки нет, insert с дефолтами (точно так же, как checkAuth в рулетке)
     async function loadFromDB() {
-        const userId = tg.initDataUnsafe?.user?.id || 12345; 
-        try {
-            const res = await fetch(`${BACKEND_URL}/get_balance?user_id=${userId}&t=${Date.now()}`);
-            const data = await res.json();
-            if (data && !data.error) {
-                state.points = parseInt(data.points || 0);
-                state.energy = parseInt(data.energy || 1000);
-                state.maxEnergy = parseInt(data.max_energy || 1000);
-                state.clickPower = parseInt(data.click_power || 1);
-                state.activeHeroId = parseInt(data.active_hero_id || 0);
-                state.ownedHeroes = Array.isArray(data.owned_heroes) ? data.owned_heroes : [0];
-                state.marketLevels = data.market_levels || {};
-                state.lastChargeUnix = parseInt(data.last_charge_unix || 0);
-                if (data.click_mult_percent !== undefined) state.clickMultPercent = parseFloat(data.click_mult_percent) || 0;
-                if (data.factory_pph) state.factoryPph = data.factory_pph;
-                if (data.built_factories) state.builtFactories = data.built_factories;
-                if (data.owned_pets) state.ownedPets = data.owned_pets;
-                if (data.active_pet_id !== undefined) state.activePetId = parseInt(data.active_pet_id);
-                
-                updateUI();
-                applyHeroVisuals();
-                refreshPetIcon();
-            }
-        } catch (e) { 
-            console.error("Ошибка синхронизации с бэкендом при загрузке:", e); 
+        const userId = tg.initDataUnsafe?.user?.id || 12345;
+
+        let { data, error } = await SB.from('users').select('*').eq('user_id', userId).single();
+
+        if (error || !data) {
+            const { data: newUser } = await SB.from('users').insert([{
+                user_id: userId,
+                username: tg.initDataUnsafe?.user?.username || 'Anonymous',
+                points: 0,
+                energy: 1000,
+                max_energy: 1000,
+                click_power: 1,
+                active_hero_id: 0,
+                owned_heroes: [0],
+                market_levels: {},
+                last_charge_unix: 0,
+                click_mult_percent: 0,
+                factory_pph: {},
+                built_factories: [],
+                owned_pets: [0],
+                active_pet_id: 0
+            }]).select().single();
+            data = newUser;
+        }
+
+        if (data) {
+            state.points = parseInt(data.points || 0);
+            state.energy = parseInt(data.energy || 1000);
+            state.maxEnergy = parseInt(data.max_energy || 1000);
+            state.clickPower = parseInt(data.click_power || 1);
+            state.activeHeroId = parseInt(data.active_hero_id || 0);
+            state.ownedHeroes = Array.isArray(data.owned_heroes) ? data.owned_heroes : [0];
+            state.marketLevels = data.market_levels || {};
+            state.lastChargeUnix = parseInt(data.last_charge_unix || 0);
+            state.clickMultPercent = parseFloat(data.click_mult_percent) || 0;
+            state.factoryPph = data.factory_pph || {};
+            state.builtFactories = data.built_factories || [];
+            state.ownedPets = data.owned_pets || [0];
+            state.activePetId = parseInt(data.active_pet_id) || 0;
+
+            updateUI();
+            applyHeroVisuals();
+            refreshPetIcon();
         }
     }
 
@@ -784,30 +815,24 @@ const heroes = [
         const userId = user?.id || 12345;
         const username = user?.username || 'Anonymous';
         try {
-            await fetch(`${BACKEND_URL}/update_balance`, {
-                method: 'POST',
-                keepalive: true,
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    user_id: userId,
-                    username: username,
-                    points: Math.floor(state.points),
-                    energy: Math.floor(state.energy),
-                    max_energy: state.maxEnergy,
-                    click_power: state.clickPower,
-                    active_hero_id: state.activeHeroId,
-                    owned_heroes: state.ownedHeroes,  
-                    market_levels: state.marketLevels,
-                    last_charge_unix: state.lastChargeUnix,
-                    click_mult_percent: state.clickMultPercent || 0,
-                    factory_pph: state.factoryPph || {},
-                    built_factories: state.builtFactories || [],
-                    owned_pets: state.ownedPets || [0],
-                    active_pet_id: state.activePetId || 0
-                })
-            });
-        } catch (e) { 
-            console.error("Ошибка сохранения на бэкенд:", e); 
+            await SB.from('users').update({
+                username: username,
+                points: Math.floor(state.points),
+                energy: Math.floor(state.energy),
+                max_energy: state.maxEnergy,
+                click_power: state.clickPower,
+                active_hero_id: state.activeHeroId,
+                owned_heroes: state.ownedHeroes,
+                market_levels: state.marketLevels,
+                last_charge_unix: state.lastChargeUnix,
+                click_mult_percent: state.clickMultPercent || 0,
+                factory_pph: state.factoryPph || {},
+                built_factories: state.builtFactories || [],
+                owned_pets: state.ownedPets || [0],
+                active_pet_id: state.activePetId || 0
+            }).eq('user_id', userId);
+        } catch (e) {
+            console.error("Ошибка сохранения в Supabase:", e);
         }
     }
 
@@ -815,20 +840,27 @@ const heroes = [
         const list = document.getElementById('leaderboard-list');
         list.innerHTML = '<div style="text-align:center; padding:30px; opacity:0.5;">Ищем легенд...</div>';
         try {
-            const res = await fetch(`${BACKEND_URL}/get_leaders`);
-            const topUsers = await res.json();
+            const { data: topUsers, error } = await SB
+                .from('users')
+                .select('user_id, username, points')
+                .order('points', { ascending: false })
+                .limit(10);
+
+            if (error) throw error;
+
             list.innerHTML = '';
-            topUsers.forEach((user, index) => {
+            (topUsers || []).forEach((user, index) => {
                 const isMe = user.user_id == (tg.initDataUnsafe?.user?.id || 12345);
                 list.innerHTML += `
                     <div class="lb-row ${isMe ? 'me' : ''}">
                         <div class="lb-rank">${index + 1}</div>
                         <div class="lb-name">${user.username || 'Anonymous'}</div>
-                        <div class="lb-points">${formatNumber(user.points)}</div>
+                        <div class="lb-points">${formatNumber(user.points || 0)}</div>
                     </div>
                 `;
             });
         } catch (e) { 
+            console.error("Ошибка загрузки топа:", e);
             list.innerHTML = '<div style="text-align:center; padding:30px; color:red;">Ошибка загрузки топа</div>'; 
         }
     }
