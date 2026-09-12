@@ -422,6 +422,43 @@
 <script src="items.js"></script>
 
 <script>
+/*
+ =====================================================================
+ ВАЖНО ПРО РЕГИСТРАЦИЮ НОВЫХ ЮЗЕРОВ (читай перед тем как снова дебажить)
+ =====================================================================
+ Вы используете sb_publishable_... (anon key) и логинитесь по своему
+ Telegram user_id, а НЕ через встроенный Supabase Auth. Это значит,
+ что все insert/update/select идут от роли anon, и если в таблице
+ users включен RLS без явных политик для anon — новые юзеры не
+ создаются либо создаются, но не читаются обратно (out тогда null).
+
+ Проверь/накати в Supabase SQL editor:
+
+    alter table users enable row level security;
+
+    create policy "anon can insert users" on users
+    for insert to anon
+    with check (true);
+
+    create policy "anon can select users" on users
+    for select to anon
+    using (true);
+
+    create policy "anon can update users" on users
+    for update to anon
+    using (true);
+
+ И убедись, что на user_id есть уникальный констрейнт (нужен для
+ upsert onConflict):
+
+    alter table users add constraint users_user_id_key unique (user_id);
+
+ Если сомневаешься — сначала посмотри в консоль браузера при заходе
+ нового юзера: ensureUserExists теперь печатает message/details/hint/code
+ из реальной ошибки Supabase, а не просто "не сработал".
+ =====================================================================
+*/
+
 const tg = window.Telegram.WebApp;
 
 tg.ready();
@@ -471,6 +508,20 @@ function hideLoader() {
 // Страховка: не даём лоадеру висеть дольше 3.5с, даже если сеть тормозит
 setTimeout(hideLoader, 3500);
 
+// Разворачивает объект ошибки Supabase в читаемые поля, вместо
+// "[object Object]" в консоли. Это то, чего не хватало раньше —
+// без этого невозможно было понять, RLS ли это, отсутствующий
+// констрейнт или что-то ещё.
+function logSupabaseError(label, error) {
+    if (!error) return;
+    console.error(label, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+    });
+}
+
 // Полный набор полей, которые в разных местах проекта (swap, rolls, profile)
 // ожидают увидеть в строке users. Если в базе не хватает какой-то из этих
 // колонок при первом создании — именно это раньше валило создание пользователя
@@ -513,7 +564,7 @@ async function ensureUserExists(userId, tgUser) {
         .maybeSingle();
 
     if (!error && data) return { data, error: null };
-    if (error) console.warn("upsert не сработал, пробуем insert:", error);
+    logSupabaseError("upsert не сработал, пробуем insert:", error);
 
     // Попытка 2: обычный insert
     ({ data, error } = await _supabase
@@ -523,11 +574,12 @@ async function ensureUserExists(userId, tgUser) {
         .maybeSingle());
 
     if (!error && data) return { data, error: null };
-    if (error) console.warn("insert тоже не сработал, перечитываем строку:", error);
+    logSupabaseError("insert тоже не сработал, перечитываем строку:", error);
 
     // Попытка 3: возможно строка уже существует (создана параллельно),
     // просто перечитываем её ещё раз
     const reread = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
+    if (reread.error) logSupabaseError("reread тоже не сработал:", reread.error);
     if (reread.data) return { data: reread.data, error: null };
 
     return { data: null, error: error || reread.error || new Error('unknown') };
@@ -560,7 +612,7 @@ async function loadUser() {
         const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
 
         if (error) {
-            console.error("Ошибка при загрузке из БД:", error);
+            logSupabaseError("Ошибка при загрузке из БД:", error);
         }
 
         if (data) {
@@ -570,7 +622,7 @@ async function loadUser() {
             const { data: createdUser, error: createErr } = await ensureUserExists(userId, tgUser);
 
             if (createErr || !createdUser) {
-                console.error("Не удалось создать профиль после всех попыток:", createErr);
+                logSupabaseError("Не удалось создать профиль после всех попыток:", createErr);
                 // Не блокируем интерфейс текстом "ошибка создания профиля" —
                 // показываем профиль с нулевыми значениями локально (в памяти),
                 // чтобы человек мог пользоваться приложением. При следующей
@@ -651,7 +703,7 @@ async function handlePromo() {
     const { data: refPromo, error: refErr } = await _supabase.from('userss_promo').select('*').eq('code', codeText).maybeSingle();
 
     if (refErr) {
-        console.error("Ошибка проверки реферального промокода:", refErr);
+        logSupabaseError("Ошибка проверки реферального промокода:", refErr);
     }
 
     if (refPromo) {
