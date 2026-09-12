@@ -1164,37 +1164,34 @@
         let welcomeShownOnce = false;
 
         async function registerOrLoadUser(uid, tgUser) {
-            const payload = buildDefaultUserPayload(uid, tgUser);
-            payload.stars = WELCOME_BONUS_AMOUNT;
-            payload.welcome_bonus_claimed = true;
+            try {
+                const res = await fetch(`${BACKEND_URL}/api/register_user`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tg_user: tgUser,
+                        start_param: tg.initDataUnsafe?.start_param || null
+                    })
+                });
+                const data = await res.json();
 
-            const { data: inserted, error: insertErr } = await _supabase
-                .from('users')
-                .insert(payload)
-                .select()
-                .maybeSingle();
+                if (!res.ok || !data.success) {
+                    console.error('register_user не сработал:', data);
+                    return null;
+                }
 
-            if (!insertErr && inserted) {
-                // Настоящий новый юзер — бонус уже зачислен этим же insert'ом.
-                console.log("Новый пользователь создан, начислено", WELCOME_BONUS_AMOUNT, "звёзд");
-                showWelcomeModal();
-                return inserted;
+                if (data.is_new) {
+                    // Настоящий новый юзер — бонус уже зачислен на сервере
+                    // (service_role, в обход RLS) прямо в этом запросе.
+                    console.log('Новый пользователь создан бэкендом, бонус начислен');
+                    showWelcomeModal();
+                }
+
+                return data.user;
+            } catch (e) {
+                console.error('registerOrLoadUser: ошибка сети:', e);
+                return null;
             }
-
-            if (insertErr && insertErr.code !== '23505') {
-                logSupabaseError("registerOrLoadUser: insert не сработал:", insertErr);
-            }
-
-            // Юзер уже существует (или это гонка с другой страницей) — читаем
-            // текущую строку, ничего не создаём и не перезаписываем.
-            const { data: existing, error: selectErr } = await _supabase
-                .from('users')
-                .select('*')
-                .eq('user_id', uid)
-                .maybeSingle();
-
-            if (selectErr) { logSupabaseError("registerOrLoadUser: select не сработал:", selectErr); return null; }
-            return existing;
         }
 
         function showWelcomeModal() {
@@ -1479,7 +1476,9 @@ document.querySelectorAll('.mosaic .card').forEach(card => {
             document.getElementById('userIdDisplay').innerText = `ID: ${userId}`;
             document.getElementById('userAvatar').src = photoUrl || `https://ui-avatars.com/api/?background=c68c16&color=fff&name=${encodeURIComponent(firstName)}`;
 
-            handleReferral();
+            // handleReferral() больше не вызываем с фронта — сервер сам
+            // регистрирует реферала внутри /api/register_user (см. syncData),
+            // так надёжнее и не задвоит тикеты гонкой клиент/сервер.
             syncData();
             renderTonPacks();
             initStars();
