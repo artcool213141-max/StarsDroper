@@ -735,6 +735,163 @@
             .bal-pill { font-size: 11px; padding: 4px 7px 4px 4px; }
             .topup-btn { padding: 8px 10px; font-size: 9px; }
         }
+
+        /* ============================================================
+           WELCOME MODAL — приветственная плашка для нового юзера с
+           бонусом в 5 звёзд. Центрированная карточка поверх затемнения,
+           в стиле остального приложения (стекло + мягкое свечение).
+           ============================================================ */
+        .welcome-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 3000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .welcome-overlay.active { display: flex; }
+
+        .welcome-card {
+            position: relative;
+            width: 100%;
+            max-width: 320px;
+            border-radius: 28px;
+            padding: 30px 24px 24px;
+            text-align: center;
+            overflow: hidden;
+            background:
+                radial-gradient(circle at 20% 0%, rgba(245, 176, 37, 0.35), transparent 55%),
+                radial-gradient(circle at 90% 100%, rgba(90, 62, 240, 0.35), transparent 55%),
+                linear-gradient(160deg, #16161f 0%, #0a0a10 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08);
+            animation: welcomePop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes welcomePop {
+            from { opacity: 0; transform: scale(0.85) translateY(10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .welcome-glow-ring {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle, rgba(245,176,37,0.25) 0%, transparent 70%);
+            position: relative;
+        }
+        .welcome-glow-ring::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 1px solid rgba(245,176,37,0.35);
+            animation: welcomeRingPulse 2.2s ease-in-out infinite;
+        }
+        @keyframes welcomeRingPulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.12); opacity: 1; }
+        }
+        .welcome-glow-ring img {
+            width: 46px;
+            height: 46px;
+            object-fit: contain;
+            filter: drop-shadow(0 4px 14px rgba(245,176,37,0.55));
+        }
+
+        .welcome-title {
+            font-size: 20px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: -0.3px;
+            background: linear-gradient(135deg, #ffffff 0%, #f5b025 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .welcome-subtitle {
+            font-size: 12px;
+            color: rgba(255,255,255,0.55);
+            font-weight: 600;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .welcome-bonus-pill {
+            margin: 20px auto 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: rgba(245,176,37,0.12);
+            border: 1px solid rgba(245,176,37,0.35);
+        }
+        .welcome-bonus-pill img {
+            width: 20px;
+            height: 20px;
+            object-fit: contain;
+        }
+        .welcome-bonus-pill .wb-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: rgba(255,255,255,0.6);
+        }
+        .welcome-bonus-pill .wb-amount {
+            font-size: 15px;
+            font-weight: 900;
+            color: #f5b025;
+        }
+
+        .welcome-claim-btn {
+            width: 100%;
+            margin-top: 22px;
+            border: none;
+            cursor: pointer;
+            padding: 13px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #7c6bff 0%, #5a3ef0 100%);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            box-shadow: 0 10px 24px rgba(90, 62, 240, 0.45), inset 0 1px 0 rgba(255,255,255,0.25);
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.15s ease;
+        }
+        .welcome-claim-btn.pressed { transform: scale(0.94); filter: brightness(1.12); }
+
+        .welcome-confetti {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            border-radius: 28px;
+        }
+        .welcome-confetti span {
+            position: absolute;
+            top: -10%;
+            width: 6px;
+            height: 6px;
+            border-radius: 2px;
+            opacity: 0.9;
+            animation: welcomeConfettiFall linear infinite;
+        }
+        @keyframes welcomeConfettiFall {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            100% { transform: translateY(340px) rotate(360deg); opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -901,6 +1058,23 @@
         </div>
     </div>
 
+    <div class="welcome-overlay" id="welcomeOverlay">
+        <div class="welcome-card">
+            <div class="welcome-confetti" id="welcomeConfetti"></div>
+            <div class="welcome-glow-ring">
+                <img src="img/star.png" alt="star">
+            </div>
+            <div class="welcome-title">Добро пожаловать<br>в Swap</div>
+            <div class="welcome-subtitle">Мы рады видеть тебя здесь.<br>Забери свой стартовый подарок:</div>
+            <div class="welcome-bonus-pill">
+                <img src="img/5star.png" alt="5 stars">
+                <span class="wb-label">Приветственный бонус</span>
+                <span class="wb-amount">+5</span>
+            </div>
+            <button class="welcome-claim-btn press-fx" id="welcomeClaimBtn" onclick="claimWelcomeBonus()">Забрать бонус</button>
+        </div>
+    </div>
+
     <script>
         /*
          =====================================================================
@@ -967,7 +1141,8 @@
                 last_free_spin: null,
                 used_promos: null,
                 has_used_referral: false,
-                activated_referral_code: null
+                activated_referral_code: null,
+                welcome_bonus_claimed: false
             };
         }
 
@@ -1037,7 +1212,91 @@
                 update('balTon', parseFloat(user.balance || 0).toFixed(2));
                 update('balStars', Math.floor(user.stars || 0));
                 update('balTickets', Math.floor(user.tickets || 0));
+
+                checkWelcomeBonus(user);
             } catch (e) { console.error("syncData error:", e); }
+        }
+
+        /*
+         =====================================================================
+         ПРИВЕТСТВЕННЫЙ БОНУС: показываем красивую модалку "Добро пожаловать
+         в Swap" один раз — для тех, у кого в базе welcome_bonus_claimed
+         ещё не true (в т.ч. для только что созданных юзеров, у которых это
+         поле по умолчанию false). После нажатия "Забрать бонус" начисляем
+         +5 звёзд и ставим флаг, чтобы модалка больше не всплывала.
+
+         ВАЖНО: в таблице users в Supabase нужна колонка
+             welcome_bonus_claimed boolean default false
+         Если её нет — добавь через SQL-редактор Supabase:
+             alter table users add column welcome_bonus_claimed boolean default false;
+         =====================================================================
+        */
+        const WELCOME_BONUS_AMOUNT = 5;
+        let welcomeModalShown = false;
+
+        function checkWelcomeBonus(user) {
+            if (welcomeModalShown) return;
+            if (user && user.welcome_bonus_claimed) return;
+            welcomeModalShown = true;
+            spawnWelcomeConfetti();
+            document.getElementById('welcomeOverlay').classList.add('active');
+            try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+        }
+
+        function spawnWelcomeConfetti() {
+            const holder = document.getElementById('welcomeConfetti');
+            if (!holder || holder.dataset.filled) return;
+            holder.dataset.filled = '1';
+            const colors = ['#f5b025', '#7c6bff', '#34d399', '#f472b6', '#60a5fa'];
+            for (let i = 0; i < 24; i++) {
+                const piece = document.createElement('span');
+                piece.style.left = `${Math.random() * 100}%`;
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = `${Math.random() * 1.5 + 1.8}s`;
+                piece.style.animationDelay = `${Math.random() * 1.2}s`;
+                holder.appendChild(piece);
+            }
+        }
+
+        let isClaimingWelcome = false;
+
+        async function claimWelcomeBonus() {
+            if (isClaimingWelcome || !userId) return;
+            isClaimingWelcome = true;
+            const btn = document.getElementById('welcomeClaimBtn');
+            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+            try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
+
+            try {
+                const { data: cur, error: readErr } = await _supabase
+                    .from('users')
+                    .select('stars, welcome_bonus_claimed')
+                    .eq('user_id', userId)
+                    .maybeSingle();
+
+                if (readErr) { logSupabaseError("welcome bonus: не удалось прочитать юзера:", readErr); return; }
+                if (cur && cur.welcome_bonus_claimed) {
+                    document.getElementById('welcomeOverlay').classList.remove('active');
+                    return;
+                }
+
+                const newStars = Math.floor((cur?.stars || 0) + WELCOME_BONUS_AMOUNT);
+                const { error: updErr } = await _supabase
+                    .from('users')
+                    .update({ stars: newStars, welcome_bonus_claimed: true })
+                    .eq('user_id', userId);
+
+                if (updErr) { logSupabaseError("welcome bonus: не удалось начислить звёзды:", updErr); return; }
+
+                document.getElementById('welcomeOverlay').classList.remove('active');
+                try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
+                syncData();
+            } catch (e) {
+                console.error("claimWelcomeBonus error:", e);
+            } finally {
+                isClaimingWelcome = false;
+                if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+            }
         }
 
         async function processPayment(amount) {
