@@ -7,6 +7,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@2/dist/tonconnect-ui.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
@@ -675,6 +676,32 @@
         }
         .stars-pay-btn.pressed { transform: scale(0.92); filter: brightness(1.15); }
 
+        /* ============================================================
+           TON CONNECT — блок подключения кошелька в вкладке TON
+           ============================================================ */
+        .tonconnect-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+        }
+        .tonconnect-status {
+            font-size: 10px;
+            font-weight: 700;
+            color: #999;
+        }
+        .tonconnect-status.connected {
+            color: #34d399;
+        }
+        #tonConnectButtonRoot {
+            flex-shrink: 0;
+        }
+
         #error-screen {
             position: fixed;
             inset: 0;
@@ -885,6 +912,10 @@
             </div>
 
             <div class="vault-pane" id="paneTon">
+                <div class="tonconnect-row">
+                    <span class="tonconnect-status" id="tonConnectStatus">Кошелёк не подключен</span>
+                    <div id="tonConnectButtonRoot"></div>
+                </div>
                 <div style="font-size:10px;color:#777;font-weight:700;margin-bottom:10px;text-transform:uppercase;">Выберите пакет пополнения</div>
                 <div class="packs-grid" id="tonPacks"></div>
             </div>
@@ -927,6 +958,87 @@
         const BACKEND_URL = 'https://stars-droper-main.vercel.app';
         let isProcessing = false;
         let isStarsProcessing = false;
+
+        // ============================================================
+        // TON CONNECT — подключение кошелька и прямая оплата в TON
+        // ============================================================
+        const TON_MANIFEST_URL = 'https://stars-droper-main.vercel.app/tonconnect-manifest.json';
+        const TON_RECEIVER_ADDRESS = 'ВАШ_TON_АДРЕС_СЮДА'; // <-- впишите свой адрес кошелька-приёмника
+        let tonConnectUI = null;
+        let isTonProcessing = false;
+
+        function initTonConnect() {
+            tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+                manifestUrl: TON_MANIFEST_URL,
+                buttonRootId: 'tonConnectButtonRoot'
+            });
+
+            tonConnectUI.onStatusChange((wallet) => {
+                const statusEl = document.getElementById('tonConnectStatus');
+                if (wallet) {
+                    const addr = wallet.account.address;
+                    statusEl.textContent = 'Подключен: ' + addr.slice(0, 4) + '...' + addr.slice(-4);
+                    statusEl.classList.add('connected');
+                } else {
+                    statusEl.textContent = 'Кошелёк не подключен';
+                    statusEl.classList.remove('connected');
+                }
+            });
+        }
+
+        // Прямая оплата через подключенный TON-кошелёк (без CryptoBot)
+        async function payWithTonConnect(amountTon) {
+            if (isTonProcessing || !userId) return;
+            if (!tonConnectUI || !tonConnectUI.connected) {
+                tg.showAlert('Сначала подключите TON-кошелёк кнопкой выше');
+                return;
+            }
+
+            isTonProcessing = true;
+            tg.HapticFeedback.impactOccurred('medium');
+
+            try {
+                const nanoAmount = Math.floor(amountTon * 1_000_000_000).toString();
+
+                const result = await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [
+                        {
+                            address: TON_RECEIVER_ADDRESS,
+                            amount: nanoAmount
+                        }
+                    ]
+                });
+
+                // Сообщаем бэкенду о транзакции — он должен сам сверить её
+                // с блокчейном (через TonAPI/toncenter) и только потом начислить баланс
+                const res = await fetch(`${BACKEND_URL}/api/ton-connect-verify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        amount: amountTon,
+                        receiver: TON_RECEIVER_ADDRESS,
+                        boc: result.boc
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    tg.HapticFeedback.notificationOccurred('success');
+                    tg.showAlert('Баланс пополнен!');
+                    closeVault();
+                    setTimeout(syncData, 3000);
+                } else {
+                    tg.showAlert('Транзакция отправлена, проверка займёт немного времени. Баланс обновится автоматически.');
+                }
+            } catch (e) {
+                console.error('TonConnect payment error:', e);
+                tg.showAlert('Оплата отменена или произошла ошибка');
+            } finally {
+                isTonProcessing = false;
+            }
+        }
 
         function handleReferral() {
             const startParam = tg.initDataUnsafe?.start_param;
@@ -1050,7 +1162,7 @@
         function renderTonPacks() {
             const PACKS = [1, 3, 5, 10, 20, 50, 100, 250];
             document.getElementById('tonPacks').innerHTML = PACKS.map(amt => `
-                <div class="pack-btn press-fx" onclick="processPayment(${amt})">
+                <div class="pack-btn press-fx" onclick="payWithTonConnect(${amt})">
                     <div class="label">Пополнить</div>
                     <div class="amount">${amt} TON</div>
                 </div>
@@ -1185,6 +1297,7 @@ document.querySelectorAll('.mosaic .card').forEach(card => {
             handleReferral();
             syncData();
             renderTonPacks();
+            initTonConnect();
             initStars();
             attachPressFx();
 
