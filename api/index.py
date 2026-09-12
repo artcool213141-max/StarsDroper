@@ -99,7 +99,11 @@ def build_default_user_payload(query_id, tg_from):
         "last_free_spin": None,
         "used_promos": None,
         "has_used_referral": False,
-        "activated_referral_code": None
+        "activated_referral_code": None,
+        # Бонус уже выдан прямо здесь через WELCOME_BONUS_STARS, поэтому
+        # сразу помечаем True — иначе юзер словит ещё +5 звёзд повторно
+        # через приветственную модалку в index.html.
+        "welcome_bonus_claimed": True
     }
 
 
