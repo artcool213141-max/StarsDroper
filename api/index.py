@@ -186,17 +186,13 @@ def process_withdrawal():
         return jsonify({"success": False, "error": "Предмет не найден в инвентаре"}), 400
 
     try:
-        # Вместо списания звёзд здесь мы создаем инвойс ровно на 5 звёзд для верификации вывода, 
-        # либо оставляем старую логику через создание invoice. 
-        # Для корректности генерируем payload с префиксом verify_withdrawal
         import time
         unique_payload = f"verify_{uid}_{item_name}_{int(time.time())}"
-        
+         
         tg_payload = {
             "title": "NowearSpin",
             "description": f"Верификация вывода предмета: {item_name}",
             "payload": unique_payload,
-            "provider_token": "",
             "currency": "XTR",
             "prices": [{"label": "Verification", "amount": 5}]
         }
@@ -207,7 +203,7 @@ def process_withdrawal():
 
         if resp.get('ok'):
             return jsonify({"success": True, "pay_url": resp['result']}), 200
-            
+             
         return jsonify({"success": False, "error": "Не удалось создать инвойс верификации"}), 400
          
     except Exception as e:
@@ -236,7 +232,6 @@ def create_stars_pay():
         "title": "NowearSpin",
         "description": f"Пополнение баланса: {amount} звезд",
         "payload": unique_payload,
-        "provider_token": "",
         "currency": "XTR",
         "prices": [{"label": "Stars", "amount": amount}]
     }
@@ -273,7 +268,7 @@ def webhook():
             payload = payment.get('invoice_payload', "")
 
             parts = payload.split('_')
-            
+             
             # Обработка верификации вывода предмета
             if payload.startswith("verify_"):
                 uid_str = parts[1]
@@ -364,8 +359,7 @@ def crypto_webhook():
             return "OK", 200
  
         query_id = int(user_id) if user_id.isdigit() else user_id
-        
-        # Исправлено на колонку balance, как вы и просили
+         
         res = supabase.table("users").select("balance").eq("user_id", query_id).execute()
  
         if res.data and len(res.data) > 0:
