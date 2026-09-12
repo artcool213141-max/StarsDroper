@@ -1065,13 +1065,13 @@
                 <img src="img/star.png" alt="star">
             </div>
             <div class="welcome-title">Добро пожаловать<br>в Swap</div>
-            <div class="welcome-subtitle">Мы рады видеть тебя здесь.<br>Забери свой стартовый подарок:</div>
+            <div class="welcome-subtitle">Мы рады видеть тебя здесь.<br>Уже начислили тебе стартовый бонус:</div>
             <div class="welcome-bonus-pill">
                 <img src="img/5star.png" alt="5 stars">
                 <span class="wb-label">Приветственный бонус</span>
                 <span class="wb-amount">+5</span>
             </div>
-            <button class="welcome-claim-btn press-fx" id="welcomeClaimBtn" onclick="claimWelcomeBonus()">Забрать бонус</button>
+            <button class="welcome-claim-btn press-fx" id="welcomeClaimBtn" onclick="closeWelcomeModal()">Отлично, погнали!</button>
         </div>
     </div>
 
@@ -1146,98 +1146,60 @@
             };
         }
 
-        // Тот же паттерн retry, что и в profile.html: upsert -> insert -> reread.
-        async function ensureUserExists(uid, tgUser) {
-            const payload = buildDefaultUserPayload(uid, tgUser);
-
-            let { data, error } = await _supabase
-                .from('users')
-                .upsert(payload, { onConflict: 'user_id' })
-                .select()
-                .maybeSingle();
-
-            if (!error && data) return { data, error: null };
-            logSupabaseError("upsert не сработал, пробуем insert:", error);
-
-            ({ data, error } = await _supabase
-                .from('users')
-                .insert(payload)
-                .select()
-                .maybeSingle());
-
-            if (!error && data) return { data, error: null };
-            logSupabaseError("insert тоже не сработал, перечитываем строку:", error);
-
-            const reread = await _supabase.from('users').select('*').eq('user_id', uid).maybeSingle();
-            if (reread.error) logSupabaseError("reread тоже не сработал:", reread.error);
-            if (reread.data) return { data: reread.data, error: null };
-
-            return { data: null, error: error || reread.error || new Error('unknown') };
-        }
-
-        function handleReferral() {
-            const startParam = tg.initDataUnsafe?.start_param;
-            if (startParam && startParam !== userId) {
-                _supabase.from('referrals').select('id').eq('referred_id', userId).maybeSingle()
-                    .then(({ data: existing }) => {
-                        if (!existing) {
-                            _supabase.from('referrals').insert([{ referrer_id: startParam, referred_id: userId, claimed: false }])
-                                .then(() => {
-                                    _supabase.rpc('increment_tickets', { target_user_id: startParam, amount: 1 });
-                                    console.log("Реферал засчитан!");
-                                });
-                        }
-                    });
-            }
-        }
-
-        async function syncData() {
-            try {
-                const { data, error } = await _supabase.from('users').select('*').eq('user_id', userId).maybeSingle();
-                if (error) { logSupabaseError("Ошибка Supabase при загрузке:", error); return; }
-
-                let user = data;
-
-                if (!user) {
-                    console.warn("Пользователь не найден в базе, создаём (safety-net)...");
-                    const { data: created, error: createErr } = await ensureUserExists(userId, currentTgUser);
-                    if (createErr || !created) {
-                        logSupabaseError("Не удалось создать профиль (safety-net):", createErr);
-                        return;
-                    }
-                    user = created;
-                }
-
-                const update = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
-                update('balTon', parseFloat(user.balance || 0).toFixed(2));
-                update('balStars', Math.floor(user.stars || 0));
-                update('balTickets', Math.floor(user.tickets || 0));
-
-                checkWelcomeBonus(user);
-            } catch (e) { console.error("syncData error:", e); }
-        }
-
         /*
          =====================================================================
-         ПРИВЕТСТВЕННЫЙ БОНУС: показываем красивую модалку "Добро пожаловать
-         в Swap" один раз — для тех, у кого в базе welcome_bonus_claimed
-         ещё не true (в т.ч. для только что созданных юзеров, у которых это
-         поле по умолчанию false). После нажатия "Забрать бонус" начисляем
-         +5 звёзд и ставим флаг, чтобы модалка больше не всплывала.
+         РЕГИСТРАЦИЯ + ПРИВЕТСТВЕННЫЙ БОНУС: НЕ ищем юзера в базе первым
+         запросом. Сразу пытаемся его СОЗДАТЬ (insert) с 5 звёздами на
+         балансе. Так бонус выдаётся мгновенно при первом же открытии
+         страницы, независимо от того, что успело или не успело сделать
+         до этого /start в боте или другие страницы (wheel.html и т.п.).
 
-         ВАЖНО: в таблице users в Supabase нужна колонка
-             welcome_bonus_claimed boolean default false
-         Если её нет — добавь через SQL-редактор Supabase:
-             alter table users add column welcome_bonus_claimed boolean default false;
+         Если строка с таким user_id уже есть — insert упадёт с ошибкой
+         уникальности (код 23505), и тогда мы просто читаем существующую
+         строку и НЕ трогаем её баланс. Это и есть "не искать, а
+         добавлять": сначала добавляем, и только если не вышло — читаем.
          =====================================================================
         */
         const WELCOME_BONUS_AMOUNT = 5;
-        let welcomeModalShown = false;
+        let welcomeShownOnce = false;
 
-        function checkWelcomeBonus(user) {
-            if (welcomeModalShown) return;
-            if (user && user.welcome_bonus_claimed) return;
-            welcomeModalShown = true;
+        async function registerOrLoadUser(uid, tgUser) {
+            const payload = buildDefaultUserPayload(uid, tgUser);
+            payload.stars = WELCOME_BONUS_AMOUNT;
+            payload.welcome_bonus_claimed = true;
+
+            const { data: inserted, error: insertErr } = await _supabase
+                .from('users')
+                .insert(payload)
+                .select()
+                .maybeSingle();
+
+            if (!insertErr && inserted) {
+                // Настоящий новый юзер — бонус уже зачислен этим же insert'ом.
+                console.log("Новый пользователь создан, начислено", WELCOME_BONUS_AMOUNT, "звёзд");
+                showWelcomeModal();
+                return inserted;
+            }
+
+            if (insertErr && insertErr.code !== '23505') {
+                logSupabaseError("registerOrLoadUser: insert не сработал:", insertErr);
+            }
+
+            // Юзер уже существует (или это гонка с другой страницей) — читаем
+            // текущую строку, ничего не создаём и не перезаписываем.
+            const { data: existing, error: selectErr } = await _supabase
+                .from('users')
+                .select('*')
+                .eq('user_id', uid)
+                .maybeSingle();
+
+            if (selectErr) { logSupabaseError("registerOrLoadUser: select не сработал:", selectErr); return null; }
+            return existing;
+        }
+
+        function showWelcomeModal() {
+            if (welcomeShownOnce) return;
+            welcomeShownOnce = true;
             spawnWelcomeConfetti();
             document.getElementById('welcomeOverlay').classList.add('active');
             try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
@@ -1258,45 +1220,37 @@
             }
         }
 
-        let isClaimingWelcome = false;
+        function closeWelcomeModal() {
+            tg.HapticFeedback.impactOccurred('light');
+            document.getElementById('welcomeOverlay').classList.remove('active');
+        }
 
-        async function claimWelcomeBonus() {
-            if (isClaimingWelcome || !userId) return;
-            isClaimingWelcome = true;
-            const btn = document.getElementById('welcomeClaimBtn');
-            if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
-            try { tg.HapticFeedback.impactOccurred('medium'); } catch (e) {}
-
-            try {
-                const { data: cur, error: readErr } = await _supabase
-                    .from('users')
-                    .select('stars, welcome_bonus_claimed')
-                    .eq('user_id', userId)
-                    .maybeSingle();
-
-                if (readErr) { logSupabaseError("welcome bonus: не удалось прочитать юзера:", readErr); return; }
-                if (cur && cur.welcome_bonus_claimed) {
-                    document.getElementById('welcomeOverlay').classList.remove('active');
-                    return;
-                }
-
-                const newStars = Math.floor((cur?.stars || 0) + WELCOME_BONUS_AMOUNT);
-                const { error: updErr } = await _supabase
-                    .from('users')
-                    .update({ stars: newStars, welcome_bonus_claimed: true })
-                    .eq('user_id', userId);
-
-                if (updErr) { logSupabaseError("welcome bonus: не удалось начислить звёзды:", updErr); return; }
-
-                document.getElementById('welcomeOverlay').classList.remove('active');
-                try { tg.HapticFeedback.notificationOccurred('success'); } catch (e) {}
-                syncData();
-            } catch (e) {
-                console.error("claimWelcomeBonus error:", e);
-            } finally {
-                isClaimingWelcome = false;
-                if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+        function handleReferral() {
+            const startParam = tg.initDataUnsafe?.start_param;
+            if (startParam && startParam !== userId) {
+                _supabase.from('referrals').select('id').eq('referred_id', userId).maybeSingle()
+                    .then(({ data: existing }) => {
+                        if (!existing) {
+                            _supabase.from('referrals').insert([{ referrer_id: startParam, referred_id: userId, claimed: false }])
+                                .then(() => {
+                                    _supabase.rpc('increment_tickets', { target_user_id: startParam, amount: 1 });
+                                    console.log("Реферал засчитан!");
+                                });
+                        }
+                    });
             }
+        }
+
+        async function syncData() {
+            try {
+                const user = await registerOrLoadUser(userId, currentTgUser);
+                if (!user) return;
+
+                const update = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+                update('balTon', parseFloat(user.balance || 0).toFixed(2));
+                update('balStars', Math.floor(user.stars || 0));
+                update('balTickets', Math.floor(user.tickets || 0));
+            } catch (e) { console.error("syncData error:", e); }
         }
 
         async function processPayment(amount) {
