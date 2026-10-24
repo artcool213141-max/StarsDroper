@@ -1,16 +1,13 @@
 """
-Роутер ивента «Кровавая Жатва».
+Роутер ивента «Кровавая Жатва» — версия для Flask (Blueprint).
 
-Подключение в основном приложении FastAPI:
-    from event_api import router as event_router
-    app.include_router(event_router)
+Подключение в основном файле (см. инструкцию в чате):
+    from event_api import bp as event_bp
+    app.register_blueprint(event_bp)
 
-Переменные окружения (Vercel → Settings → Environment Variables):
-    BOT_TOKEN             токен бота (для проверки initData)
-    SUPABASE_URL          https://xxxx.supabase.co
-    SUPABASE_SERVICE_KEY  service_role ключ (ТОЛЬКО на бэкенде, на фронт не отдавать!)
-
-requirements.txt:  supabase
+Используются те же переменные окружения, что у основного бэкенда:
+    BOT_TOKEN, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
+Новых pip-пакетов не нужно (supabase и flask уже есть).
 """
 import hashlib
 import hmac
@@ -20,14 +17,13 @@ import time
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qsl
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from flask import Blueprint, jsonify, request
 from supabase import create_client
 
-BOT_TOKEN = os.environ["BOT_TOKEN"]
-sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
+sb = create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_ROLE_KEY"])
 
-router = APIRouter(prefix="/event", tags=["event"])
+bp = Blueprint("event", __name__, url_prefix="/event")
 
 # Только для показа в интерфейсе. Реальные значения живут в SQL-функциях —
 # если меняешь экономику, меняй и там, и тут.
@@ -47,82 +43,90 @@ CFG = {
 }
 
 
+class ApiError(Exception):
+    def __init__(self, status, detail):
+        self.status = status
+        self.detail = detail
+
+
+@bp.errorhandler(ApiError)
+def handle_api_error(e):
+    return jsonify({"detail": e.detail}), e.status
+
+
+def body():
+    return request.get_json(silent=True) or {}
+
+
 # ---------- авторизация через Telegram initData ----------
-def auth(init_data: str):
+def auth(data):
+    init_data = data.get("init_data")
     if not init_data:
-        raise HTTPException(401, "no init_data")
+        raise ApiError(401, "no init_data")
     pairs = dict(parse_qsl(init_data, keep_blank_values=True))
     received = pairs.pop("hash", None)
     if not received:
-        raise HTTPException(401, "no hash")
+        raise ApiError(401, "no hash")
 
     check = "\n".join(f"{k}={v}" for k, v in sorted(pairs.items()))
     secret = hmac.new(b"WebAppData", BOT_TOKEN.encode(), hashlib.sha256).digest()
     calc = hmac.new(secret, check.encode(), hashlib.sha256).hexdigest()
     if not hmac.compare_digest(calc, received):
-        raise HTTPException(401, "bad signature")
-    if time.time() - int(pairs.get("auth_date", "0")) > 86400:
-        raise HTTPException(401, "init_data expired")
+        raise ApiError(401, "bad signature")
+    try:
+        age = time.time() - int(pairs.get("auth_date", "0"))
+    except ValueError:
+        raise ApiError(401, "bad auth_date")
+    if age > 86400:
+        raise ApiError(401, "init_data expired")
 
-    user = json.loads(pairs["user"])
+    try:
+        user = json.loads(pairs["user"])
+    except Exception:
+        raise ApiError(401, "no user")
     name = ("@" + user["username"]) if user.get("username") else user.get("first_name", "Жнец")
     return int(user["id"]), name
 
 
-def rpc(name: str, params: dict):
+def rpc(name, params):
     try:
         return sb.rpc(name, params).execute().data
     except Exception as e:  # noqa: BLE001
         print(f"[event] rpc {name} failed: {e}")
-        raise HTTPException(500, "rpc_failed")
+        raise ApiError(500, "rpc_failed")
 
 
-def secs_until(ts, plus: int = 0) -> int:
+def secs_until(ts, plus=0):
     if not ts:
         return 0
     t = datetime.fromisoformat(ts.replace("Z", "+00:00")) + timedelta(seconds=plus)
     return max(0, int((t - datetime.now(timezone.utc)).total_seconds()))
 
 
-# ---------- модели запросов ----------
-class Base(BaseModel):
-    init_data: str
-
-
-class BattleIn(Base):
-    battle_id: str
-
-
-class MoveIn(BattleIn):
-    spell: str
-
-
-class ConvertIn(Base):
-    stars: int
-
-
-class RatingIn(Base):
-    kind: str = "stolen"
-
-
 # ---------- эндпоинты ----------
-@router.post("/profile")
-def profile(body: Base):
-    uid, name = auth(body.init_data)
+@bp.route("/profile", methods=["POST"])
+def profile():
+    uid, name = auth(body())
     p = rpc("event_ensure_profile", {"p_user": uid, "p_username": name})
 
-    stars_balance, converted_today = 0, 0.0
+    stars_balance, converted_today = 0.0, 0.0
     try:
-        row = sb.table("users").select("balance").eq("user_id", uid).execute().data
+        # user_id в users может быть int8 или text — пробуем оба варианта
+        row = sb.table("users").select("stars").eq("user_id", uid).execute().data
+        if not row:
+            row = sb.table("users").select("stars").eq("user_id", str(uid)).execute().data
         if row:
-            stars_balance = float(row[0]["balance"])
+            stars_balance = float(row[0].get("stars") or 0)
         since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
-        conv = sb.table("event_conversions").select("stars").eq("user_id", uid).gte("created_at", since).execute().data
+        conv = (
+            sb.table("event_conversions").select("stars")
+            .eq("user_id", uid).gte("created_at", since).execute().data
+        )
         converted_today = float(sum(float(c["stars"]) for c in conv))
     except Exception as e:  # noqa: BLE001
         print(f"[event] profile extras failed: {e}")
 
-    return {
+    return jsonify({
         "souls": p["souls_balance"],
         "collected": p["souls_collected_total"],
         "stolen": p["souls_stolen_total"],
@@ -135,56 +139,71 @@ def profile(body: Base):
         "stars_balance": stars_balance,
         "converted_today": converted_today,
         "cfg": CFG,
-    }
+    })
 
 
-@router.post("/harvest")
-def harvest(body: Base):
-    uid, _ = auth(body.init_data)
-    return rpc("event_harvest", {"p_user": uid})
+@bp.route("/harvest", methods=["POST"])
+def harvest():
+    uid, _ = auth(body())
+    return jsonify(rpc("event_harvest", {"p_user": uid}))
 
 
-@router.post("/shield")
-def shield(body: Base):
-    uid, _ = auth(body.init_data)
-    return rpc("event_buy_shield", {"p_user": uid})
+@bp.route("/shield", methods=["POST"])
+def shield():
+    uid, _ = auth(body())
+    return jsonify(rpc("event_buy_shield", {"p_user": uid}))
 
 
-@router.post("/battle/search")
-def battle_search(body: Base):
-    uid, name = auth(body.init_data)
-    return rpc("event_find_match", {"p_user": uid, "p_username": name})
+@bp.route("/battle/search", methods=["POST"])
+def battle_search():
+    uid, name = auth(body())
+    return jsonify(rpc("event_find_match", {"p_user": uid, "p_username": name}))
 
 
-@router.post("/battle/cancel")
-def battle_cancel(body: Base):
-    uid, _ = auth(body.init_data)
+@bp.route("/battle/cancel", methods=["POST"])
+def battle_cancel():
+    uid, _ = auth(body())
     rpc("event_cancel_search", {"p_user": uid})
-    return {"ok": True}
+    return jsonify({"ok": True})
 
 
-@router.post("/battle/move")
-def battle_move(body: MoveIn):
-    uid, _ = auth(body.init_data)
-    return rpc("event_submit_move", {"p_user": uid, "p_battle": body.battle_id, "p_spell": body.spell})
+@bp.route("/battle/move", methods=["POST"])
+def battle_move():
+    data = body()
+    uid, _ = auth(data)
+    battle_id = data.get("battle_id")
+    spell = data.get("spell")
+    if not battle_id or not spell:
+        raise ApiError(400, "battle_id and spell required")
+    return jsonify(rpc("event_submit_move", {"p_user": uid, "p_battle": battle_id, "p_spell": spell}))
 
 
-@router.post("/battle/state")
-def battle_state(body: BattleIn):
-    uid, _ = auth(body.init_data)
-    return rpc("event_battle_state", {"p_user": uid, "p_battle": body.battle_id})
+@bp.route("/battle/state", methods=["POST"])
+def battle_state():
+    data = body()
+    uid, _ = auth(data)
+    battle_id = data.get("battle_id")
+    if not battle_id:
+        raise ApiError(400, "battle_id required")
+    return jsonify(rpc("event_battle_state", {"p_user": uid, "p_battle": battle_id}))
 
 
-@router.post("/convert")
-def convert(body: ConvertIn):
-    uid, _ = auth(body.init_data)
-    return rpc("event_convert", {"p_user": uid, "p_stars": body.stars})
+@bp.route("/convert", methods=["POST"])
+def convert():
+    data = body()
+    uid, _ = auth(data)
+    try:
+        stars = int(data.get("stars", 0))
+    except (TypeError, ValueError):
+        raise ApiError(400, "bad stars")
+    return jsonify(rpc("event_convert", {"p_user": uid, "p_stars": stars}))
 
 
-@router.post("/rating")
-def rating(body: RatingIn):
-    uid, _ = auth(body.init_data)
-    col = "souls_balance" if body.kind == "souls" else "souls_stolen_total"
+@bp.route("/rating", methods=["POST"])
+def rating():
+    data = body()
+    uid, _ = auth(data)
+    col = "souls_balance" if data.get("kind") == "souls" else "souls_stolen_total"
     try:
         rows = (
             sb.table("event_profiles")
@@ -196,9 +215,9 @@ def rating(body: RatingIn):
         )
     except Exception as e:  # noqa: BLE001
         print(f"[event] rating failed: {e}")
-        raise HTTPException(500, "rating_failed")
+        raise ApiError(500, "rating_failed")
 
-    return {
+    return jsonify({
         "items": [
             {
                 "rank": i + 1,
@@ -210,4 +229,4 @@ def rating(body: RatingIn):
             }
             for i, r in enumerate(rows)
         ]
-    }
+    })
