@@ -5,6 +5,7 @@ import requests
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from supabase import create_client
+from event_api import bp as event_bp
 
 app = Flask(__name__)
 # Включаем CORS глобально
