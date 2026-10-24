@@ -10,6 +10,7 @@ from event_api import bp as event_bp
 app = Flask(__name__)
 # Включаем CORS глобально
 CORS(app, resources={r"/api/*": {"origins": "*"}, r"/webhook": {"origins": "*"}, r"/api/crypto-webhook": {"origins": "*"}})
+app.register_blueprint(event_bp)
 
 # Инициализация
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
